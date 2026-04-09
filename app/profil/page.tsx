@@ -7,6 +7,7 @@ import { createClient } from '../../lib/supabase'
 
 type Stats = {
   pseudo: string
+  avatarUrl: string | null
   depuis: string
   totalQuestions: number
   tauxReussite: number
@@ -59,10 +60,12 @@ export default function Profil() {
       const createdAt = new Date(user.created_at)
       const depuis = createdAt.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
 
-      const pseudo = user.user_metadata?.pseudo || user.email?.split('@')[0] || 'Joueur'
+     const pseudo = user.user_metadata?.pseudo || user.email?.split('@')[0] || 'Joueur'
+      const avatarUrl = user.user_metadata?.avatar_url || null
 
       setStats({
         pseudo,
+        avatarUrl,
         depuis,
         totalQuestions,
         tauxReussite,
@@ -112,17 +115,21 @@ export default function Profil() {
         {/* Header profil */}
         <div className="flex items-center gap-5">
           <div className="relative">
-            <div className="w-20 h-20 rounded-full bg-[#2a1f3d] flex items-center justify-center" style={{ border: '3px solid #a78bfa' }}>
-              <div className="w-10 h-10 rounded-full bg-[#a78bfa]"></div>
+            <div className="w-20 h-20 rounded-full bg-[#2a1f3d] flex items-center justify-center overflow-hidden" style={{ border: '3px solid #a78bfa' }}>
+              {stats.avatarUrl ? (
+                <img src={stats.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-[#a78bfa]"></div>
+              )}
             </div>
           </div>
           <div>
             <h2 className="font-fredoka text-3xl text-[#eeeaf8]">{stats.pseudo}</h2>
             <p className="text-[#6b6880] text-sm">Membre depuis {stats.depuis}</p>
             <div className="flex gap-2 mt-2">
-              <button className="border border-[#3a3650] text-[#9b96b8] rounded-full px-4 py-1 font-fredoka text-sm hover:bg-[#1e1c2e] transition">
+              <Link href="/profil/modifier" className="border border-[#3a3650] text-[#9b96b8] rounded-full px-4 py-1 font-fredoka text-sm hover:bg-[#1e1c2e] transition">
                 Modifier le profil
-              </button>
+              </Link>
             </div>
           </div>
         </div>

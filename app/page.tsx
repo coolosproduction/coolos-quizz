@@ -7,6 +7,7 @@ import { createClient } from '../lib/supabase'
 export default function Home() {
   const [connecte, setConnecte] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [nbQuestions, setNbQuestions] = useState<number | null>(null)
 
   useEffect(() => {
     const checkUser = async () => {
@@ -15,7 +16,16 @@ export default function Home() {
       setConnecte(!!user)
       setLoading(false)
     }
+    const loadNbQuestions = async () => {
+      const supabase = createClient()
+      const { count } = await supabase
+        .from('questions')
+        .select('*', { count: 'exact', head: true })
+        .eq('active', true)
+      setNbQuestions(count || 0)
+    }
     checkUser()
+    loadNbQuestions()
   }, [])
 
   return (
@@ -26,14 +36,22 @@ export default function Home() {
         className="fixed top-0 left-0 right-0 flex justify-between items-center bg-[#0f0e17] border-b border-[#1e1c2e] z-10"
         style={{ padding: '20px 60px 20px 32px' }}
       >
-        <div className="font-fredoka text-2xl">
-          <span className="text-[#ff6b6b]">C</span>
-          <span className="text-[#ff9f43]">o</span>
-          <span className="text-[#ffd93d]">o</span>
-          <span className="text-[#6bcb77]">l</span>
-          <span className="text-[#4ecdc4]">o</span>
-          <span className="text-[#a78bfa]">s</span>
-          <span className="text-[#c9c4e0]"> Quiz</span>
+        <div className="flex items-center gap-4">
+          <div className="font-fredoka text-2xl">
+            <span className="text-[#ff6b6b]">C</span>
+            <span className="text-[#ff9f43]">o</span>
+            <span className="text-[#ffd93d]">o</span>
+            <span className="text-[#6bcb77]">l</span>
+            <span className="text-[#4ecdc4]">o</span>
+            <span className="text-[#a78bfa]">s</span>
+            <span className="text-[#c9c4e0]"> Quiz</span>
+          </div>
+          {nbQuestions !== null && (
+            <div className="bg-[#1e1c2e] border border-[#2a2830] rounded-full px-3 py-1 flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-[#6bcb77]"></div>
+              <span className="font-fredoka text-[#6bcb77] text-sm">{nbQuestions} questions</span>
+            </div>
+          )}
         </div>
         {!loading && (
           connecte ? (
