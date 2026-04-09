@@ -64,6 +64,11 @@ export default function ModifierProfil() {
         data: { pseudo, avatar_url: avatarUrl }
       })
 
+      await supabase
+        .from('users')
+        .update({ pseudo })
+        .eq('id', user.id)
+
       setMessage('Profil mis à jour !')
       setTimeout(() => router.push('/profil'), 1500)
     } catch (err) {

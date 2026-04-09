@@ -5,44 +5,46 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '../../lib/supabase'
 
-const questionsTest = [
-  { id: '1', question: 'Quel événement a marqué le début de la Révolution française ?', answer: 'La prise de la Bastille, le 14 juillet 1789.', category: 'Histoire', difficulty: 'moyen', active: true },
-  { id: '2', question: 'Quelle est la planète la plus proche du Soleil ?', answer: 'Mercure.', category: 'Sciences', difficulty: 'facile', active: true },
-  { id: '3', question: 'Combien de joueurs composent une équipe de rugby à XV ?', answer: '15 joueurs.', category: 'Sport', difficulty: 'facile', active: false },
-  { id: '4', question: 'Quel est le plus long fleuve du monde ?', answer: 'Le Nil (6 650 km).', category: 'Géographie', difficulty: 'difficile', active: true },
-  { id: '5', question: 'Dans quel film apparaît Forrest Gump ?', answer: 'Forrest Gump (1994).', category: 'Cinéma', difficulty: 'facile', active: true },
-]
-
-const categoriesTest = [
-  { id: '1', name: 'Histoire', active: true, count: 120 },
-  { id: '2', name: 'Sciences', active: true, count: 95 },
-  { id: '3', name: 'Sport', active: true, count: 88 },
-  { id: '4', name: 'Géographie', active: true, count: 74 },
-  { id: '5', name: 'Culture pop', active: true, count: 110 },
-  { id: '6', name: 'Cinéma', active: false, count: 67 },
-]
-
-const usersTest = [
-  { id: '1', pseudo: 'QuizMaster42', email: 'quizmaster@gmail.com', questions: 1842, reussite: 74, since: 'jan. 2026' },
-  { id: '2', pseudo: 'CultGénérale', email: 'cg@hotmail.fr', questions: 1630, reussite: 81, since: 'fév. 2026' },
-  { id: '3', pseudo: 'SophieQ', email: 'sophie.q@orange.fr', questions: 1204, reussite: 68, since: 'jan. 2026' },
-  { id: '4', pseudo: 'Triviaman', email: 'trivia@gmail.com', questions: 987, reussite: 61, since: 'mars 2026' },
-  { id: '5', pseudo: 'Léo_bzh', email: 'leo29@sfr.fr', questions: 754, reussite: 55, since: 'mars 2026' },
-]
-
 const diffColors: Record<string, string> = {
   facile: '#6bcb77',
   moyen: '#ffd93d',
   difficile: '#ff6b6b',
 }
 
+type Question = {
+  id: string
+  question: string
+  answer: string
+  category: string
+  difficulty: string
+  active: boolean
+}
+
+type Category = {
+  id: string
+  name: string
+  active: boolean
+  count: number
+}
+
+type UserStat = {
+  id: string
+  pseudo: string
+  email: string
+  questions: number
+  reussite: number
+}
+
 export default function Admin() {
   const router = useRouter()
   const [panel, setPanel] = useState<'questions' | 'categories' | 'users'>('questions')
-  const [questions, setQuestions] = useState(questionsTest)
-  const [categories, setCategories] = useState(categoriesTest)
+  const [questions, setQuestions] = useState<Question[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [users, setUsers] = useState<UserStat[]>([])
+  const [totalQuestions, setTotalQuestions] = useState(0)
   const [search, setSearch] = useState('')
   const [authorized, setAuthorized] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -58,30 +60,116 @@ export default function Admin() {
 
       if (data?.role !== 'admin') { router.push('/'); return }
       setAuthorized(true)
+      loadData()
     }
     checkAdmin()
   }, [])
 
-  if (!authorized) {
-    return (
-      <main className="min-h-screen bg-[#0f0e17] flex items-center justify-center">
-        <p className="font-fredoka text-[#9b96b8] text-xl">Chargement...</p>
-      </main>
-    )
+  const loadData = async () => {
+    const supabase = createClient()
+
+    // Questions
+    const { data: questionsData } = await supabase
+      .from('questions')
+      .select('id, question_text, answer_text, difficulty, active, category_id, categories(name)')
+      .order('created_at', { ascending: false })
+
+    if (questionsData) {
+      setQuestions(questionsData.map((q: any) => ({
+        id: q.id,
+        question: q.question_text,
+        answer: q.answer_text,
+        category: q.categories?.name || '',
+        difficulty: q.difficulty,
+        active: q.active,
+      })))
+    }
+
+    // Categories avec comptage
+    const { data: catsData } = await supabase
+      .from('categories')
+      .select('id, name, active')
+      .order('name')
+
+    if (catsData) {
+      const catsWithCount = await Promise.all(catsData.map(async (c: any) => {
+        const { count } = await supabase
+          .from('questions')
+          .select('*', { count: 'exact', head: true })
+          .eq('category_id', c.id)
+        return { id: c.id, name: c.name, active: c.active, count: count || 0 }
+      }))
+      setCategories(catsWithCount)
+    }
+
+    // Users avec stats
+    const { data: usersData } = await supabase
+      .from('users')
+      .select('id, pseudo, email')
+
+    if (usersData) {
+      const usersWithStats = await Promise.all(usersData.map(async (u: any) => {
+        const { data: games } = await supabase
+          .from('games')
+          .select('questions_count, score, score_max')
+          .eq('user_id', u.id)
+
+        const totalQ = games?.reduce((acc, g) => acc + g.questions_count, 0) || 0
+        const totalScore = games?.reduce((acc, g) => acc + g.score, 0) || 0
+        const totalMax = games?.reduce((acc, g) => acc + g.score_max, 0) || 0
+        const reussite = totalMax > 0 ? Math.round((totalScore / totalMax) * 100) : 0
+
+        return { id: u.id, pseudo: u.pseudo || u.email?.split('@')[0], email: u.email, questions: totalQ, reussite }
+      }))
+      setUsers(usersWithStats.sort((a, b) => b.questions - a.questions))
+      setTotalQuestions(usersWithStats.reduce((acc, u) => acc + u.questions, 0))
+    }
+
+    setLoading(false)
   }
 
-  const toggleQuestion = (id: string) => {
+  const toggleQuestion = async (id: string) => {
+    const supabase = createClient()
+    const question = questions.find(q => q.id === id)
+    if (!question) return
+    await supabase.from('questions').update({ active: !question.active }).eq('id', id)
     setQuestions(prev => prev.map(q => q.id === id ? { ...q, active: !q.active } : q))
   }
 
-  const toggleCategory = (id: string) => {
+  const toggleCategory = async (id: string) => {
+    const supabase = createClient()
+    const category = categories.find(c => c.id === id)
+    if (!category) return
+    await supabase.from('categories').update({ active: !category.active }).eq('id', id)
     setCategories(prev => prev.map(c => c.id === id ? { ...c, active: !c.active } : c))
+  }
+
+  const deleteQuestion = async (id: string) => {
+    if (!confirm('Supprimer cette question ?')) return
+    const supabase = createClient()
+    await supabase.from('questions').delete().eq('id', id)
+    setQuestions(prev => prev.filter(q => q.id !== id))
+  }
+
+  const deleteCategory = async (id: string) => {
+    if (!confirm('Supprimer cette catégorie ?')) return
+    const supabase = createClient()
+    await supabase.from('categories').delete().eq('id', id)
+    setCategories(prev => prev.filter(c => c.id !== id))
   }
 
   const questionsFiltrees = questions.filter(q =>
     q.question.toLowerCase().includes(search.toLowerCase()) ||
     q.category.toLowerCase().includes(search.toLowerCase())
   )
+
+  if (!authorized || loading) {
+    return (
+      <main className="min-h-screen bg-[#0f0e17] flex items-center justify-center">
+        <p className="font-fredoka text-[#9b96b8] text-xl">Chargement...</p>
+      </main>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-[#0f0e17] flex" style={{ fontFamily: 'Nunito, sans-serif' }}>
@@ -203,10 +291,7 @@ export default function Admin() {
                     <div onClick={() => toggleQuestion(q.id)} className="rounded-full cursor-pointer relative" style={{ width: '40px', height: '20px', background: q.active ? '#6bcb77' : '#2a2830' }}>
                       <div className="rounded-full bg-white absolute" style={{ width: '16px', height: '16px', top: '2px', left: q.active ? '22px' : '2px', transition: 'left 0.2s' }}></div>
                     </div>
-                    <button className="flex items-center justify-center hover:opacity-80" style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#2a1f3d' }}>
-                      <div className="w-3 h-3 rounded bg-[#a78bfa]"></div>
-                    </button>
-                    <button className="flex items-center justify-center hover:opacity-80" style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#2e1a1a' }}>
+                    <button onClick={() => deleteQuestion(q.id)} className="flex items-center justify-center hover:opacity-80" style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#2e1a1a' }}>
                       <div className="rounded bg-[#ff6b6b]" style={{ width: '12px', height: '3px' }}></div>
                     </button>
                   </div>
@@ -253,10 +338,7 @@ export default function Admin() {
                   <div onClick={() => toggleCategory(c.id)} className="rounded-full cursor-pointer relative" style={{ width: '40px', height: '20px', background: c.active ? '#6bcb77' : '#2a2830' }}>
                     <div className="rounded-full bg-white absolute" style={{ width: '16px', height: '16px', top: '2px', left: c.active ? '22px' : '2px', transition: 'left 0.2s' }}></div>
                   </div>
-                  <button className="flex items-center justify-center hover:opacity-80" style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#2a1f3d' }}>
-                    <div className="w-3 h-3 rounded bg-[#a78bfa]"></div>
-                  </button>
-                  <button className="flex items-center justify-center hover:opacity-80" style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#2e1a1a' }}>
+                  <button onClick={() => deleteCategory(c.id)} className="flex items-center justify-center hover:opacity-80" style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#2e1a1a' }}>
                     <div className="rounded bg-[#ff6b6b]" style={{ width: '12px', height: '3px' }}></div>
                   </button>
                 </div>
@@ -275,25 +357,18 @@ export default function Admin() {
 
             <div className="grid grid-cols-3 gap-4" style={{ marginBottom: '24px' }}>
               <div className="bg-[#1a1828] border border-[#2a2830] rounded-xl p-4 text-center">
-                <div className="font-fredoka text-2xl text-[#a78bfa]">1 284</div>
+                <div className="font-fredoka text-2xl text-[#a78bfa]">{users.length}</div>
                 <div className="text-[#6b6880] text-xs" style={{ marginTop: '4px' }}>Inscrits</div>
               </div>
               <div className="bg-[#1a1828] border border-[#2a2830] rounded-xl p-4 text-center">
-                <div className="font-fredoka text-2xl text-[#6bcb77]">847</div>
-                <div className="text-[#6b6880] text-xs" style={{ marginTop: '4px' }}>Actifs ce mois</div>
+                <div className="font-fredoka text-2xl text-[#6bcb77]">{users.filter(u => u.questions > 0).length}</div>
+                <div className="text-[#6b6880] text-xs" style={{ marginTop: '4px' }}>Ont joué</div>
               </div>
               <div className="bg-[#1a1828] border border-[#2a2830] rounded-xl p-4 text-center">
-                <div className="font-fredoka text-2xl text-[#ffd93d]">48 320</div>
+                <div className="font-fredoka text-2xl text-[#ffd93d]">{totalQuestions.toLocaleString()}</div>
                 <div className="text-[#6b6880] text-xs" style={{ marginTop: '4px' }}>Questions répondues</div>
               </div>
             </div>
-
-            <input
-              type="text"
-              placeholder="Rechercher un pseudo ou email..."
-              className="w-full text-[#eeeaf8] text-sm outline-none"
-              style={{ background: '#1a1828', border: '1.5px solid #2a2830', borderRadius: '12px', padding: '12px 16px', marginBottom: '16px' }}
-            />
 
             <div className="grid grid-cols-5 gap-4" style={{ padding: '0 12px', marginBottom: '8px' }}>
               <p className="text-[#4a4760] text-xs font-bold uppercase tracking-wider">#</p>
@@ -303,7 +378,7 @@ export default function Admin() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {usersTest.map((u, i) => (
+              {users.map((u, i) => (
                 <div
                   key={u.id}
                   className="grid grid-cols-5 gap-4 items-center"
