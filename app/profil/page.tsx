@@ -17,10 +17,20 @@ type Stats = {
   non: number
 }
 
+type StatCategorie = {
+  nom: string
+  total: number
+  oui: number
+  enPartie: number
+  non: number
+  taux: number
+}
+
 export default function Profil() {
   const router = useRouter()
   const [onglet, setOnglet] = useState<'stats' | 'categories'>('stats')
   const [stats, setStats] = useState<Stats | null>(null)
+  const [statsCategories, setStatsCategories] = useState<StatCategorie[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -59,8 +69,7 @@ export default function Profil() {
 
       const createdAt = new Date(user.created_at)
       const depuis = createdAt.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
-
-     const pseudo = user.user_metadata?.pseudo || user.email?.split('@')[0] || 'Joueur'
+      const pseudo = user.user_metadata?.pseudo || user.email?.split('@')[0] || 'Joueur'
       const avatarUrl = user.user_metadata?.avatar_url || null
 
       setStats({
@@ -74,6 +83,40 @@ export default function Profil() {
         enPartie: enPartiePct,
         non: nonPct,
       })
+
+      // Stats par catégorie
+      const gameIds = games?.map(g => g.id) || []
+      if (gameIds.length > 0) {
+        const { data: answersWithCat } = await supabase
+          .from('game_answers')
+          .select('self_eval, question:questions!inner(categories(name))')
+          .in('game_id', gameIds)
+
+        if (answersWithCat) {
+          const catMap: Record<string, { total: number, oui: number, enPartie: number, non: number }> = {}
+
+          answersWithCat.forEach((a: any) => {
+            const nom = a.question?.categories?.name || 'Autre'
+            if (!catMap[nom]) catMap[nom] = { total: 0, oui: 0, enPartie: 0, non: 0 }
+            catMap[nom].total++
+            if (a.self_eval === 'oui') catMap[nom].oui++
+            else if (a.self_eval === 'en_partie') catMap[nom].enPartie++
+            else if (a.self_eval === 'non') catMap[nom].non++
+          })
+
+          const result = Object.entries(catMap).map(([nom, v]) => ({
+            nom,
+            total: v.total,
+            oui: v.oui,
+            enPartie: v.enPartie,
+            non: v.non,
+            taux: v.total > 0 ? Math.round((v.oui / v.total) * 100) : 0,
+          })).sort((a, b) => b.total - a.total)
+
+          setStatsCategories(result)
+        }
+      }
+
       setLoading(false)
     }
     loadStats()
@@ -201,8 +244,8 @@ export default function Profil() {
             </div>
 
             <Link href="/configuration" className="block w-full bg-[#ffd93d] text-[#0f0e17] rounded-2xl py-4 font-fredoka text-lg text-center hover:opacity-90 transition">
-  Lancer un quiz !
-</Link>
+              Lancer un quiz !
+            </Link>
             
             <Link href="/historique" className="block w-full border rounded-2xl py-4 font-fredoka text-lg text-center hover:bg-[#1f1e10] transition" style={{ borderColor: '#ffd93d', color: '#ffd93d' }}>
               Voir mon historique →
@@ -210,11 +253,39 @@ export default function Profil() {
           </div>
         )}
 
-        {/* Panel par catégorie — données de test pour l'instant */}
+        {/* Panel par catégorie */}
         {onglet === 'categories' && (
-          <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-10 text-center">
-            <p className="font-fredoka text-[#9b96b8] text-xl mb-2">Bientôt disponible</p>
-            <p className="text-[#6b6880] text-sm">Les stats par catégorie arrivent prochainement.</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {statsCategories.length === 0 ? (
+              <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-10 text-center">
+                <p className="font-fredoka text-[#9b96b8] text-xl mb-2">Aucune donnée</p>
+                <p className="text-[#6b6880] text-sm">Joue quelques parties pour voir tes stats par catégorie.</p>
+              </div>
+            ) : (
+              statsCategories.map((cat) => (
+                <div key={cat.nom} className="bg-[#1a1828] border border-[#2a2830] rounded-2xl" style={{ padding: '16px 20px' }}>
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="font-fredoka text-[#eeeaf8] text-base">{cat.nom}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-[#6b6880] text-xs">{cat.total} questions</span>
+                      <span className="font-fredoka text-sm" style={{ color: cat.taux >= 70 ? '#6bcb77' : cat.taux >= 40 ? '#ffd93d' : '#ff6b6b' }}>
+                        {cat.taux}%
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex gap-1" style={{ height: '8px' }}>
+                    <div className="rounded-full bg-[#6bcb77]" style={{ width: `${cat.total > 0 ? (cat.oui / cat.total) * 100 : 0}%` }}></div>
+                    <div className="rounded-full bg-[#ffd93d]" style={{ width: `${cat.total > 0 ? (cat.enPartie / cat.total) * 100 : 0}%` }}></div>
+                    <div className="rounded-full bg-[#ff6b6b]" style={{ width: `${cat.total > 0 ? (cat.non / cat.total) * 100 : 0}%` }}></div>
+                  </div>
+                  <div className="flex gap-4 mt-2">
+                    <span className="text-[#6bcb77] text-xs font-fredoka">{cat.oui} oui</span>
+                    <span className="text-[#ffd93d] text-xs font-fredoka">{cat.enPartie} en partie</span>
+                    <span className="text-[#ff6b6b] text-xs font-fredoka">{cat.non} non</span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         )}
 
