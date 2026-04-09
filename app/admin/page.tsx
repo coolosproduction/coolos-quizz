@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { createClient } from '../../lib/supabase'
 
 const questionsTest = [
   { id: '1', question: 'Quel événement a marqué le début de la Révolution française ?', answer: 'La prise de la Bastille, le 14 juillet 1789.', category: 'Histoire', difficulty: 'moyen', active: true },
@@ -35,10 +37,38 @@ const diffColors: Record<string, string> = {
 }
 
 export default function Admin() {
+  const router = useRouter()
   const [panel, setPanel] = useState<'questions' | 'categories' | 'users'>('questions')
   const [questions, setQuestions] = useState(questionsTest)
   const [categories, setCategories] = useState(categoriesTest)
   const [search, setSearch] = useState('')
+  const [authorized, setAuthorized] = useState(false)
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.push('/connexion'); return }
+
+      const { data } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      if (data?.role !== 'admin') { router.push('/'); return }
+      setAuthorized(true)
+    }
+    checkAdmin()
+  }, [])
+
+  if (!authorized) {
+    return (
+      <main className="min-h-screen bg-[#0f0e17] flex items-center justify-center">
+        <p className="font-fredoka text-[#9b96b8] text-xl">Chargement...</p>
+      </main>
+    )
+  }
 
   const toggleQuestion = (id: string) => {
     setQuestions(prev => prev.map(q => q.id === id ? { ...q, active: !q.active } : q))
