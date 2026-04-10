@@ -18,13 +18,15 @@ export default function Resultats() {
   const [mode, setMode] = useState<'inscrit' | 'invite'>('inscrit')
   const [resultats, setResultats] = useState<Resultats | null>(null)
 
-  useEffect(() => {
+ useEffect(() => {
     const data = sessionStorage.getItem('resultats_partie')
     if (!data) {
       router.push('/configuration')
       return
     }
     setResultats(JSON.parse(data))
+    const isInvite = sessionStorage.getItem('is_invite') === 'true'
+    setMode(isInvite ? 'invite' : 'inscrit')
   }, [])
 
   if (!resultats) {

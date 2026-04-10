@@ -2,12 +2,16 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '../lib/supabase'
 
 export default function Home() {
+  const router = useRouter()
   const [connecte, setConnecte] = useState(false)
   const [loading, setLoading] = useState(true)
   const [nbQuestions, setNbQuestions] = useState<number | null>(null)
+  const [showPopup, setShowPopup] = useState(false)
+  const [pseudoInvite, setPseudoInvite] = useState('')
 
   useEffect(() => {
     const checkUser = async () => {
@@ -28,8 +32,52 @@ export default function Home() {
     loadNbQuestions()
   }, [])
 
+  const handleJouerSansCompte = () => {
+    setShowPopup(true)
+  }
+
+  const handleConfirmerInvite = () => {
+    const pseudo = pseudoInvite.trim() || 'Invité'
+    sessionStorage.setItem('invite_pseudo', pseudo)
+    sessionStorage.setItem('is_invite', 'true')
+    setShowPopup(false)
+    router.push('/configuration')
+  }
+
   return (
     <main className="min-h-screen bg-[#0f0e17]">
+
+      {/* Popup invité */}
+      {showPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: 'rgba(0,0,0,0.7)' }}>
+          <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-8 w-full max-w-sm flex flex-col gap-5">
+            <h2 className="font-fredoka text-2xl text-[#eeeaf8] text-center">Jouer sans compte</h2>
+            <p className="text-[#9b96b8] text-sm text-center">Choisis un pseudo pour cette session. Tes résultats ne seront pas sauvegardés.</p>
+            <input
+              type="text"
+              placeholder="Ton pseudo..."
+              value={pseudoInvite}
+              onChange={e => setPseudoInvite(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleConfirmerInvite()}
+              className="bg-[#0f0e17] border border-[#2a2830] rounded-xl px-4 py-3 text-[#eeeaf8] font-fredoka focus:outline-none focus:border-[#a78bfa] text-center"
+              maxLength={20}
+              autoFocus
+            />
+            <button
+              onClick={handleConfirmerInvite}
+              className="w-full bg-[#ffd93d] text-[#0f0e17] rounded-2xl py-4 font-fredoka text-lg hover:opacity-90 transition"
+            >
+              Jouer →
+            </button>
+            <button
+              onClick={() => setShowPopup(false)}
+              className="w-full text-[#6b6880] text-sm font-semibold hover:text-[#9b96b8] transition"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 flex justify-between items-center bg-[#0f0e17] border-b border-[#1e1c2e] z-10 px-4 md:px-8 py-4">
@@ -80,48 +128,51 @@ export default function Home() {
       {/* Contenu principal */}
       <div className="flex flex-col items-center px-6 pb-16 text-center" style={{ paddingTop: '100px' }}>
 
-       {/* Hero */}
-<div className="flex flex-col items-center text-center w-full max-w-2xl mx-auto">
-  <h1 className="font-fredoka text-4xl md:text-5xl text-[#eeeaf8] leading-tight mb-6">
-    Teste ta <span className="text-[#ff6b6b]">culture</span> générale{' '}
-    <span className="text-[#ffd93d]">dès maintenant !</span>
-  </h1>
+        {/* Hero */}
+        <div className="flex flex-col items-center text-center w-full max-w-2xl mx-auto">
+          <h1 className="font-fredoka text-4xl md:text-5xl text-[#eeeaf8] leading-tight mb-6">
+            Teste ta <span className="text-[#ff6b6b]">culture</span> générale{' '}
+            <span className="text-[#ffd93d]">dès maintenant !</span>
+          </h1>
 
-  <p className="text-[#9b96b8] text-base md:text-lg leading-relaxed mb-10 max-w-lg">
-    Des centaines de questions sur tous les thèmes. Joue en solo, suis ta progression et deviens incollable.
-  </p>
+          <p className="text-[#9b96b8] text-base md:text-lg leading-relaxed mb-10 max-w-lg">
+            Des centaines de questions sur tous les thèmes. Joue en solo, suis ta progression et deviens incollable.
+          </p>
 
-  <div className="flex flex-col gap-4 w-full max-w-sm">
-    {connecte ? (
-      <Link
-        href="/configuration"
-        className="block w-full bg-[#ffd93d] text-[#0f0e17] rounded-2xl py-5 font-fredoka text-xl hover:opacity-90 transition text-center"
-      >
-        Lancer un quiz !
-      </Link>
-    ) : (
-      <>
-        <Link
-          href="/inscription"
-          className="block w-full bg-[#ff6b6b] text-white rounded-2xl py-5 font-fredoka text-xl hover:opacity-90 transition text-center"
-        >
-          Créer mon compte gratuit
-        </Link>
+          <div className="flex flex-col gap-4 w-full max-w-sm">
+            {connecte ? (
+              <Link
+                href="/configuration"
+                className="block w-full bg-[#ffd93d] text-[#0f0e17] rounded-2xl py-5 font-fredoka text-xl hover:opacity-90 transition text-center"
+              >
+                Lancer un quiz !
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/inscription"
+                  className="block w-full bg-[#ff6b6b] text-white rounded-2xl py-5 font-fredoka text-xl hover:opacity-90 transition text-center"
+                >
+                  Créer mon compte gratuit
+                </Link>
 
-        <Link
-          href="/connexion"
-          className="block w-full border border-[#3a3650] text-[#c9c4e0] rounded-2xl py-4 font-fredoka text-lg hover:bg-[#1e1c2e] transition text-center"
-        >
-          J'ai déjà un compte →
-        </Link>
+                <Link
+                  href="/connexion"
+                  className="block w-full border border-[#3a3650] text-[#c9c4e0] rounded-2xl py-4 font-fredoka text-lg hover:bg-[#1e1c2e] transition text-center"
+                >
+                  J'ai déjà un compte →
+                </Link>
 
-        <button className="w-full text-[#9b96b8] text-sm font-semibold hover:text-[#c9c4e0] transition py-3">
-          Jouer sans compte
-        </button>
-      </>
-    )}
-  </div>
-</div>
+                <button
+                  onClick={handleJouerSansCompte}
+                  className="w-full text-[#9b96b8] text-sm font-semibold hover:text-[#c9c4e0] transition py-3"
+                >
+                  Jouer sans compte
+                </button>
+              </>
+            )}
+          </div>
+        </div>
 
         {/* Séparateur */}
         <div className="w-full max-w-2xl border-t border-[#1e1c2e]" style={{ marginTop: '80px', marginBottom: '60px' }}></div>

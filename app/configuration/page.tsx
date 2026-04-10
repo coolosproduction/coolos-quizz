@@ -113,9 +113,11 @@ export default function Configuration() {
           <span className="text-[#a78bfa]">s</span>
           <span className="text-[#c9c4e0]"> Quiz</span>
         </Link>
-        <Link href="/profil" className="w-10 h-10 rounded-full bg-[#2a1f3d] border-2 border-[#a78bfa] flex items-center justify-center cursor-pointer">
-          <div className="w-5 h-5 rounded-full bg-[#a78bfa]"></div>
-        </Link>
+        {typeof window !== 'undefined' && sessionStorage.getItem('is_invite') !== 'true' && (
+  <Link href="/profil" className="w-10 h-10 rounded-full bg-[#2a1f3d] border-2 border-[#a78bfa] flex items-center justify-center cursor-pointer">
+    <div className="w-5 h-5 rounded-full bg-[#a78bfa]"></div>
+  </Link>
+)}
       </nav>
 
       <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '40px' }}>
