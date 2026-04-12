@@ -16,7 +16,7 @@ export default function Connexion() {
     setError('')
     setLoading(true)
     const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data: signInData, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
@@ -25,6 +25,25 @@ export default function Connexion() {
       setLoading(false)
       return
     }
+
+    if (signInData.user) {
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', signInData.user.id)
+        .single()
+
+      if (!existingUser) {
+        const pseudo = signInData.user.user_metadata?.pseudo || email.split('@')[0]
+        await supabase.from('users').insert({
+          id: signInData.user.id,
+          email,
+          pseudo,
+          role: 'user',
+        })
+      }
+    }
+
     router.push('/configuration')
   }
 
