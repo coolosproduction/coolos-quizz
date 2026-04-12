@@ -338,6 +338,9 @@ export default function Admin() {
                   <div onClick={() => toggleCategory(c.id)} className="rounded-full cursor-pointer relative" style={{ width: '40px', height: '20px', background: c.active ? '#6bcb77' : '#2a2830' }}>
                     <div className="rounded-full bg-white absolute" style={{ width: '16px', height: '16px', top: '2px', left: c.active ? '22px' : '2px', transition: 'left 0.2s' }}></div>
                   </div>
+                  <Link href={`/admin/categorie/modifier/${c.id}`} className="flex items-center justify-center hover:opacity-80" style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#1a2a2d' }}>
+                    <div className="w-3 h-3 rounded bg-[#4ecdc4]"></div>
+                  </Link>
                   <button onClick={() => deleteCategory(c.id)} className="flex items-center justify-center hover:opacity-80" style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#2e1a1a' }}>
                     <div className="rounded bg-[#ff6b6b]" style={{ width: '12px', height: '3px' }}></div>
                   </button>
