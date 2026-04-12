@@ -68,7 +68,6 @@ export default function Admin() {
   const loadData = async () => {
     const supabase = createClient()
 
-    // Questions
     const { data: questionsData } = await supabase
       .from('questions')
       .select('id, question_text, answer_text, difficulty, active, category_id, categories(name)')
@@ -85,7 +84,6 @@ export default function Admin() {
       })))
     }
 
-    // Categories avec comptage
     const { data: catsData } = await supabase
       .from('categories')
       .select('id, name, active')
@@ -102,7 +100,6 @@ export default function Admin() {
       setCategories(catsWithCount)
     }
 
-    // Users avec stats
     const { data: usersData } = await supabase
       .from('users')
       .select('id, pseudo, email')
@@ -291,6 +288,9 @@ export default function Admin() {
                     <div onClick={() => toggleQuestion(q.id)} className="rounded-full cursor-pointer relative" style={{ width: '40px', height: '20px', background: q.active ? '#6bcb77' : '#2a2830' }}>
                       <div className="rounded-full bg-white absolute" style={{ width: '16px', height: '16px', top: '2px', left: q.active ? '22px' : '2px', transition: 'left 0.2s' }}></div>
                     </div>
+                    <Link href={`/admin/question/modifier/${q.id}`} className="flex items-center justify-center hover:opacity-80" style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#2a1f3d' }}>
+                      <div className="w-3 h-3 rounded bg-[#a78bfa]"></div>
+                    </Link>
                     <button onClick={() => deleteQuestion(q.id)} className="flex items-center justify-center hover:opacity-80" style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#2e1a1a' }}>
                       <div className="rounded bg-[#ff6b6b]" style={{ width: '12px', height: '3px' }}></div>
                     </button>
