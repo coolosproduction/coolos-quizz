@@ -30,7 +30,7 @@ export default function Inscription() {
     }
     setLoading(true)
     const supabase = createClient()
-    const { error } = await supabase.auth.signUp({
+    const { data: signUpData, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -42,7 +42,15 @@ export default function Inscription() {
       setLoading(false)
       return
     }
-   router.push('/')
+    if (signUpData.user) {
+      await supabase.from('users').insert({
+        id: signUpData.user.id,
+        email,
+        pseudo,
+        role: 'user',
+      })
+    }
+    router.push('/')
   }
 
   return (
