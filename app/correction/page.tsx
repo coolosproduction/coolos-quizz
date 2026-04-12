@@ -32,6 +32,12 @@ export default function Correction() {
   const [saving, setSaving] = useState(false)
   const savingRef = useRef(false)
 
+  // Signalement
+  const [signalModal, setSignalModal] = useState(false)
+  const [signalTexte, setSignalTexte] = useState('')
+  const [signalEnvoye, setSignalEnvoye] = useState(false)
+  const [signalEnvoi, setSignalEnvoi] = useState(false)
+
   useEffect(() => {
     const data = sessionStorage.getItem('reponses_partie')
     if (!data) {
@@ -44,6 +50,12 @@ export default function Correction() {
     setLoading(false)
   }, [])
 
+  // Reset le signalement à chaque nouvelle question
+  useEffect(() => {
+    setSignalEnvoye(false)
+    setSignalTexte('')
+  }, [index])
+
   const question = questions[index]
   const evalActuelle = evals[index]
   const total = questions.length
@@ -52,6 +64,44 @@ export default function Correction() {
     const newEvals = [...evals]
     newEvals[index] = val
     setEvals(newEvals)
+  }
+
+  const handleEnvoyerSignalement = async () => {
+    if (!signalTexte.trim()) return
+    setSignalEnvoi(true)
+
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    let pseudo = 'Invité'
+    let userId = null
+
+    if (user) {
+      userId = user.id
+      const { data } = await supabase
+        .from('users')
+        .select('pseudo')
+        .eq('id', user.id)
+        .single()
+      pseudo = data?.pseudo || user.email || 'Utilisateur'
+    } else {
+      const pseudoSession = sessionStorage.getItem('invite_pseudo')
+      if (pseudoSession) pseudo = pseudoSession
+    }
+
+    await supabase.from('messages').insert({
+      user_id: userId,
+      pseudo,
+      type: 'signalement',
+      question_id: questions[index].questionId,
+      sujet: 'Signalement question',
+      contenu: signalTexte.trim(),
+    })
+
+    setSignalEnvoi(false)
+    setSignalTexte('')
+    setSignalModal(false)
+    setSignalEnvoye(true)
   }
 
   const handleNext = async () => {
@@ -139,6 +189,39 @@ export default function Correction() {
 
   return (
     <main className="min-h-screen bg-[#0f0e17]" style={{ padding: '32px 24px' }}>
+
+      {/* Modal signalement */}
+      {signalModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: 'rgba(0,0,0,0.7)' }}>
+          <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-8 w-full max-w-sm flex flex-col gap-5">
+            <h3 className="font-fredoka text-xl text-[#eeeaf8] text-center">Signaler une erreur</h3>
+            <p className="text-[#9b96b8] text-sm text-center">
+              Décris le problème avec cette question et on la corrigera dès que possible.
+            </p>
+            <textarea
+              value={signalTexte}
+              onChange={e => setSignalTexte(e.target.value)}
+              placeholder="Ex : La réponse officielle est incorrecte..."
+              rows={4}
+              className="bg-[#0f0e17] border border-[#2a2830] rounded-xl px-4 py-3 text-[#eeeaf8] font-fredoka focus:outline-none focus:border-[#ff6b6b] transition placeholder-[#3a3650] resize-none"
+            />
+            <button
+              onClick={handleEnvoyerSignalement}
+              disabled={signalEnvoi || !signalTexte.trim()}
+              className="w-full bg-[#ff6b6b] text-[#0f0e17] rounded-2xl py-4 font-fredoka text-lg hover:opacity-90 transition disabled:opacity-50"
+            >
+              {signalEnvoi ? 'Envoi...' : 'Envoyer le signalement →'}
+            </button>
+            <button
+              onClick={() => { setSignalModal(false); setSignalTexte('') }}
+              className="w-full text-[#6b6880] text-sm font-semibold hover:text-[#9b96b8] transition"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
+
       <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
 
         <div className="flex justify-between items-center">
@@ -157,9 +240,24 @@ export default function Correction() {
           ></div>
         </div>
 
-        <div className="inline-flex items-center gap-2 bg-[#1e1c2e] border border-[#2a2830] rounded-full px-4 py-2" style={{ width: 'fit-content' }}>
-          <div className="w-2 h-2 rounded-full bg-[#ff6b6b]"></div>
-          <span className="font-fredoka text-[#9b96b8] text-sm">{question.category}</span>
+        <div className="flex items-center justify-between">
+          <div className="inline-flex items-center gap-2 bg-[#1e1c2e] border border-[#2a2830] rounded-full px-4 py-2">
+            <div className="w-2 h-2 rounded-full bg-[#ff6b6b]"></div>
+            <span className="font-fredoka text-[#9b96b8] text-sm">{question.category}</span>
+          </div>
+
+          {/* Bouton signaler */}
+          {signalEnvoye ? (
+            <span className="font-fredoka text-[#6bcb77] text-xs">✓ Signalement envoyé</span>
+          ) : (
+            <button
+              onClick={() => setSignalModal(true)}
+              className="inline-flex items-center gap-1 text-[#3a3650] hover:text-[#ff6b6b] transition font-fredoka text-xs"
+            >
+              <span>⚑</span>
+              <span>Signaler cette question</span>
+            </button>
+          )}
         </div>
 
         <h2 className="font-fredoka text-3xl text-[#eeeaf8] leading-tight">

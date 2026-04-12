@@ -79,51 +79,64 @@ export default function Home() {
         </div>
       )}
 
-      {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 flex justify-between items-center bg-[#0f0e17] border-b border-[#1e1c2e] z-10 px-4 md:px-8 py-4">
-        <div className="flex items-center gap-3">
-          <div className="font-fredoka text-xl md:text-2xl">
-            <span className="text-[#ff6b6b]">C</span>
-            <span className="text-[#ff9f43]">o</span>
-            <span className="text-[#ffd93d]">o</span>
-            <span className="text-[#6bcb77]">l</span>
-            <span className="text-[#4ecdc4]">o</span>
-            <span className="text-[#a78bfa]">s</span>
-            <span className="text-[#c9c4e0]"> Quiz</span>
-          </div>
-          {nbQuestions !== null && (
-            <div className="bg-[#1e1c2e] border border-[#2a2830] rounded-full px-3 py-1 flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[#6bcb77]"></div>
-              <span className="font-fredoka text-[#6bcb77] text-xs md:text-sm">{nbQuestions} questions</span>
-            </div>
-          )}
-        </div>
-        {!loading && (
-          connecte ? (
-            <div className="flex items-center gap-3">
-              <Link
-                href="/configuration"
-                className="bg-[#ffd93d] text-[#0f0e17] rounded-full px-4 py-2 font-fredoka text-sm hover:opacity-90 transition"
-              >
-                Jouer →
-              </Link>
-              <Link
-                href="/profil"
-                className="w-9 h-9 rounded-full bg-[#2a1f3d] border-2 border-[#a78bfa] flex items-center justify-center"
-              >
-                <div className="w-4 h-4 rounded-full bg-[#a78bfa]"></div>
-              </Link>
-            </div>
-          ) : (
-            <Link
-              href="/connexion"
-              className="border border-[#3a3650] text-[#c9c4e0] rounded-full px-4 py-2 text-sm hover:bg-[#1e1c2e] transition"
-            >
-              Connexion
-            </Link>
-          )
-        )}
-      </nav>
+  <div className="flex items-center gap-3">
+    <div className="font-fredoka text-xl md:text-2xl">
+      <span className="text-[#ff6b6b]">C</span>
+      <span className="text-[#ff9f43]">o</span>
+      <span className="text-[#ffd93d]">o</span>
+      <span className="text-[#6bcb77]">l</span>
+      <span className="text-[#4ecdc4]">o</span>
+      <span className="text-[#a78bfa]">s</span>
+      <span className="text-[#c9c4e0]"> Quiz</span>
+    </div>
+    {nbQuestions !== null && (
+      <div className="bg-[#1e1c2e] border border-[#2a2830] rounded-full px-3 py-1 flex items-center gap-2">
+        <div className="w-2 h-2 rounded-full bg-[#6bcb77]"></div>
+        <span className="font-fredoka text-[#6bcb77] text-xs md:text-sm">{nbQuestions} questions</span>
+      </div>
+    )}
+  </div>
+  {!loading && (
+    connecte ? (
+      <div className="flex items-center gap-3">
+        <Link
+          href="/contact"
+          className="font-fredoka text-sm text-[#6b6880] hover:text-[#c9c4e0] transition"
+        >
+          Contact
+        </Link>
+        <Link
+          href="/configuration"
+          className="bg-[#ffd93d] text-[#0f0e17] rounded-full px-4 py-2 font-fredoka text-sm hover:opacity-90 transition"
+        >
+          Jouer →
+        </Link>
+        <Link
+          href="/profil"
+          className="w-9 h-9 rounded-full bg-[#2a1f3d] border-2 border-[#a78bfa] flex items-center justify-center"
+        >
+          <div className="w-4 h-4 rounded-full bg-[#a78bfa]"></div>
+        </Link>
+      </div>
+    ) : (
+      <div className="flex items-center gap-3">
+        <Link
+          href="/contact"
+          className="font-fredoka text-sm text-[#6b6880] hover:text-[#c9c4e0] transition"
+        >
+          Contact
+        </Link>
+        <Link
+          href="/connexion"
+          className="border border-[#3a3650] text-[#c9c4e0] rounded-full px-4 py-2 text-sm hover:bg-[#1e1c2e] transition"
+        >
+          Connexion
+        </Link>
+      </div>
+    )
+  )}
+</nav>
 
       {/* Contenu principal */}
       <div className="flex flex-col items-center px-6 pb-16 text-center" style={{ paddingTop: '100px' }}>

@@ -36,12 +36,24 @@ type UserStat = {
   reussite: number
 }
 
+type Message = {
+  id: string
+  pseudo: string
+  type: 'message' | 'signalement'
+  question_id: string | null
+  sujet: string | null
+  contenu: string
+  lu: boolean
+  created_at: string
+}
+
 export default function Admin() {
   const router = useRouter()
-  const [panel, setPanel] = useState<'questions' | 'categories' | 'users'>('questions')
+  const [panel, setPanel] = useState<'questions' | 'categories' | 'users' | 'messages'>('questions')
   const [questions, setQuestions] = useState<Question[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [users, setUsers] = useState<UserStat[]>([])
+  const [messages, setMessages] = useState<Message[]>([])
   const [totalQuestions, setTotalQuestions] = useState(0)
   const [search, setSearch] = useState('')
   const [authorized, setAuthorized] = useState(false)
@@ -123,6 +135,15 @@ export default function Admin() {
       setTotalQuestions(usersWithStats.reduce((acc, u) => acc + u.questions, 0))
     }
 
+    const { data: messagesData } = await supabase
+      .from('messages')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (messagesData) {
+      setMessages(messagesData as Message[])
+    }
+
     setLoading(false)
   }
 
@@ -156,10 +177,25 @@ export default function Admin() {
     setCategories(prev => prev.filter(c => c.id !== id))
   }
 
+  const marquerLu = async (id: string) => {
+    const supabase = createClient()
+    await supabase.from('messages').update({ lu: true }).eq('id', id)
+    setMessages(prev => prev.map(m => m.id === id ? { ...m, lu: true } : m))
+  }
+
+  const supprimerMessage = async (id: string) => {
+    if (!confirm('Supprimer ce message ?')) return
+    const supabase = createClient()
+    await supabase.from('messages').delete().eq('id', id)
+    setMessages(prev => prev.filter(m => m.id !== id))
+  }
+
   const questionsFiltrees = questions.filter(q =>
     q.question.toLowerCase().includes(search.toLowerCase()) ||
     q.category.toLowerCase().includes(search.toLowerCase())
   )
+
+  const nonLus = messages.filter(m => !m.lu).length
 
   if (!authorized || loading) {
     return (
@@ -220,6 +256,25 @@ export default function Admin() {
         >
           <div className="w-2 h-2 rounded-full bg-[#a78bfa]"></div>
           Utilisateurs
+        </button>
+
+        <button
+          onClick={() => setPanel('messages')}
+          className="flex items-center gap-3 font-fredoka text-sm text-left"
+          style={{
+            padding: '10px 20px',
+            background: panel === 'messages' ? '#1a1828' : 'transparent',
+            color: panel === 'messages' ? '#eeeaf8' : '#6b6880',
+            borderRight: panel === 'messages' ? '3px solid #ff9f43' : '3px solid transparent',
+          }}
+        >
+          <div className="w-2 h-2 rounded-full bg-[#ff9f43]"></div>
+          <span style={{ flex: 1 }}>Messages</span>
+          {nonLus > 0 && (
+            <span className="font-fredoka text-xs rounded-full flex items-center justify-center" style={{ background: '#ff6b6b', color: '#fff', minWidth: '18px', height: '18px', padding: '0 5px' }}>
+              {nonLus}
+            </span>
+          )}
         </button>
 
         <div style={{ flex: 1 }}></div>
@@ -400,6 +455,119 @@ export default function Admin() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Panel Messages */}
+        {panel === 'messages' && (
+          <div>
+            <div style={{ marginBottom: '24px' }}>
+              <h2 className="font-fredoka text-2xl text-[#eeeaf8]">Messages & Signalements</h2>
+              <p className="text-[#6b6880] text-sm" style={{ marginTop: '4px' }}>Messages des utilisateurs et signalements de questions</p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4" style={{ marginBottom: '24px' }}>
+              <div className="bg-[#1a1828] border border-[#2a2830] rounded-xl p-4 text-center">
+                <div className="font-fredoka text-2xl text-[#ff9f43]">{messages.length}</div>
+                <div className="text-[#6b6880] text-xs" style={{ marginTop: '4px' }}>Total</div>
+              </div>
+              <div className="bg-[#1a1828] border border-[#2a2830] rounded-xl p-4 text-center">
+                <div className="font-fredoka text-2xl text-[#ff6b6b]">{nonLus}</div>
+                <div className="text-[#6b6880] text-xs" style={{ marginTop: '4px' }}>Non lus</div>
+              </div>
+              <div className="bg-[#1a1828] border border-[#2a2830] rounded-xl p-4 text-center">
+                <div className="font-fredoka text-2xl text-[#6bcb77]">{messages.filter(m => m.lu).length}</div>
+                <div className="text-[#6b6880] text-xs" style={{ marginTop: '4px' }}>Traités</div>
+              </div>
+            </div>
+
+            {messages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center" style={{ padding: '60px 0' }}>
+                <p className="font-fredoka text-[#4a4760] text-xl">Aucun message pour l'instant</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {messages.map(m => (
+                  <div
+                    key={m.id}
+                    style={{
+                      background: m.lu ? '#141320' : '#1a1828',
+                      border: `1px solid ${m.lu ? '#1e1c2e' : m.type === 'signalement' ? '#ff6b6b' : '#ff9f43'}`,
+                      borderRadius: '12px',
+                      padding: '16px',
+                      opacity: m.lu ? 0.6 : 1,
+                    }}
+                  >
+                    <div className="flex items-center justify-between" style={{ marginBottom: '10px' }}>
+                      <div className="flex items-center gap-3">
+                        <span
+                          className="font-fredoka text-xs rounded-full px-3 py-1"
+                          style={{
+                            background: m.type === 'signalement' ? '#2e1a1a' : '#1f1a10',
+                            color: m.type === 'signalement' ? '#ff6b6b' : '#ff9f43',
+                          }}
+                        >
+                          {m.type === 'signalement' ? '⚑ Signalement' : '✉ Message'}
+                        </span>
+                        <span className="font-fredoka text-sm text-[#eeeaf8]">{m.pseudo}</span>
+                        {!m.lu && (
+                          <span className="font-fredoka text-xs rounded-full px-2 py-0.5" style={{ background: '#ff6b6b', color: '#fff' }}>
+                            Nouveau
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[#4a4760] text-xs">
+                        {new Date(m.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+
+                    {m.sujet && m.type === 'message' && (
+                      <p className="font-fredoka text-[#c9c4e0] text-sm" style={{ marginBottom: '6px' }}>
+                        Sujet : {m.sujet}
+                      </p>
+                    )}
+
+                    {m.question_id && (
+                      <p className="text-[#6b6880] text-xs" style={{ marginBottom: '6px' }}>
+                        Question ID : <span className="text-[#9b96b8]">{m.question_id}</span>
+                      </p>
+                    )}
+
+                    <p className="text-[#9b96b8] text-sm" style={{ marginBottom: '12px', lineHeight: '1.5' }}>
+                      {m.contenu}
+                    </p>
+
+                    <div className="flex items-center gap-3">
+                      {!m.lu && (
+                        <button
+                          onClick={() => marquerLu(m.id)}
+                          className="font-fredoka text-xs hover:opacity-80 transition rounded-lg px-3 py-1.5"
+                          style={{ background: '#1a2e1f', color: '#6bcb77', border: '1px solid #1f3a28' }}
+                        >
+                          ✓ Marquer comme lu
+                        </button>
+                      )}
+                      {m.question_id && (
+                        <Link
+                          href={`/admin/question/modifier/${m.question_id}`}
+                          className="font-fredoka text-xs hover:opacity-80 transition rounded-lg px-3 py-1.5"
+                          style={{ background: '#2a1f3d', color: '#a78bfa', border: '1px solid #3a2d5a' }}
+                        >
+                          Voir la question →
+                        </Link>
+                      )}
+                      <button
+                        onClick={() => supprimerMessage(m.id)}
+                        className="font-fredoka text-xs hover:opacity-80 transition rounded-lg px-3 py-1.5"
+                        style={{ background: '#2e1a1a', color: '#ff6b6b', border: '1px solid #3a2020' }}
+                      >
+                        Supprimer
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
