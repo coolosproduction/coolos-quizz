@@ -9,6 +9,7 @@ const diffColors: Record<string, string> = {
   facile: '#6bcb77',
   moyen: '#ffd93d',
   difficile: '#ff6b6b',
+  hardcore: '#a78bfa',
 }
 
 type Question = {

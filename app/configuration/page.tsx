@@ -9,6 +9,7 @@ const difficultes = [
   { id: 'facile', label: 'Facile', sub: 'Pour débuter', color: '#6bcb77', bg: '#1a2e1f' },
   { id: 'moyen', label: 'Moyen', sub: 'Un peu corsé', color: '#ffd93d', bg: '#1f1e10' },
   { id: 'difficile', label: 'Difficile', sub: 'Expert only', color: '#ff6b6b', bg: '#2e1a1a' },
+  { id: 'hardcore', label: 'Hardcore', sub: 'Sans pitié', color: '#a78bfa', bg: '#2a1f3d' },
 ]
 
 const nbQuestions = [10, 20, 30, 40, 50]
@@ -90,7 +91,7 @@ export default function Configuration() {
 
   const handleLancer = () => {
     const categoryIds = themesSelec.length === 0 ? themes.map(t => t.id) : themesSelec
-    const difficulties = diffSelec.length === 0 ? ['facile', 'moyen', 'difficile'] : diffSelec
+    const difficulties = diffSelec.length === 0 ? ['facile', 'moyen', 'difficile', 'hardcore'] : diffSelec
     const params = new URLSearchParams({
       categories: categoryIds.join(','),
       difficulties: difficulties.join(','),
@@ -114,10 +115,10 @@ export default function Configuration() {
           <span className="text-[#c9c4e0]"> Quiz</span>
         </Link>
         {typeof window !== 'undefined' && sessionStorage.getItem('is_invite') !== 'true' && (
-  <Link href="/profil" className="w-10 h-10 rounded-full bg-[#2a1f3d] border-2 border-[#a78bfa] flex items-center justify-center cursor-pointer">
-    <div className="w-5 h-5 rounded-full bg-[#a78bfa]"></div>
-  </Link>
-)}
+          <Link href="/profil" className="w-10 h-10 rounded-full bg-[#2a1f3d] border-2 border-[#a78bfa] flex items-center justify-center cursor-pointer">
+            <div className="w-5 h-5 rounded-full bg-[#a78bfa]"></div>
+          </Link>
+        )}
       </nav>
 
       <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '40px' }}>

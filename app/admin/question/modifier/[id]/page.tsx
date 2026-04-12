@@ -24,6 +24,7 @@ export default function ModifierQuestion() {
     { id: 'facile', label: 'Facile', color: '#6bcb77', bg: '#1a2e1f' },
     { id: 'moyen', label: 'Moyen', color: '#ffd93d', bg: '#1f1e10' },
     { id: 'difficile', label: 'Difficile', color: '#ff6b6b', bg: '#2e1a1a' },
+    { id: 'hardcore', label: 'Hardcore', color: '#a78bfa', bg: '#2a1f3d' },
   ]
 
   useEffect(() => {
