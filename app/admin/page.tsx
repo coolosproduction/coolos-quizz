@@ -56,6 +56,12 @@ type ModalSanction = {
   pseudo: string
 }
 
+type ModalMessage = {
+  open: boolean
+  userId: string
+  pseudo: string
+}
+
 export default function Admin() {
   const router = useRouter()
   const [panel, setPanel] = useState<'questions' | 'categories' | 'users' | 'messages'>('questions')
@@ -73,6 +79,13 @@ export default function Admin() {
   const [sanctionType, setSanctionType] = useState<'suspension' | 'bannissement'>('suspension')
   const [suspensionDuree, setSuspensionDuree] = useState('1')
   const [suspensionUnite, setSuspensionUnite] = useState<'heures' | 'jours' | 'semaines'>('jours')
+
+  // Modal message
+  const [modalMessage, setModalMessage] = useState<ModalMessage>({ open: false, userId: '', pseudo: '' })
+  const [msgTitre, setMsgTitre] = useState('')
+  const [msgContenu, setMsgContenu] = useState('')
+  const [msgEnvoi, setMsgEnvoi] = useState(false)
+  const [msgEnvoye, setMsgEnvoye] = useState(false)
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -246,6 +259,25 @@ export default function Admin() {
     setUsers(prev => prev.map(u => u.id === id ? { ...u, statut: 'actif', suspendu_jusqu_au: null } : u))
   }
 
+  const envoyerMessage = async () => {
+    if (!msgTitre.trim() || !msgContenu.trim()) return
+    setMsgEnvoi(true)
+    const supabase = createClient()
+    await supabase.from('notifications').insert({
+      user_id: modalMessage.userId,
+      titre: msgTitre.trim(),
+      contenu: msgContenu.trim(),
+    })
+    setMsgEnvoi(false)
+    setMsgEnvoye(true)
+    setTimeout(() => {
+      setModalMessage({ open: false, userId: '', pseudo: '' })
+      setMsgTitre('')
+      setMsgContenu('')
+      setMsgEnvoye(false)
+    }, 1500)
+  }
+
   const getStatutBadge = (u: UserStat) => {
     if (u.statut === 'banni') return { label: 'Banni', color: '#ff6b6b', bg: '#2e1a1a' }
     if (u.statut === 'suspendu' && u.suspendu_jusqu_au && new Date(u.suspendu_jusqu_au) > new Date()) {
@@ -279,8 +311,6 @@ export default function Admin() {
             <h3 className="font-fredoka text-xl text-[#eeeaf8] text-center">
               Sanctionner <span className="text-[#ff6b6b]">{modalSanction.pseudo}</span>
             </h3>
-
-            {/* Type de sanction */}
             <div className="flex gap-3">
               <button
                 onClick={() => setSanctionType('suspension')}
@@ -305,8 +335,6 @@ export default function Admin() {
                 Bannissement
               </button>
             </div>
-
-            {/* Durée si suspension */}
             {sanctionType === 'suspension' && (
               <div className="flex flex-col gap-3">
                 <p className="font-fredoka text-[#9b96b8] text-sm">Durée de la suspension</p>
@@ -337,13 +365,11 @@ export default function Admin() {
                 </div>
               </div>
             )}
-
             {sanctionType === 'bannissement' && (
               <p className="text-[#9b96b8] text-sm text-center">
                 L'utilisateur sera banni définitivement et ne pourra plus se connecter.
               </p>
             )}
-
             <button
               onClick={appliquerSanction}
               className="w-full font-fredoka text-lg rounded-2xl py-4 hover:opacity-90 transition"
@@ -354,13 +380,63 @@ export default function Admin() {
             >
               {sanctionType === 'bannissement' ? 'Bannir définitivement' : 'Appliquer la suspension'}
             </button>
-
             <button
               onClick={() => setModalSanction({ open: false, userId: '', pseudo: '' })}
               className="w-full text-[#6b6880] text-sm font-semibold hover:text-[#9b96b8] transition"
             >
               Annuler
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal message */}
+      {modalMessage.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: 'rgba(0,0,0,0.7)' }}>
+          <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-8 w-full max-w-sm flex flex-col gap-5">
+            <h3 className="font-fredoka text-xl text-[#eeeaf8] text-center">
+              Envoyer un message à <span className="text-[#a78bfa]">{modalMessage.pseudo}</span>
+            </h3>
+            {msgEnvoye ? (
+              <p className="font-fredoka text-[#6bcb77] text-center text-lg">✓ Message envoyé !</p>
+            ) : (
+              <>
+                <div className="flex flex-col gap-2">
+                  <label className="font-fredoka text-[#9b96b8] text-sm">Titre</label>
+                  <input
+                    type="text"
+                    value={msgTitre}
+                    onChange={e => setMsgTitre(e.target.value)}
+                    placeholder="Objet du message..."
+                    className="bg-[#0f0e17] border border-[#2a2830] rounded-xl px-4 py-3 text-[#eeeaf8] font-fredoka focus:outline-none focus:border-[#a78bfa] transition"
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="font-fredoka text-[#9b96b8] text-sm">Message</label>
+                  <textarea
+                    value={msgContenu}
+                    onChange={e => setMsgContenu(e.target.value)}
+                    placeholder="Ton message..."
+                    rows={4}
+                    className="bg-[#0f0e17] border border-[#2a2830] rounded-xl px-4 py-3 text-[#eeeaf8] font-fredoka focus:outline-none focus:border-[#a78bfa] transition resize-none"
+                  />
+                </div>
+                <button
+                  onClick={envoyerMessage}
+                  disabled={msgEnvoi || !msgTitre.trim() || !msgContenu.trim()}
+                  className="w-full font-fredoka text-lg rounded-2xl py-4 hover:opacity-90 transition disabled:opacity-50"
+                  style={{ background: '#a78bfa', color: '#0f0e17' }}
+                >
+                  {msgEnvoi ? 'Envoi...' : 'Envoyer →'}
+                </button>
+                <button
+                  onClick={() => { setModalMessage({ open: false, userId: '', pseudo: '' }); setMsgTitre(''); setMsgContenu('') }}
+                  className="w-full text-[#6b6880] text-sm font-semibold hover:text-[#9b96b8] transition"
+                >
+                  Annuler
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -629,6 +705,13 @@ export default function Admin() {
                       <div className="font-fredoka text-sm w-16 text-center" style={{ color: '#ffd93d' }}>{u.questions.toLocaleString()}</div>
                       <div className="font-fredoka text-sm w-12 text-center" style={{ color: u.reussite >= 70 ? '#6bcb77' : '#ffd93d' }}>{u.reussite}%</div>
                       <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setModalMessage({ open: true, userId: u.id, pseudo: u.pseudo })}
+                          className="font-fredoka text-xs rounded-lg px-3 py-1.5 hover:opacity-80 transition"
+                          style={{ background: '#2a1f3d', color: '#a78bfa', border: '1px solid #3a2d5a' }}
+                        >
+                          ✉ Message
+                        </button>
                         {badge ? (
                           <button
                             onClick={() => leverSanction(u.id)}

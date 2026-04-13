@@ -26,11 +26,21 @@ type StatCategorie = {
   taux: number
 }
 
+type Notification = {
+  id: string
+  titre: string
+  contenu: string
+  lu: boolean
+  created_at: string
+}
+
 export default function Profil() {
   const router = useRouter()
-  const [onglet, setOnglet] = useState<'stats' | 'categories'>('stats')
+  const [onglet, setOnglet] = useState<'stats' | 'categories' | 'messages'>('stats')
   const [stats, setStats] = useState<Stats | null>(null)
   const [statsCategories, setStatsCategories] = useState<StatCategorie[]>([])
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [nbNonLus, setNbNonLus] = useState(0)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -94,7 +104,6 @@ export default function Profil() {
 
         if (answersWithCat) {
           const catMap: Record<string, { total: number, oui: number, enPartie: number, non: number }> = {}
-
           answersWithCat.forEach((a: any) => {
             const nom = a.question?.categories?.name || 'Autre'
             if (!catMap[nom]) catMap[nom] = { total: 0, oui: 0, enPartie: 0, non: 0 }
@@ -103,7 +112,6 @@ export default function Profil() {
             else if (a.self_eval === 'en_partie') catMap[nom].enPartie++
             else if (a.self_eval === 'non') catMap[nom].non++
           })
-
           const result = Object.entries(catMap).map(([nom, v]) => ({
             nom,
             total: v.total,
@@ -112,15 +120,33 @@ export default function Profil() {
             non: v.non,
             taux: v.total > 0 ? Math.round((v.oui / v.total) * 100) : 0,
           })).sort((a, b) => b.total - a.total)
-
           setStatsCategories(result)
         }
+      }
+
+      // Notifications
+      const { data: notifs } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (notifs) {
+        setNotifications(notifs as Notification[])
+        setNbNonLus(notifs.filter(n => !n.lu).length)
       }
 
       setLoading(false)
     }
     loadStats()
   }, [])
+
+  const marquerNotifLue = async (id: string) => {
+    const supabase = createClient()
+    await supabase.from('notifications').update({ lu: true }).eq('id', id)
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, lu: true } : n))
+    setNbNonLus(prev => Math.max(0, prev - 1))
+  }
 
   const handleDeconnexion = async () => {
     const supabase = createClient()
@@ -193,6 +219,21 @@ export default function Profil() {
           >
             Par catégorie
           </button>
+          <button
+            onClick={() => setOnglet('messages')}
+            className="flex-1 text-center font-fredoka text-sm py-3 rounded-lg relative"
+            style={{ background: onglet === 'messages' ? '#0f0e17' : 'transparent', color: onglet === 'messages' ? '#eeeaf8' : '#9b96b8' }}
+          >
+            Messages
+            {nbNonLus > 0 && (
+              <span
+                className="absolute font-fredoka text-xs rounded-full flex items-center justify-center"
+                style={{ background: '#ff6b6b', color: '#fff', width: '18px', height: '18px', top: '4px', right: '8px', fontSize: '10px' }}
+              >
+                {nbNonLus}
+              </span>
+            )}
+          </button>
         </div>
 
         {/* Panel stats globales */}
@@ -246,7 +287,7 @@ export default function Profil() {
             <Link href="/configuration" className="block w-full bg-[#ffd93d] text-[#0f0e17] rounded-2xl py-4 font-fredoka text-lg text-center hover:opacity-90 transition">
               Lancer un quiz !
             </Link>
-            
+
             <Link href="/historique" className="block w-full border rounded-2xl py-4 font-fredoka text-lg text-center hover:bg-[#1f1e10] transition" style={{ borderColor: '#ffd93d', color: '#ffd93d' }}>
               Voir mon historique →
             </Link>
@@ -283,6 +324,58 @@ export default function Profil() {
                     <span className="text-[#ffd93d] text-xs font-fredoka">{cat.enPartie} en partie</span>
                     <span className="text-[#ff6b6b] text-xs font-fredoka">{cat.non} non</span>
                   </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Panel messages */}
+        {onglet === 'messages' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {notifications.length === 0 ? (
+              <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-10 text-center">
+                <p className="font-fredoka text-[#9b96b8] text-xl mb-2">Aucun message</p>
+                <p className="text-[#6b6880] text-sm">Tu recevras ici les messages de l'équipe Coolos.</p>
+              </div>
+            ) : (
+              notifications.map(n => (
+                <div
+                  key={n.id}
+                  style={{
+                    background: n.lu ? '#141320' : '#1a1828',
+                    border: `1px solid ${n.lu ? '#1e1c2e' : '#a78bfa'}`,
+                    borderRadius: '16px',
+                    padding: '20px',
+                    opacity: n.lu ? 0.7 : 1,
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-3" style={{ marginBottom: '10px' }}>
+                    <div className="flex items-center gap-2">
+                      <span className="font-fredoka text-xs rounded-full px-3 py-1" style={{ background: '#2a1f3d', color: '#a78bfa' }}>
+                        ✉ Coolos
+                      </span>
+                      {!n.lu && (
+                        <span className="font-fredoka text-xs rounded-full px-2 py-0.5" style={{ background: '#a78bfa', color: '#0f0e17' }}>
+                          Nouveau
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[#4a4760] text-xs flex-shrink-0">
+                      {new Date(n.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  <p className="font-fredoka text-[#eeeaf8] text-base" style={{ marginBottom: '8px' }}>{n.titre}</p>
+                  <p className="text-[#9b96b8] text-sm leading-relaxed" style={{ marginBottom: '12px' }}>{n.contenu}</p>
+                  {!n.lu && (
+                    <button
+                      onClick={() => marquerNotifLue(n.id)}
+                      className="font-fredoka text-xs rounded-lg px-3 py-1.5 hover:opacity-80 transition"
+                      style={{ background: '#2a1f3d', color: '#a78bfa', border: '1px solid #3a2d5a' }}
+                    >
+                      ✓ Marquer comme lu
+                    </button>
+                  )}
                 </div>
               ))
             )}
