@@ -15,6 +15,8 @@ export default function NouvelleQuestion() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [categories, setCategories] = useState<{ id: string, name: string }[]>([])
+  const [images, setImages] = useState<File[]>([])
+  const [previews, setPreviews] = useState<string[]>([])
 
   const difficultes = [
     { id: 'facile', label: 'Facile', color: '#6bcb77', bg: '#1a2e1f' },
@@ -36,6 +38,22 @@ export default function NouvelleQuestion() {
     loadCategories()
   }, [])
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+    const newImages = [...images, ...files].slice(0, 5)
+    setImages(newImages)
+    const newPreviews = newImages.map(f => URL.createObjectURL(f))
+    setPreviews(newPreviews)
+  }
+
+  const supprimerImage = (index: number) => {
+    const newImages = images.filter((_, i) => i !== index)
+    const newPreviews = previews.filter((_, i) => i !== index)
+    setImages(newImages)
+    setPreviews(newPreviews)
+  }
+
   const handleSave = async () => {
     if (!question || !answer || !categoryId || !difficulty) {
       setError('Tous les champs obligatoires doivent être remplis.')
@@ -44,7 +62,8 @@ export default function NouvelleQuestion() {
     setLoading(true)
     setError('')
     const supabase = createClient()
-    const { error } = await supabase
+
+    const { data: newQuestion, error: insertError } = await supabase
       .from('questions')
       .insert({
         question_text: question,
@@ -53,11 +72,39 @@ export default function NouvelleQuestion() {
         difficulty,
         active,
       })
-    if (error) {
-      setError('Erreur lors de la création : ' + error.message)
+      .select()
+      .single()
+
+    if (insertError) {
+      setError('Erreur lors de la création : ' + insertError.message)
       setLoading(false)
       return
     }
+
+    if (images.length > 0 && newQuestion) {
+      for (let i = 0; i < images.length; i++) {
+        const file = images[i]
+        const ext = file.name.split('.').pop()
+        const path = `${newQuestion.id}/${i + 1}.${ext}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('question-images')
+          .upload(path, file, { upsert: true })
+
+        if (!uploadError) {
+          const { data: { publicUrl } } = supabase.storage
+            .from('question-images')
+            .getPublicUrl(path)
+
+          await supabase.from('question_images').insert({
+            question_id: newQuestion.id,
+            url: publicUrl,
+            position: i + 1,
+          })
+        }
+      }
+    }
+
     router.push('/admin')
   }
 
@@ -166,12 +213,12 @@ export default function NouvelleQuestion() {
             </div>
             <div>
               <label className="block font-fredoka text-[#9b96b8] text-sm" style={{ marginBottom: '8px' }}>Difficulté *</label>
-              <div className="flex gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 {difficultes.map(d => (
                   <button
                     key={d.id}
                     onClick={() => setDifficulty(d.id)}
-                    className="flex-1 font-fredoka text-sm rounded-xl py-3"
+                    className="font-fredoka text-sm rounded-xl py-3"
                     style={{
                       background: difficulty === d.id ? d.bg : '#1a1828',
                       border: `1.5px solid ${difficulty === d.id ? d.color : '#3a3650'}`,
@@ -187,17 +234,54 @@ export default function NouvelleQuestion() {
 
           {/* Images */}
           <div>
-            <label className="block font-fredoka text-[#9b96b8] text-sm" style={{ marginBottom: '8px' }}>Images (optionnel)</label>
-            <div
-              className="w-full flex flex-col items-center justify-center cursor-pointer hover:border-[#3a3650] transition"
-              style={{ background: '#1a1828', border: '2px dashed #2a2830', borderRadius: '14px', padding: '32px' }}
-            >
-              <div className="w-10 h-8 rounded-lg border-2 border-[#3a3650] flex items-center justify-center mb-3">
-                <div className="w-4 h-4 rounded-full border-2 border-[#4a4760]"></div>
+            <p className="font-fredoka text-[#9b96b8] text-sm" style={{ marginBottom: '8px' }}>
+              Images (optionnel) — max 5
+            </p>
+
+            {previews.length > 0 && (
+              <div className="flex gap-3 flex-wrap" style={{ marginBottom: '12px' }}>
+                {previews.map((src, i) => (
+                  <div key={i} className="relative" style={{ width: '80px', height: '80px' }}>
+                    <img
+                      src={src}
+                      alt={`image ${i + 1}`}
+                      className="w-full h-full object-cover rounded-xl"
+                      style={{ border: '2px solid #2a2830' }}
+                    />
+                    <button
+                      onClick={() => supprimerImage(i)}
+                      className="absolute flex items-center justify-center font-fredoka text-xs"
+                      style={{ top: '-6px', right: '-6px', width: '20px', height: '20px', background: '#ff6b6b', color: '#fff', borderRadius: '50%' }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
               </div>
-              <p className="font-fredoka text-[#6b6880] text-sm">Cliquer pour ajouter une image</p>
-              <p className="text-[#4a4760] text-xs" style={{ marginTop: '4px' }}>JPG ou PNG · Plusieurs images possibles</p>
-            </div>
+            )}
+
+            {previews.length < 5 && (
+              <label
+                htmlFor="image-upload"
+                className="w-full flex flex-col items-center justify-center cursor-pointer transition"
+                style={{ background: '#1a1828', border: '2px dashed #2a2830', borderRadius: '14px', padding: '32px' }}
+              >
+                <div className="w-10 h-8 rounded-lg border-2 border-[#3a3650] flex items-center justify-center mb-3">
+                  <div className="w-4 h-4 rounded-full border-2 border-[#4a4760]"></div>
+                </div>
+                <p className="font-fredoka text-[#6b6880] text-sm">Cliquer pour ajouter une image</p>
+                <p className="text-[#4a4760] text-xs" style={{ marginTop: '4px' }}>JPG ou PNG · {5 - previews.length} emplacement(s) restant(s)</p>
+              </label>
+            )}
+
+            <input
+              id="image-upload"
+              type="file"
+              accept="image/jpeg,image/png"
+              multiple
+              className="hidden"
+              onChange={handleFileChange}
+            />
           </div>
 
           {/* Active toggle */}
