@@ -32,6 +32,7 @@ type UserStat = {
   id: string
   pseudo: string
   email: string
+  avatar_url: string | null
   questions: number
   reussite: number
 }
@@ -115,7 +116,7 @@ export default function Admin() {
 
     const { data: usersData } = await supabase
       .from('users')
-      .select('id, pseudo, email')
+      .select('id, pseudo, email, avatar_url')
 
     if (usersData) {
       const usersWithStats = await Promise.all(usersData.map(async (u: any) => {
@@ -129,7 +130,14 @@ export default function Admin() {
         const totalMax = games?.reduce((acc, g) => acc + g.score_max, 0) || 0
         const reussite = totalMax > 0 ? Math.round((totalScore / totalMax) * 100) : 0
 
-        return { id: u.id, pseudo: u.pseudo || u.email?.split('@')[0], email: u.email, questions: totalQ, reussite }
+        return {
+          id: u.id,
+          pseudo: u.pseudo || u.email?.split('@')[0],
+          email: u.email,
+          avatar_url: u.avatar_url || null,
+          questions: totalQ,
+          reussite,
+        }
       }))
       setUsers(usersWithStats.sort((a, b) => b.questions - a.questions))
       setTotalQuestions(usersWithStats.reduce((acc, u) => acc + u.questions, 0))
@@ -446,9 +454,21 @@ export default function Admin() {
                   <div className="font-fredoka text-sm" style={{ color: i === 0 ? '#ffd93d' : i === 1 ? '#9b96b8' : i === 2 ? '#ff9f43' : '#4a4760' }}>
                     {i + 1}
                   </div>
-                  <div className="col-span-2">
-                    <p className="font-fredoka text-[#eeeaf8] text-sm">{u.pseudo}</p>
-                    <p className="text-[#4a4760] text-xs">{u.email}</p>
+                  <div className="col-span-2 flex items-center gap-3">
+                    <div
+                      className="rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center"
+                      style={{ width: '32px', height: '32px', border: '2px solid #2a2830', background: '#2a1f3d' }}
+                    >
+                      {u.avatar_url ? (
+                        <img src={u.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-4 h-4 rounded-full bg-[#a78bfa]"></div>
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-fredoka text-[#eeeaf8] text-sm">{u.pseudo}</p>
+                      <p className="text-[#4a4760] text-xs">{u.email}</p>
+                    </div>
                   </div>
                   <div className="font-fredoka text-center" style={{ color: '#ffd93d' }}>{u.questions.toLocaleString()}</div>
                   <div className="font-fredoka text-center" style={{ color: u.reussite >= 70 ? '#6bcb77' : '#ffd93d' }}>{u.reussite}%</div>

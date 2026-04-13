@@ -33,50 +33,51 @@ export default function ModifierProfil() {
   }
 
   const handleSave = async () => {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
 
-    setUploading(true)
-    setMessage(null)
+  setUploading(true)
+  setMessage(null)
 
-    try {
-      let avatarUrl = currentAvatar
+  try {
+    let avatarUrl = currentAvatar
 
-      const file = fileInputRef.current?.files?.[0]
-      if (file) {
-        const ext = file.name.split('.').pop()
-        const path = `${user.id}/avatar.${ext}`
-        const { error: uploadError } = await supabase.storage
-          .from('avatars')
-          .upload(path, file, { upsert: true })
+    const file = fileInputRef.current?.files?.[0]
+    if (file) {
+      const ext = file.name.split('.').pop()
+      const path = `${user.id}/avatar.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(path, file, { upsert: true })
 
-        if (uploadError) throw uploadError
+      if (uploadError) throw uploadError
 
-        const { data: { publicUrl } } = supabase.storage
-          .from('avatars')
-          .getPublicUrl(path)
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(path)
 
-        avatarUrl = publicUrl
-      }
-
-      await supabase.auth.updateUser({
-        data: { pseudo, avatar_url: avatarUrl }
-      })
-
-      await supabase
-        .from('users')
-        .update({ pseudo })
-        .eq('id', user.id)
-
-      setMessage('Profil mis à jour !')
-      setTimeout(() => router.push('/profil'), 1500)
-    } catch (err) {
-      setMessage('Une erreur est survenue.')
-    } finally {
-      setUploading(false)
+      avatarUrl = publicUrl
     }
+
+    await supabase.auth.updateUser({
+      data: { pseudo, avatar_url: avatarUrl }
+    })
+
+    // Sauvegarde aussi dans la table users
+    await supabase
+      .from('users')
+      .update({ pseudo, avatar_url: avatarUrl })
+      .eq('id', user.id)
+
+    setMessage('Profil mis à jour !')
+    setTimeout(() => router.push('/profil'), 1500)
+  } catch (err) {
+    setMessage('Une erreur est survenue.')
+  } finally {
+    setUploading(false)
   }
+}
 
   return (
     <main className="min-h-screen bg-[#0f0e17]" style={{ padding: '32px 24px' }}>
