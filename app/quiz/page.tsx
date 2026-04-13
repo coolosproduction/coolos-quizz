@@ -31,6 +31,7 @@ function QuizContent() {
   const [loading, setLoading] = useState(true)
   const reponsesRef = useRef<ReponsePartie[]>([])
   const timerRef = useRef(20)
+  const reponseRef = useRef('') // Ref pour capturer la réponse en temps réel
 
   const nb = parseInt(searchParams.get('nb') || '20')
   const timerDuration = parseInt(searchParams.get('timer') || '20')
@@ -73,6 +74,8 @@ function QuizContent() {
     if (loading || questions.length === 0) return
     setTimeLeft(timerDuration)
     timerRef.current = timerDuration
+    setReponse('')
+    reponseRef.current = '' // Reset la ref aussi
   }, [index, loading])
 
   useEffect(() => {
@@ -94,7 +97,7 @@ function QuizContent() {
       questionId: q.id,
       question: q.question_text,
       reponseOfficielle: q.answer_text,
-      reponseUtilisateur: timedOut ? '' : reponse,
+      reponseUtilisateur: reponseRef.current, // Toujours la vraie valeur, même si timedOut
       category: (q.category as any)?.name || '',
       timedOut,
     }
@@ -108,6 +111,7 @@ function QuizContent() {
     }
     setIndex(prev => prev + 1)
     setReponse('')
+    reponseRef.current = ''
   }
 
   const strokeDashoffset = circumference * (1 - timeLeft / timerDuration)
@@ -186,7 +190,10 @@ function QuizContent() {
           <label className="block font-fredoka text-[#9b96b8] text-base mb-3">Ta réponse</label>
           <textarea
             value={reponse}
-            onChange={(e) => setReponse(e.target.value)}
+            onChange={(e) => {
+              setReponse(e.target.value)
+              reponseRef.current = e.target.value // Sync la ref à chaque frappe
+            }}
             placeholder="Écris ta réponse ici..."
             rows={4}
             className="w-full bg-[#1a1828] border border-[#3a3650] rounded-2xl px-5 py-4 text-[#eeeaf8] text-base outline-none resize-none"

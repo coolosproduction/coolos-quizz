@@ -269,17 +269,24 @@ export default function Correction() {
           <p className="text-[#eeeaf8] text-base font-semibold">{question.reponseOfficielle}</p>
         </div>
 
-        {question.timedOut ? (
-          <div className="inline-flex items-center gap-2 bg-[#2e1a1a] border border-[#ff6b6b] rounded-full px-4 py-2" style={{ width: 'fit-content' }}>
-            <div className="w-2 h-2 rounded-full bg-[#ff6b6b]"></div>
-            <span className="font-fredoka text-[#ff6b6b] text-sm">Temps écoulé — pas de réponse</span>
-          </div>
-        ) : (
-          <div className="bg-[#1e1c2e] border border-[#2a2830] rounded-2xl px-5 py-4">
-            <p className="font-fredoka text-[#9b96b8] text-sm mb-2">Ta réponse</p>
-            <p className="text-[#c9c4e0] text-base font-semibold">{question.reponseUtilisateur}</p>
-          </div>
-        )}
+        {question.timedOut && !question.reponseUtilisateur ? (
+  <div className="inline-flex items-center gap-2 bg-[#2e1a1a] border border-[#ff6b6b] rounded-full px-4 py-2" style={{ width: 'fit-content' }}>
+    <div className="w-2 h-2 rounded-full bg-[#ff6b6b]"></div>
+    <span className="font-fredoka text-[#ff6b6b] text-sm">Temps écoulé — pas de réponse</span>
+  </div>
+) : (
+  <div className="bg-[#1e1c2e] border border-[#2a2830] rounded-2xl px-5 py-4">
+    <div className="flex items-center gap-2 mb-2">
+      <p className="font-fredoka text-[#9b96b8] text-sm">Ta réponse</p>
+      {question.timedOut && (
+        <span className="font-fredoka text-xs rounded-full px-2 py-0.5" style={{ background: '#2e1a1a', color: '#ff6b6b' }}>
+          Temps écoulé
+        </span>
+      )}
+    </div>
+    <p className="text-[#c9c4e0] text-base font-semibold">{question.reponseUtilisateur}</p>
+  </div>
+)}
 
         <div>
           <p className="font-fredoka text-[#c9c4e0] text-lg mb-4">Tu as eu bon ?</p>
