@@ -45,7 +45,26 @@ export default function Resultats() {
   const mentionColor = pct >= 80 ? '#6bcb77' : pct >= 60 ? '#ffd93d' : pct >= 40 ? '#ff9f43' : '#ff6b6b'
 
   return (
-    <main className="min-h-screen bg-[#0f0e17]" style={{ padding: '32px 24px' }}>
+    <main className="min-h-screen bg-[#0f0e17]" style={{ padding: '100px 24px 32px' }}>
+      <nav className="fixed top-0 left-0 right-0 flex justify-between items-center bg-[#0f0e17] border-b border-[#1e1c2e] z-10 px-4 md:px-8 py-4">
+  <Link href="/" className="font-fredoka text-xl md:text-2xl">
+    <span className="text-[#ff6b6b]">C</span>
+    <span className="text-[#ff9f43]">o</span>
+    <span className="text-[#ffd93d]">o</span>
+    <span className="text-[#6bcb77]">l</span>
+    <span className="text-[#4ecdc4]">o</span>
+    <span className="text-[#a78bfa]">s</span>
+    <span className="text-[#c9c4e0]"> Quiz</span>
+  </Link>
+  {mode === 'inscrit' && (
+    <Link
+      href="/profil"
+      className="w-9 h-9 rounded-full bg-[#2a1f3d] border-2 border-[#a78bfa] flex items-center justify-center"
+    >
+      <div className="w-4 h-4 rounded-full bg-[#a78bfa]"></div>
+    </Link>
+  )}
+</nav>
       <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
 
         <div className="text-center">
