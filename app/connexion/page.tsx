@@ -29,7 +29,7 @@ export default function Connexion() {
     if (signInData.user) {
       const { data: existingUser } = await supabase
         .from('users')
-        .select('id')
+        .select('id, statut, suspendu_jusqu_au')
         .eq('id', signInData.user.id)
         .single()
 
@@ -40,7 +40,31 @@ export default function Connexion() {
           email,
           pseudo,
           role: 'user',
+          statut: 'actif',
         })
+      } else {
+        // Vérification bannissement définitif
+        if (existingUser.statut === 'banni') {
+          await supabase.auth.signOut()
+          setError('Ton compte a été banni définitivement. Contacte le support si tu penses qu\'il s\'agit d\'une erreur.')
+          setLoading(false)
+          return
+        }
+
+        // Vérification suspension temporaire
+        if (existingUser.statut === 'suspendu' && existingUser.suspendu_jusqu_au) {
+          const fin = new Date(existingUser.suspendu_jusqu_au)
+          if (fin > new Date()) {
+            await supabase.auth.signOut()
+            const finFormatee = fin.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+            setError(`Ton compte est suspendu jusqu'au ${finFormatee}.`)
+            setLoading(false)
+            return
+          } else {
+            // Suspension expirée, on réactive le compte
+            await supabase.from('users').update({ statut: 'actif', suspendu_jusqu_au: null }).eq('id', signInData.user.id)
+          }
+        }
       }
     }
 
@@ -50,7 +74,6 @@ export default function Connexion() {
   return (
     <main className="min-h-screen bg-[#0f0e17] flex flex-col items-center justify-center px-6 py-12">
 
-      {/* Logo */}
       <Link href="/" className="font-fredoka text-2xl mb-8">
         <span className="text-[#ff6b6b]">C</span>
         <span className="text-[#ff9f43]">o</span>
@@ -61,7 +84,6 @@ export default function Connexion() {
         <span className="text-[#c9c4e0]"> Quiz</span>
       </Link>
 
-      {/* Card */}
       <div className="w-full max-w-md bg-[#1a1828] border border-[#2a2830] rounded-2xl" style={{ padding: '20px' }}>
 
         <h2 className="font-fredoka text-3xl text-[#eeeaf8] mb-2">Bon retour <span className="text-[#4ecdc4]">par ici !</span></h2>
@@ -73,7 +95,6 @@ export default function Connexion() {
           </div>
         )}
 
-        {/* Email */}
         <div className="mb-5">
           <label className="block font-fredoka text-[#9b96b8] text-sm mb-2">Adresse email</label>
           <input
@@ -85,7 +106,6 @@ export default function Connexion() {
           />
         </div>
 
-        {/* Mot de passe */}
         <div className="mb-2">
           <label className="block font-fredoka text-[#9b96b8] text-sm mb-2">Mot de passe</label>
           <input
@@ -97,14 +117,12 @@ export default function Connexion() {
           />
         </div>
 
-        {/* Mot de passe oublié */}
         <div className="flex justify-end mb-8">
           <Link href="/mot-de-passe-oublie" className="font-fredoka text-[#a78bfa] text-sm hover:opacity-80 transition">
             Mot de passe oublié ?
           </Link>
         </div>
 
-        {/* Bouton */}
         <button
           onClick={handleConnexion}
           disabled={loading}
@@ -113,7 +131,6 @@ export default function Connexion() {
           {loading ? 'Connexion en cours...' : 'Se connecter'}
         </button>
 
-        {/* Lien inscription */}
         <p className="text-center text-[#9b96b8] text-sm">
           Pas encore de compte ?{' '}
           <Link href="/inscription" className="text-[#ffd93d] font-fredoka">
@@ -122,7 +139,6 @@ export default function Connexion() {
         </p>
 
       </div>
-
     </main>
   )
 }

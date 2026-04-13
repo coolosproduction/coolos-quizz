@@ -35,6 +35,8 @@ type UserStat = {
   avatar_url: string | null
   questions: number
   reussite: number
+  statut: string
+  suspendu_jusqu_au: string | null
 }
 
 type Message = {
@@ -48,6 +50,12 @@ type Message = {
   created_at: string
 }
 
+type ModalSanction = {
+  open: boolean
+  userId: string
+  pseudo: string
+}
+
 export default function Admin() {
   const router = useRouter()
   const [panel, setPanel] = useState<'questions' | 'categories' | 'users' | 'messages'>('questions')
@@ -59,6 +67,12 @@ export default function Admin() {
   const [search, setSearch] = useState('')
   const [authorized, setAuthorized] = useState(false)
   const [loading, setLoading] = useState(true)
+
+  // Modal sanction
+  const [modalSanction, setModalSanction] = useState<ModalSanction>({ open: false, userId: '', pseudo: '' })
+  const [sanctionType, setSanctionType] = useState<'suspension' | 'bannissement'>('suspension')
+  const [suspensionDuree, setSuspensionDuree] = useState('1')
+  const [suspensionUnite, setSuspensionUnite] = useState<'heures' | 'jours' | 'semaines'>('jours')
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -116,7 +130,7 @@ export default function Admin() {
 
     const { data: usersData } = await supabase
       .from('users')
-      .select('id, pseudo, email, avatar_url')
+      .select('id, pseudo, email, avatar_url, statut, suspendu_jusqu_au')
 
     if (usersData) {
       const usersWithStats = await Promise.all(usersData.map(async (u: any) => {
@@ -137,6 +151,8 @@ export default function Admin() {
           avatar_url: u.avatar_url || null,
           questions: totalQ,
           reussite,
+          statut: u.statut || 'actif',
+          suspendu_jusqu_au: u.suspendu_jusqu_au || null,
         }
       }))
       setUsers(usersWithStats.sort((a, b) => b.questions - a.questions))
@@ -198,6 +214,46 @@ export default function Admin() {
     setMessages(prev => prev.filter(m => m.id !== id))
   }
 
+  const appliquerSanction = async () => {
+    const supabase = createClient()
+
+    if (sanctionType === 'bannissement') {
+      await supabase.from('users').update({
+        statut: 'banni',
+        suspendu_jusqu_au: null,
+      }).eq('id', modalSanction.userId)
+      setUsers(prev => prev.map(u => u.id === modalSanction.userId ? { ...u, statut: 'banni', suspendu_jusqu_au: null } : u))
+    } else {
+      const duree = parseInt(suspensionDuree)
+      const maintenant = new Date()
+      if (suspensionUnite === 'heures') maintenant.setHours(maintenant.getHours() + duree)
+      else if (suspensionUnite === 'jours') maintenant.setDate(maintenant.getDate() + duree)
+      else if (suspensionUnite === 'semaines') maintenant.setDate(maintenant.getDate() + duree * 7)
+
+      await supabase.from('users').update({
+        statut: 'suspendu',
+        suspendu_jusqu_au: maintenant.toISOString(),
+      }).eq('id', modalSanction.userId)
+      setUsers(prev => prev.map(u => u.id === modalSanction.userId ? { ...u, statut: 'suspendu', suspendu_jusqu_au: maintenant.toISOString() } : u))
+    }
+
+    setModalSanction({ open: false, userId: '', pseudo: '' })
+  }
+
+  const leverSanction = async (id: string) => {
+    const supabase = createClient()
+    await supabase.from('users').update({ statut: 'actif', suspendu_jusqu_au: null }).eq('id', id)
+    setUsers(prev => prev.map(u => u.id === id ? { ...u, statut: 'actif', suspendu_jusqu_au: null } : u))
+  }
+
+  const getStatutBadge = (u: UserStat) => {
+    if (u.statut === 'banni') return { label: 'Banni', color: '#ff6b6b', bg: '#2e1a1a' }
+    if (u.statut === 'suspendu' && u.suspendu_jusqu_au && new Date(u.suspendu_jusqu_au) > new Date()) {
+      return { label: 'Suspendu', color: '#ff9f43', bg: '#2d1f10' }
+    }
+    return null
+  }
+
   const questionsFiltrees = questions.filter(q =>
     q.question.toLowerCase().includes(search.toLowerCase()) ||
     q.category.toLowerCase().includes(search.toLowerCase())
@@ -215,6 +271,99 @@ export default function Admin() {
 
   return (
     <div className="min-h-screen bg-[#0f0e17] flex" style={{ fontFamily: 'Nunito, sans-serif' }}>
+
+      {/* Modal sanction */}
+      {modalSanction.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: 'rgba(0,0,0,0.7)' }}>
+          <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-8 w-full max-w-sm flex flex-col gap-5">
+            <h3 className="font-fredoka text-xl text-[#eeeaf8] text-center">
+              Sanctionner <span className="text-[#ff6b6b]">{modalSanction.pseudo}</span>
+            </h3>
+
+            {/* Type de sanction */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setSanctionType('suspension')}
+                className="flex-1 font-fredoka text-sm rounded-xl py-3"
+                style={{
+                  background: sanctionType === 'suspension' ? '#2d1f10' : '#1a1828',
+                  border: `1.5px solid ${sanctionType === 'suspension' ? '#ff9f43' : '#2a2830'}`,
+                  color: sanctionType === 'suspension' ? '#ff9f43' : '#9b96b8',
+                }}
+              >
+                Suspension
+              </button>
+              <button
+                onClick={() => setSanctionType('bannissement')}
+                className="flex-1 font-fredoka text-sm rounded-xl py-3"
+                style={{
+                  background: sanctionType === 'bannissement' ? '#2e1a1a' : '#1a1828',
+                  border: `1.5px solid ${sanctionType === 'bannissement' ? '#ff6b6b' : '#2a2830'}`,
+                  color: sanctionType === 'bannissement' ? '#ff6b6b' : '#9b96b8',
+                }}
+              >
+                Bannissement
+              </button>
+            </div>
+
+            {/* Durée si suspension */}
+            {sanctionType === 'suspension' && (
+              <div className="flex flex-col gap-3">
+                <p className="font-fredoka text-[#9b96b8] text-sm">Durée de la suspension</p>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min="1"
+                    value={suspensionDuree}
+                    onChange={e => setSuspensionDuree(e.target.value)}
+                    className="w-20 bg-[#0f0e17] border border-[#2a2830] rounded-xl px-3 py-2 text-[#eeeaf8] font-fredoka text-center focus:outline-none focus:border-[#ff9f43]"
+                  />
+                  <div className="flex gap-1 flex-1">
+                    {(['heures', 'jours', 'semaines'] as const).map(u => (
+                      <button
+                        key={u}
+                        onClick={() => setSuspensionUnite(u)}
+                        className="flex-1 font-fredoka text-xs rounded-lg py-2"
+                        style={{
+                          background: suspensionUnite === u ? '#2d1f10' : '#0f0e17',
+                          border: `1px solid ${suspensionUnite === u ? '#ff9f43' : '#2a2830'}`,
+                          color: suspensionUnite === u ? '#ff9f43' : '#6b6880',
+                        }}
+                      >
+                        {u}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {sanctionType === 'bannissement' && (
+              <p className="text-[#9b96b8] text-sm text-center">
+                L'utilisateur sera banni définitivement et ne pourra plus se connecter.
+              </p>
+            )}
+
+            <button
+              onClick={appliquerSanction}
+              className="w-full font-fredoka text-lg rounded-2xl py-4 hover:opacity-90 transition"
+              style={{
+                background: sanctionType === 'bannissement' ? '#ff6b6b' : '#ff9f43',
+                color: '#0f0e17',
+              }}
+            >
+              {sanctionType === 'bannissement' ? 'Bannir définitivement' : 'Appliquer la suspension'}
+            </button>
+
+            <button
+              onClick={() => setModalSanction({ open: false, userId: '', pseudo: '' })}
+              className="w-full text-[#6b6880] text-sm font-semibold hover:text-[#9b96b8] transition"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Sidebar */}
       <div style={{ width: '220px', background: '#0a0910', borderRight: '1px solid #1e1c2e', display: 'flex', flexDirection: 'column', padding: '24px 0', flexShrink: 0 }}>
@@ -437,43 +586,71 @@ export default function Admin() {
               </div>
             </div>
 
-            <div className="grid grid-cols-5 gap-4" style={{ padding: '0 12px', marginBottom: '8px' }}>
-              <p className="text-[#4a4760] text-xs font-bold uppercase tracking-wider">#</p>
-              <p className="text-[#4a4760] text-xs font-bold uppercase tracking-wider col-span-2">Utilisateur</p>
-              <p className="text-[#4a4760] text-xs font-bold uppercase tracking-wider text-center">Questions</p>
-              <p className="text-[#4a4760] text-xs font-bold uppercase tracking-wider text-center">Réussite</p>
-            </div>
-
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {users.map((u, i) => (
-                <div
-                  key={u.id}
-                  className="grid grid-cols-5 gap-4 items-center"
-                  style={{ background: i === 0 ? '#1f1e10' : '#1a1828', border: `1px solid ${i === 0 ? '#ffd93d' : '#2a2830'}`, borderRadius: '12px', padding: '12px 16px' }}
-                >
-                  <div className="font-fredoka text-sm" style={{ color: i === 0 ? '#ffd93d' : i === 1 ? '#9b96b8' : i === 2 ? '#ff9f43' : '#4a4760' }}>
-                    {i + 1}
-                  </div>
-                  <div className="col-span-2 flex items-center gap-3">
-                    <div
-                      className="rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center"
-                      style={{ width: '32px', height: '32px', border: '2px solid #2a2830', background: '#2a1f3d' }}
-                    >
-                      {u.avatar_url ? (
-                        <img src={u.avatar_url} alt="avatar" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-4 h-4 rounded-full bg-[#a78bfa]"></div>
-                      )}
+              {users.map((u, i) => {
+                const badge = getStatutBadge(u)
+                return (
+                  <div
+                    key={u.id}
+                    style={{
+                      background: badge ? (u.statut === 'banni' ? '#1a0f0f' : '#1a1510') : (i === 0 ? '#1f1e10' : '#1a1828'),
+                      border: `1px solid ${badge ? badge.color : (i === 0 ? '#ffd93d' : '#2a2830')}`,
+                      borderRadius: '12px',
+                      padding: '12px 16px',
+                    }}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="font-fredoka text-sm w-6 flex-shrink-0" style={{ color: i === 0 ? '#ffd93d' : i === 1 ? '#9b96b8' : i === 2 ? '#ff9f43' : '#4a4760' }}>
+                        {i + 1}
+                      </div>
+                      <div className="flex items-center gap-3 flex-1">
+                        <div
+                          className="rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center"
+                          style={{ width: '32px', height: '32px', border: '2px solid #2a2830', background: '#2a1f3d' }}
+                        >
+                          {u.avatar_url ? (
+                            <img src={u.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-4 h-4 rounded-full bg-[#a78bfa]"></div>
+                          )}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-fredoka text-[#eeeaf8] text-sm">{u.pseudo}</p>
+                            {badge && (
+                              <span className="font-fredoka text-xs rounded-full px-2 py-0.5" style={{ background: badge.bg, color: badge.color }}>
+                                {badge.label}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[#4a4760] text-xs">{u.email}</p>
+                        </div>
+                      </div>
+                      <div className="font-fredoka text-sm w-16 text-center" style={{ color: '#ffd93d' }}>{u.questions.toLocaleString()}</div>
+                      <div className="font-fredoka text-sm w-12 text-center" style={{ color: u.reussite >= 70 ? '#6bcb77' : '#ffd93d' }}>{u.reussite}%</div>
+                      <div className="flex items-center gap-2">
+                        {badge ? (
+                          <button
+                            onClick={() => leverSanction(u.id)}
+                            className="font-fredoka text-xs rounded-lg px-3 py-1.5 hover:opacity-80 transition"
+                            style={{ background: '#1a2e1f', color: '#6bcb77', border: '1px solid #1f3a28' }}
+                          >
+                            Lever
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setModalSanction({ open: true, userId: u.id, pseudo: u.pseudo })}
+                            className="font-fredoka text-xs rounded-lg px-3 py-1.5 hover:opacity-80 transition"
+                            style={{ background: '#2e1a1a', color: '#ff6b6b', border: '1px solid #3a2020' }}
+                          >
+                            Sanctionner
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-fredoka text-[#eeeaf8] text-sm">{u.pseudo}</p>
-                      <p className="text-[#4a4760] text-xs">{u.email}</p>
-                    </div>
                   </div>
-                  <div className="font-fredoka text-center" style={{ color: '#ffd93d' }}>{u.questions.toLocaleString()}</div>
-                  <div className="font-fredoka text-center" style={{ color: u.reussite >= 70 ? '#6bcb77' : '#ffd93d' }}>{u.reussite}%</div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         )}
