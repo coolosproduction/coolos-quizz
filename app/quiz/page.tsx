@@ -21,6 +21,31 @@ type ReponsePartie = {
   timedOut: boolean
 }
 
+// Tirage aléatoire pondéré
+function tirerQuestions(questions: Question[], poids: Record<string, number>, nb: number): Question[] {
+  const pool = [...questions]
+  const selection: Question[] = []
+
+  while (selection.length < nb && pool.length > 0) {
+    const totalPoids = pool.reduce((acc, q) => acc + (poids[q.id] ?? 5), 0)
+    let rand = Math.random() * totalPoids
+    let choix = pool[pool.length - 1]
+
+    for (const q of pool) {
+      rand -= poids[q.id] ?? 5
+      if (rand <= 0) {
+        choix = q
+        break
+      }
+    }
+
+    selection.push(choix)
+    pool.splice(pool.indexOf(choix), 1)
+  }
+
+  return selection
+}
+
 function QuizContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -31,7 +56,7 @@ function QuizContent() {
   const [loading, setLoading] = useState(true)
   const reponsesRef = useRef<ReponsePartie[]>([])
   const timerRef = useRef(20)
-  const reponseRef = useRef('') // Ref pour capturer la réponse en temps réel
+  const reponseRef = useRef('')
 
   const nb = parseInt(searchParams.get('nb') || '20')
   const timerDuration = parseInt(searchParams.get('timer') || '20')
@@ -59,14 +84,67 @@ function QuizContent() {
       }
 
       const { data } = await query
-      if (data && data.length > 0) {
-        const shuffled = data.sort(() => Math.random() - 0.5).slice(0, nb)
-        setQuestions(shuffled as any)
+      if (!data || data.length === 0) {
+        setLoading(false)
+        return
       }
+
+      // Récupère l'utilisateur connecté
+      const { data: { user } } = await supabase.auth.getUser()
+
+      let poids: Record<string, number> = {}
+
+      if (user) {
+        // Récupère toutes les réponses de l'utilisateur pour ces questions
+        const questionIds = data.map((q: any) => q.id)
+        const { data: answers } = await supabase
+          .from('game_answers')
+          .select('question_id, self_eval')
+          .in('question_id', questionIds)
+          .eq('games.user_id', user.id)
+          .select('question_id, self_eval, game:games!inner(user_id)')
+
+        // Calcule le taux de réussite par question
+        const statsParQuestion: Record<string, { total: number, oui: number }> = {}
+
+        if (answers) {
+          answers.forEach((a: any) => {
+            if (a.game?.user_id !== user.id) return
+            const id = a.question_id
+            if (!statsParQuestion[id]) statsParQuestion[id] = { total: 0, oui: 0 }
+            statsParQuestion[id].total++
+            if (a.self_eval === 'oui') statsParQuestion[id].oui++
+          })
+        }
+
+        // Assigne un poids à chaque question
+        data.forEach((q: any) => {
+          const stats = statsParQuestion[q.id]
+          if (!stats || stats.total === 0) {
+            poids[q.id] = 5 // Jamais vue → prioritaire
+          } else {
+            const taux = stats.oui / stats.total
+            if (taux > 0.7) {
+              poids[q.id] = 1 // Bien maîtrisée → rare
+            } else if (taux >= 0.4) {
+              poids[q.id] = 2 // Moyenne → peu fréquente
+            } else {
+              poids[q.id] = 4 // Difficile → fréquente
+            }
+          }
+        })
+      } else {
+        // Invité : aléatoire pur
+        data.forEach((q: any) => { poids[q.id] = 1 })
+      }
+
+      const selection = tirerQuestions(data as any, poids, nb)
+      setQuestions(selection)
       setLoading(false)
       timerRef.current = timerDuration
       setTimeLeft(timerDuration)
     }
+
     loadQuestions()
   }, [])
 
@@ -75,7 +153,7 @@ function QuizContent() {
     setTimeLeft(timerDuration)
     timerRef.current = timerDuration
     setReponse('')
-    reponseRef.current = '' // Reset la ref aussi
+    reponseRef.current = ''
   }, [index, loading])
 
   useEffect(() => {
@@ -97,7 +175,7 @@ function QuizContent() {
       questionId: q.id,
       question: q.question_text,
       reponseOfficielle: q.answer_text,
-      reponseUtilisateur: reponseRef.current, // Toujours la vraie valeur, même si timedOut
+      reponseUtilisateur: reponseRef.current,
       category: (q.category as any)?.name || '',
       timedOut,
     }
@@ -192,7 +270,7 @@ function QuizContent() {
             value={reponse}
             onChange={(e) => {
               setReponse(e.target.value)
-              reponseRef.current = e.target.value // Sync la ref à chaque frappe
+              reponseRef.current = e.target.value
             }}
             placeholder="Écris ta réponse ici..."
             rows={4}
