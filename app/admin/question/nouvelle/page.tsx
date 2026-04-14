@@ -55,59 +55,57 @@ export default function NouvelleQuestion() {
   }
 
   const handleSave = async () => {
-    if (!question || !answer || !categoryId || !difficulty) {
-      setError('Tous les champs obligatoires doivent être remplis.')
-      return
-    }
-    setLoading(true)
-    setError('')
-    const supabase = createClient()
+  if (!question || !answer || !categoryId || !difficulty) {
+    setError('Tous les champs obligatoires doivent être remplis.')
+    return
+  }
+  setLoading(true)
+  setError('')
+  const supabase = createClient()
 
-    const { data: newQuestion, error: insertError } = await supabase
-      .from('questions')
-      .insert({
-        question_text: question,
-        answer_text: answer,
-        category_id: categoryId,
-        difficulty,
-        active,
-      })
-      .select()
-      .single()
+  const { data: newQuestion, error: insertError } = await supabase
+    .from('questions')
+    .insert({
+      question_text: question,
+      answer_text: answer,
+      category_id: categoryId,
+      difficulty,
+      active,
+    })
+    .select()
+    .single()
 
-    if (insertError) {
-      setError('Erreur lors de la création : ' + insertError.message)
-      setLoading(false)
-      return
-    }
-
-    if (images.length > 0 && newQuestion) {
-      for (let i = 0; i < images.length; i++) {
-        const file = images[i]
-        const ext = file.name.split('.').pop()
-        const path = `${newQuestion.id}/${i + 1}.${ext}`
-
-        const { error: uploadError } = await supabase.storage
-          .from('question-images')
-          .upload(path, file, { upsert: true })
-
-        if (!uploadError) {
-          const { data: { publicUrl } } = supabase.storage
-            .from('question-images')
-            .getPublicUrl(path)
-
-          await supabase.from('question_images').insert({
-            question_id: newQuestion.id,
-            file_path: path,
-            position: i + 1,
-          })
-        }
-      }
-    }
-
-    router.push('/admin')
+  if (insertError) {
+    setError('Erreur lors de la création : ' + insertError.message)
+    setLoading(false)
+    return
   }
 
+  if (images.length > 0 && newQuestion) {
+    for (let i = 0; i < images.length; i++) {
+      const file = images[i]
+      const ext = file.name.split('.').pop()
+      const path = `${newQuestion.id}-${i + 1}.${ext}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('question-images')
+        .upload(path, file, { upsert: true })
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError.message)
+        continue
+      }
+
+      await supabase.from('question_images').insert({
+        question_id: newQuestion.id,
+        file_path: path,
+        position: i + 1,
+      })
+    }
+  }
+
+  router.push('/admin')
+}
   return (
     <div className="min-h-screen bg-[#0f0e17] flex">
 

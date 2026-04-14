@@ -34,9 +34,12 @@ export default function Configuration() {
   const [timer, setTimer] = useState(20)
   const [search, setSearch] = useState('')
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [isInvite, setIsInvite] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
+    setIsInvite(sessionStorage.getItem('is_invite') === 'true')
+
     const loadCategories = async () => {
       const supabase = createClient()
       const { data } = await supabase
@@ -114,7 +117,7 @@ export default function Configuration() {
           <span className="text-[#a78bfa]">s</span>
           <span className="text-[#c9c4e0]"> Quiz</span>
         </Link>
-        {typeof window !== 'undefined' && sessionStorage.getItem('is_invite') !== 'true' && (
+        {!isInvite && (
           <Link href="/profil" className="w-10 h-10 rounded-full bg-[#2a1f3d] border-2 border-[#a78bfa] flex items-center justify-center cursor-pointer">
             <div className="w-5 h-5 rounded-full bg-[#a78bfa]"></div>
           </Link>
