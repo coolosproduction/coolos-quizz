@@ -10,6 +10,7 @@ type Question = {
   question_text: string
   answer_text: string
   category: { name: string }
+  images?: { url: string, position: number }[]
 }
 
 type ReponsePartie = {
@@ -19,6 +20,7 @@ type ReponsePartie = {
   reponseUtilisateur: string
   category: string
   timedOut: boolean
+  images?: { url: string, position: number }[]
 }
 
 // Tirage aléatoire pondéré
@@ -89,22 +91,39 @@ function QuizContent() {
         return
       }
 
+      // Récupère les images pour toutes les questions
+      const questionIds = data.map((q: any) => q.id)
+      const { data: imagesData } = await supabase
+        .from('question_images')
+        .select('question_id, url, position')
+        .in('question_id', questionIds)
+        .order('position')
+
+      // Associe les images à chaque question
+      const imagesParQuestion: Record<string, { url: string, position: number }[]> = {}
+      if (imagesData) {
+        imagesData.forEach((img: any) => {
+          if (!imagesParQuestion[img.question_id]) imagesParQuestion[img.question_id] = []
+          imagesParQuestion[img.question_id].push({ url: img.url, position: img.position })
+        })
+      }
+
+      const dataAvecImages = data.map((q: any) => ({
+        ...q,
+        images: imagesParQuestion[q.id] || [],
+      }))
+
       // Récupère l'utilisateur connecté
       const { data: { user } } = await supabase.auth.getUser()
 
       let poids: Record<string, number> = {}
 
       if (user) {
-        // Récupère toutes les réponses de l'utilisateur pour ces questions
-        const questionIds = data.map((q: any) => q.id)
         const { data: answers } = await supabase
           .from('game_answers')
-          .select('question_id, self_eval')
-          .in('question_id', questionIds)
-          .eq('games.user_id', user.id)
           .select('question_id, self_eval, game:games!inner(user_id)')
+          .in('question_id', questionIds)
 
-        // Calcule le taux de réussite par question
         const statsParQuestion: Record<string, { total: number, oui: number }> = {}
 
         if (answers) {
@@ -117,28 +136,26 @@ function QuizContent() {
           })
         }
 
-        // Assigne un poids à chaque question
-        data.forEach((q: any) => {
+        dataAvecImages.forEach((q: any) => {
           const stats = statsParQuestion[q.id]
           if (!stats || stats.total === 0) {
-            poids[q.id] = 5 // Jamais vue → prioritaire
+            poids[q.id] = 5
           } else {
             const taux = stats.oui / stats.total
             if (taux > 0.7) {
-              poids[q.id] = 1 // Bien maîtrisée → rare
+              poids[q.id] = 1
             } else if (taux >= 0.4) {
-              poids[q.id] = 2 // Moyenne → peu fréquente
+              poids[q.id] = 2
             } else {
-              poids[q.id] = 4 // Difficile → fréquente
+              poids[q.id] = 4
             }
           }
         })
       } else {
-        // Invité : aléatoire pur
-        data.forEach((q: any) => { poids[q.id] = 1 })
+        dataAvecImages.forEach((q: any) => { poids[q.id] = 1 })
       }
 
-      const selection = tirerQuestions(data as any, poids, nb)
+      const selection = tirerQuestions(dataAvecImages as any, poids, nb)
       setQuestions(selection)
       setLoading(false)
       timerRef.current = timerDuration
@@ -178,6 +195,7 @@ function QuizContent() {
       reponseUtilisateur: reponseRef.current,
       category: (q.category as any)?.name || '',
       timedOut,
+      images: q.images || [],
     }
     reponsesRef.current = [...reponsesRef.current, nouvelleReponse]
 
@@ -263,6 +281,21 @@ function QuizContent() {
         <h2 className="font-fredoka text-3xl text-[#eeeaf8] leading-tight">
           {question.question_text}
         </h2>
+
+        {/* Images de la question */}
+        {question.images && question.images.length > 0 && (
+          <div className="flex gap-3 flex-wrap">
+            {question.images.map((img, i) => (
+              <img
+                key={i}
+                src={img.url}
+                alt={`image ${i + 1}`}
+                className="rounded-2xl object-cover"
+                style={{ maxHeight: '240px', maxWidth: '100%', border: '2px solid #2a2830' }}
+              />
+            ))}
+          </div>
+        )}
 
         <div>
           <label className="block font-fredoka text-[#9b96b8] text-base mb-3">Ta réponse</label>
