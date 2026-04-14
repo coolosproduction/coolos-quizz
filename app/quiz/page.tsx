@@ -23,7 +23,6 @@ type ReponsePartie = {
   images?: { url: string, position: number }[]
 }
 
-// Tirage aléatoire pondéré
 function tirerQuestions(questions: Question[], poids: Record<string, number>, nb: number): Question[] {
   const pool = [...questions]
   const selection: Question[] = []
@@ -91,23 +90,24 @@ function QuizContent() {
         return
       }
 
-     // Récupère les images pour toutes les questions
-const questionIds = data.map((q: any) => q.id)
-const { data: imagesData } = await supabase
-  .from('question_images')
-  .select('question_id, file_path, position')
-  .in('question_id', questionIds)
-  .order('position', { ascending: true })
+      const questionIds = data.map((q: any) => q.id)
 
-      // Associe les images à chaque question
+      // Récupère les images
+      const { data: imagesData } = await supabase
+        .from('question_images')
+        .select('question_id, file_path, position')
+        .in('question_id', questionIds)
+        .order('position', { ascending: true })
+
+      // Construit les URLs publiques et associe les images aux questions
       const imagesParQuestion: Record<string, { url: string, position: number }[]> = {}
       if (imagesData) {
         imagesData.forEach((img: any) => {
           if (!imagesParQuestion[img.question_id]) imagesParQuestion[img.question_id] = []
-          const { data: { publicUrl } } = supabase.storage
-  .from('question-images')
-  .getPublicUrl(img.file_path)
-imagesParQuestion[img.question_id].push({ url: publicUrl, position: img.position })
+          // Construction manuelle de l'URL publique sans destructuring
+          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+          const publicUrl = `${supabaseUrl}/storage/v1/object/public/question-images/${img.file_path}`
+          imagesParQuestion[img.question_id].push({ url: publicUrl, position: img.position })
         })
       }
 
