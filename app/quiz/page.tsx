@@ -91,20 +91,23 @@ function QuizContent() {
         return
       }
 
-      // Récupère les images pour toutes les questions
-      const questionIds = data.map((q: any) => q.id)
-      const { data: imagesData } = await supabase
-        .from('question_images')
-        .select('question_id, url, position')
-        .in('question_id', questionIds)
-        .order('position')
+     // Récupère les images pour toutes les questions
+const questionIds = data.map((q: any) => q.id)
+const { data: imagesData } = await supabase
+  .from('question_images')
+  .select('question_id, file_path, position')
+  .in('question_id', questionIds)
+  .order('position', { ascending: true })
 
       // Associe les images à chaque question
       const imagesParQuestion: Record<string, { url: string, position: number }[]> = {}
       if (imagesData) {
         imagesData.forEach((img: any) => {
           if (!imagesParQuestion[img.question_id]) imagesParQuestion[img.question_id] = []
-          imagesParQuestion[img.question_id].push({ url: img.url, position: img.position })
+          const { data: { publicUrl } } = supabase.storage
+  .from('question-images')
+  .getPublicUrl(img.file_path)
+imagesParQuestion[img.question_id].push({ url: publicUrl, position: img.position })
         })
       }
 

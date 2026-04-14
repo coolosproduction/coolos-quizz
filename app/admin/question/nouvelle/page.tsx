@@ -98,7 +98,7 @@ export default function NouvelleQuestion() {
 
           await supabase.from('question_images').insert({
             question_id: newQuestion.id,
-            url: publicUrl,
+            file_path: path,
             position: i + 1,
           })
         }
