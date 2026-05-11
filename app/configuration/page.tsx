@@ -25,10 +25,13 @@ const themeBgs = [
 ]
 
 type Category = { id: string, name: string, color: string, bg: string }
+type Subcategory = { id: string, name: string, category_id: string }
 
 export default function Configuration() {
   const [themes, setThemes] = useState<Category[]>([])
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([])
   const [themesSelec, setThemesSelec] = useState<string[]>([])
+  const [subcatsSelec, setSubcatsSelec] = useState<string[]>([])
   const [diffSelec, setDiffSelec] = useState<string[]>([])
   const [nb, setNb] = useState(20)
   const [timer, setTimer] = useState(20)
@@ -40,15 +43,15 @@ export default function Configuration() {
   useEffect(() => {
     setIsInvite(sessionStorage.getItem('is_invite') === 'true')
 
-    const loadCategories = async () => {
+    const loadData = async () => {
       const supabase = createClient()
-      const { data } = await supabase
+      const { data: catsData } = await supabase
         .from('categories')
         .select('id, name')
         .eq('active', true)
         .order('name')
-      if (data) {
-        const formatted = data.map((c, i) => ({
+      if (catsData) {
+        const formatted = catsData.map((c, i) => ({
           id: c.id,
           name: c.name,
           color: themeColors[i % themeColors.length],
@@ -56,19 +59,30 @@ export default function Configuration() {
         }))
         setThemes(formatted)
       }
+
+      const { data: subsData } = await supabase
+        .from('subcategories')
+        .select('id, name, category_id')
+        .eq('active', true)
+        .order('name')
+      if (subsData) setSubcategories(subsData)
     }
-    loadCategories()
+    loadData()
   }, [])
 
   const toggleTheme = (id: string) => {
     setThemesSelec(prev =>
       prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]
     )
+    // Reset les sous-catégories de cette catégorie si on la décoche
+    const subsOfTheme = subcategories.filter(s => s.category_id === id).map(s => s.id)
+    setSubcatsSelec(prev => prev.filter(s => !subsOfTheme.includes(s)))
   }
 
   const toggleAll = () => {
     if (themesSelec.length === themes.length) {
       setThemesSelec([])
+      setSubcatsSelec([])
     } else {
       setThemesSelec(themes.map(t => t.id))
     }
@@ -79,6 +93,17 @@ export default function Configuration() {
       prev.includes(id) ? prev.filter(d => d !== id) : [...prev, id]
     )
   }
+
+  const toggleSubcat = (id: string) => {
+    setSubcatsSelec(prev =>
+      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
+    )
+  }
+
+  // Sous-catégories visibles = celles dont la catégorie parente est sélectionnée (une seule sélectionnée)
+  const subcatsVisibles = themesSelec.length === 1
+    ? subcategories.filter(s => s.category_id === themesSelec[0])
+    : []
 
   const themesFiltres = themes.filter(t =>
     t.name.toLowerCase().includes(search.toLowerCase())
@@ -101,6 +126,10 @@ export default function Configuration() {
       nb: nb.toString(),
       timer: timer.toString(),
     })
+    // Ajoute les sous-catégories seulement si sélectionnées
+    if (subcatsSelec.length > 0) {
+      params.set('subcategories', subcatsSelec.join(','))
+    }
     router.push(`/quiz?${params.toString()}`)
   }
 
@@ -179,6 +208,11 @@ export default function Configuration() {
                   >
                     <div className="w-2 h-2 rounded-full" style={{ background: t.color }}></div>
                     <span className="text-[#eeeaf8] text-sm font-semibold flex-1">{t.name}</span>
+                    {subcategories.filter(s => s.category_id === t.id).length > 0 && (
+                      <span className="text-[#4a4760] text-xs font-fredoka">
+                        {subcategories.filter(s => s.category_id === t.id).length} sous-cat.
+                      </span>
+                    )}
                     <div className={`w-4 h-4 rounded border flex items-center justify-center ${themesSelec.includes(t.id) ? 'border-[#ffd93d] bg-[#ffd93d]' : 'border-[#3a3650] bg-[#0f0e17]'}`}>
                       {themesSelec.includes(t.id) && <div className="w-2 h-2 bg-[#0f0e17] rounded-sm"></div>}
                     </div>
@@ -206,6 +240,37 @@ export default function Configuration() {
             </div>
           )}
         </div>
+
+        {/* Sous-catégories — apparaît seulement si une seule catégorie sélectionnée et qu'elle a des sous-cats */}
+        {subcatsVisibles.length > 0 && (
+          <div>
+            <p className="font-fredoka text-[#c9c4e0] text-xl mb-2">
+              Sous-catégories
+              <span className="text-[#6b6880] text-sm font-sans ml-2">
+                (optionnel — aucune sélection = toutes incluses)
+              </span>
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {subcatsVisibles.map(s => (
+                <button
+                  key={s.id}
+                  onClick={() => toggleSubcat(s.id)}
+                  className="font-fredoka text-sm rounded-xl px-4 py-3"
+                  style={{
+                    background: subcatsSelec.includes(s.id) ? '#1a2a2d' : '#1a1828',
+                    border: `2px solid ${subcatsSelec.includes(s.id) ? '#4ecdc4' : '#2a2830'}`,
+                    color: subcatsSelec.includes(s.id) ? '#4ecdc4' : '#9b96b8',
+                  }}
+                >
+                  {s.name}
+                </button>
+              ))}
+            </div>
+            {subcatsSelec.length === 0 && (
+              <p className="text-[#6b6880] text-sm mt-2">Aucune sélection = toutes les sous-catégories incluses</p>
+            )}
+          </div>
+        )}
 
         {/* Difficulté */}
         <div>
@@ -278,6 +343,11 @@ export default function Configuration() {
         {/* Récapitulatif */}
         <div className="bg-[#1e1c2e] border border-[#2a2830] rounded-2xl p-5 flex flex-wrap gap-3">
           <span className="bg-[#2a2830] rounded-full px-4 py-2 font-fredoka text-sm text-[#ffd93d]">{themesLabel}</span>
+          {subcatsSelec.length > 0 && (
+            <span className="bg-[#2a2830] rounded-full px-4 py-2 font-fredoka text-sm text-[#4ecdc4]">
+              {subcatsSelec.length} sous-cat.
+            </span>
+          )}
           <span className="bg-[#2a2830] rounded-full px-4 py-2 font-fredoka text-sm text-[#ffd93d]">{diffLabel}</span>
           <span className="bg-[#2a2830] rounded-full px-4 py-2 font-fredoka text-sm text-[#4ecdc4]">{nb} questions</span>
           <span className="bg-[#2a2830] rounded-full px-4 py-2 font-fredoka text-sm text-[#ff9f43]">{timer}s / question</span>
