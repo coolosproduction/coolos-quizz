@@ -13,12 +13,14 @@ export default function ModifierQuestion() {
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState('')
   const [categoryId, setCategoryId] = useState('')
+  const [subcategoryId, setSubcategoryId] = useState('')
   const [difficulty, setDifficulty] = useState('')
   const [active, setActive] = useState(true)
   const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(true)
   const [error, setError] = useState('')
   const [categories, setCategories] = useState<{ id: string, name: string }[]>([])
+  const [subcategories, setSubcategories] = useState<{ id: string, name: string, category_id: string }[]>([])
 
   const difficultes = [
     { id: 'facile', label: 'Facile', color: '#6bcb77', bg: '#1a2e1f' },
@@ -38,6 +40,13 @@ export default function ModifierQuestion() {
         .order('name')
       if (catsData) setCategories(catsData)
 
+      const { data: subsData } = await supabase
+        .from('subcategories')
+        .select('id, name, category_id')
+        .eq('active', true)
+        .order('name')
+      if (subsData) setSubcategories(subsData)
+
       const { data: q } = await supabase
         .from('questions')
         .select('*')
@@ -48,6 +57,7 @@ export default function ModifierQuestion() {
         setQuestion(q.question_text)
         setAnswer(q.answer_text)
         setCategoryId(q.category_id)
+        setSubcategoryId(q.subcategory_id || '')
         setDifficulty(q.difficulty)
         setActive(q.active)
       }
@@ -55,6 +65,15 @@ export default function ModifierQuestion() {
     }
     loadData()
   }, [id])
+
+  // Sous-catégories filtrées selon la catégorie sélectionnée
+  const subcategoriesFiltrees = subcategories.filter(s => s.category_id === categoryId)
+
+  // Reset la sous-catégorie quand on change de catégorie
+  const handleCategoryChange = (newCategoryId: string) => {
+    setCategoryId(newCategoryId)
+    setSubcategoryId('')
+  }
 
   const handleSave = async () => {
     if (!question || !answer || !categoryId || !difficulty) {
@@ -70,6 +89,7 @@ export default function ModifierQuestion() {
         question_text: question,
         answer_text: answer,
         category_id: categoryId,
+        subcategory_id: subcategoryId || null,
         difficulty,
         active,
       })
@@ -184,7 +204,7 @@ export default function ModifierQuestion() {
               <label className="block font-fredoka text-[#9b96b8] text-sm" style={{ marginBottom: '8px' }}>Catégorie *</label>
               <select
                 value={categoryId}
-                onChange={e => setCategoryId(e.target.value)}
+                onChange={e => handleCategoryChange(e.target.value)}
                 className="w-full text-[#eeeaf8] text-sm outline-none cursor-pointer"
                 style={{ background: '#1a1828', border: `1.5px solid ${categoryId ? '#ffd93d' : '#3a3650'}`, borderRadius: '14px', padding: '14px 16px' }}
               >
@@ -196,12 +216,12 @@ export default function ModifierQuestion() {
             </div>
             <div>
               <label className="block font-fredoka text-[#9b96b8] text-sm" style={{ marginBottom: '8px' }}>Difficulté *</label>
-              <div className="flex gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 {difficultes.map(d => (
                   <button
                     key={d.id}
                     onClick={() => setDifficulty(d.id)}
-                    className="flex-1 font-fredoka text-sm rounded-xl py-3"
+                    className="font-fredoka text-sm rounded-xl py-3"
                     style={{
                       background: difficulty === d.id ? d.bg : '#1a1828',
                       border: `1.5px solid ${difficulty === d.id ? d.color : '#3a3650'}`,
@@ -214,6 +234,42 @@ export default function ModifierQuestion() {
               </div>
             </div>
           </div>
+
+          {/* Sous-catégorie — apparaît seulement si la catégorie choisie en a */}
+          {categoryId && subcategoriesFiltrees.length > 0 && (
+            <div>
+              <label className="block font-fredoka text-[#9b96b8] text-sm" style={{ marginBottom: '8px' }}>
+                Sous-catégorie <span className="text-[#4a4760]">(optionnel)</span>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setSubcategoryId('')}
+                  className="font-fredoka text-sm rounded-xl px-4 py-2"
+                  style={{
+                    background: subcategoryId === '' ? '#1a2a2d' : '#1a1828',
+                    border: `1.5px solid ${subcategoryId === '' ? '#4ecdc4' : '#3a3650'}`,
+                    color: subcategoryId === '' ? '#4ecdc4' : '#9b96b8',
+                  }}
+                >
+                  Aucune
+                </button>
+                {subcategoriesFiltrees.map(s => (
+                  <button
+                    key={s.id}
+                    onClick={() => setSubcategoryId(s.id)}
+                    className="font-fredoka text-sm rounded-xl px-4 py-2"
+                    style={{
+                      background: subcategoryId === s.id ? '#1a2a2d' : '#1a1828',
+                      border: `1.5px solid ${subcategoryId === s.id ? '#4ecdc4' : '#3a3650'}`,
+                      color: subcategoryId === s.id ? '#4ecdc4' : '#9b96b8',
+                    }}
+                  >
+                    {s.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Active toggle */}
           <div className="flex items-center justify-between" style={{ background: '#1a1828', border: '1px solid #2a2830', borderRadius: '14px', padding: '16px 20px' }}>
