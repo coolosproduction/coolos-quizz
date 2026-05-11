@@ -28,6 +28,13 @@ type Category = {
   count: number
 }
 
+type Subcategory = {
+  id: string
+  category_id: string
+  name: string
+  active: boolean
+}
+
 type UserStat = {
   id: string
   pseudo: string
@@ -67,12 +74,18 @@ export default function Admin() {
   const [panel, setPanel] = useState<'questions' | 'categories' | 'users' | 'messages'>('questions')
   const [questions, setQuestions] = useState<Question[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([])
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
   const [users, setUsers] = useState<UserStat[]>([])
   const [messages, setMessages] = useState<Message[]>([])
   const [totalQuestions, setTotalQuestions] = useState(0)
   const [search, setSearch] = useState('')
   const [authorized, setAuthorized] = useState(false)
   const [loading, setLoading] = useState(true)
+
+  // Nouvelle sous-catégorie
+  const [newSubName, setNewSubName] = useState('')
+  const [addingSubFor, setAddingSubFor] = useState<string | null>(null)
 
   // Modal sanction
   const [modalSanction, setModalSanction] = useState<ModalSanction>({ open: false, userId: '', pseudo: '' })
@@ -141,6 +154,15 @@ export default function Admin() {
       setCategories(catsWithCount)
     }
 
+    const { data: subsData } = await supabase
+      .from('subcategories')
+      .select('*')
+      .order('name')
+
+    if (subsData) {
+      setSubcategories(subsData as Subcategory[])
+    }
+
     const { data: usersData } = await supabase
       .from('users')
       .select('id, pseudo, email, avatar_url, statut, suspendu_jusqu_au')
@@ -200,6 +222,14 @@ export default function Admin() {
     setCategories(prev => prev.map(c => c.id === id ? { ...c, active: !c.active } : c))
   }
 
+  const toggleSubcategory = async (id: string) => {
+    const supabase = createClient()
+    const sub = subcategories.find(s => s.id === id)
+    if (!sub) return
+    await supabase.from('subcategories').update({ active: !sub.active }).eq('id', id)
+    setSubcategories(prev => prev.map(s => s.id === id ? { ...s, active: !s.active } : s))
+  }
+
   const deleteQuestion = async (id: string) => {
     if (!confirm('Supprimer cette question ?')) return
     const supabase = createClient()
@@ -212,6 +242,28 @@ export default function Admin() {
     const supabase = createClient()
     await supabase.from('categories').delete().eq('id', id)
     setCategories(prev => prev.filter(c => c.id !== id))
+  }
+
+  const deleteSubcategory = async (id: string) => {
+    if (!confirm('Supprimer cette sous-catégorie ?')) return
+    const supabase = createClient()
+    await supabase.from('subcategories').delete().eq('id', id)
+    setSubcategories(prev => prev.filter(s => s.id !== id))
+  }
+
+  const addSubcategory = async (categoryId: string) => {
+    if (!newSubName.trim()) return
+    const supabase = createClient()
+    const { data } = await supabase.from('subcategories').insert({
+      category_id: categoryId,
+      name: newSubName.trim(),
+      active: true,
+    }).select().single()
+    if (data) {
+      setSubcategories(prev => [...prev, data as Subcategory])
+      setNewSubName('')
+      setAddingSubFor(null)
+    }
   }
 
   const marquerLu = async (id: string) => {
@@ -312,80 +364,27 @@ export default function Admin() {
               Sanctionner <span className="text-[#ff6b6b]">{modalSanction.pseudo}</span>
             </h3>
             <div className="flex gap-3">
-              <button
-                onClick={() => setSanctionType('suspension')}
-                className="flex-1 font-fredoka text-sm rounded-xl py-3"
-                style={{
-                  background: sanctionType === 'suspension' ? '#2d1f10' : '#1a1828',
-                  border: `1.5px solid ${sanctionType === 'suspension' ? '#ff9f43' : '#2a2830'}`,
-                  color: sanctionType === 'suspension' ? '#ff9f43' : '#9b96b8',
-                }}
-              >
-                Suspension
-              </button>
-              <button
-                onClick={() => setSanctionType('bannissement')}
-                className="flex-1 font-fredoka text-sm rounded-xl py-3"
-                style={{
-                  background: sanctionType === 'bannissement' ? '#2e1a1a' : '#1a1828',
-                  border: `1.5px solid ${sanctionType === 'bannissement' ? '#ff6b6b' : '#2a2830'}`,
-                  color: sanctionType === 'bannissement' ? '#ff6b6b' : '#9b96b8',
-                }}
-              >
-                Bannissement
-              </button>
+              <button onClick={() => setSanctionType('suspension')} className="flex-1 font-fredoka text-sm rounded-xl py-3" style={{ background: sanctionType === 'suspension' ? '#2d1f10' : '#1a1828', border: `1.5px solid ${sanctionType === 'suspension' ? '#ff9f43' : '#2a2830'}`, color: sanctionType === 'suspension' ? '#ff9f43' : '#9b96b8' }}>Suspension</button>
+              <button onClick={() => setSanctionType('bannissement')} className="flex-1 font-fredoka text-sm rounded-xl py-3" style={{ background: sanctionType === 'bannissement' ? '#2e1a1a' : '#1a1828', border: `1.5px solid ${sanctionType === 'bannissement' ? '#ff6b6b' : '#2a2830'}`, color: sanctionType === 'bannissement' ? '#ff6b6b' : '#9b96b8' }}>Bannissement</button>
             </div>
             {sanctionType === 'suspension' && (
               <div className="flex flex-col gap-3">
                 <p className="font-fredoka text-[#9b96b8] text-sm">Durée de la suspension</p>
                 <div className="flex gap-2">
-                  <input
-                    type="number"
-                    min="1"
-                    value={suspensionDuree}
-                    onChange={e => setSuspensionDuree(e.target.value)}
-                    className="w-20 bg-[#0f0e17] border border-[#2a2830] rounded-xl px-3 py-2 text-[#eeeaf8] font-fredoka text-center focus:outline-none focus:border-[#ff9f43]"
-                  />
+                  <input type="number" min="1" value={suspensionDuree} onChange={e => setSuspensionDuree(e.target.value)} className="w-20 bg-[#0f0e17] border border-[#2a2830] rounded-xl px-3 py-2 text-[#eeeaf8] font-fredoka text-center focus:outline-none focus:border-[#ff9f43]" />
                   <div className="flex gap-1 flex-1">
                     {(['heures', 'jours', 'semaines'] as const).map(u => (
-                      <button
-                        key={u}
-                        onClick={() => setSuspensionUnite(u)}
-                        className="flex-1 font-fredoka text-xs rounded-lg py-2"
-                        style={{
-                          background: suspensionUnite === u ? '#2d1f10' : '#0f0e17',
-                          border: `1px solid ${suspensionUnite === u ? '#ff9f43' : '#2a2830'}`,
-                          color: suspensionUnite === u ? '#ff9f43' : '#6b6880',
-                        }}
-                      >
-                        {u}
-                      </button>
+                      <button key={u} onClick={() => setSuspensionUnite(u)} className="flex-1 font-fredoka text-xs rounded-lg py-2" style={{ background: suspensionUnite === u ? '#2d1f10' : '#0f0e17', border: `1px solid ${suspensionUnite === u ? '#ff9f43' : '#2a2830'}`, color: suspensionUnite === u ? '#ff9f43' : '#6b6880' }}>{u}</button>
                     ))}
                   </div>
                 </div>
               </div>
             )}
-            {sanctionType === 'bannissement' && (
-              <p className="text-[#9b96b8] text-sm text-center">
-                L'utilisateur sera banni définitivement et ne pourra plus se connecter.
-              </p>
-            )}
-            <button
-              onClick={appliquerSanction}
-              className="w-full font-fredoka text-lg rounded-2xl py-4 hover:opacity-90 transition"
-              style={{
-                background: sanctionType === 'bannissement' ? '#ff6b6b' : '#ff9f43',
-                color: '#0f0e17',
-              }}
-            >
+            {sanctionType === 'bannissement' && <p className="text-[#9b96b8] text-sm text-center">L'utilisateur sera banni définitivement et ne pourra plus se connecter.</p>}
+            <button onClick={appliquerSanction} className="w-full font-fredoka text-lg rounded-2xl py-4 hover:opacity-90 transition" style={{ background: sanctionType === 'bannissement' ? '#ff6b6b' : '#ff9f43', color: '#0f0e17' }}>
               {sanctionType === 'bannissement' ? 'Bannir définitivement' : 'Appliquer la suspension'}
             </button>
-            <button
-              onClick={() => setModalSanction({ open: false, userId: '', pseudo: '' })}
-              className="w-full text-[#6b6880] text-sm font-semibold hover:text-[#9b96b8] transition"
-            >
-              Annuler
-            </button>
+            <button onClick={() => setModalSanction({ open: false, userId: '', pseudo: '' })} className="w-full text-[#6b6880] text-sm font-semibold hover:text-[#9b96b8] transition">Annuler</button>
           </div>
         </div>
       )}
@@ -403,38 +402,16 @@ export default function Admin() {
               <>
                 <div className="flex flex-col gap-2">
                   <label className="font-fredoka text-[#9b96b8] text-sm">Titre</label>
-                  <input
-                    type="text"
-                    value={msgTitre}
-                    onChange={e => setMsgTitre(e.target.value)}
-                    placeholder="Objet du message..."
-                    className="bg-[#0f0e17] border border-[#2a2830] rounded-xl px-4 py-3 text-[#eeeaf8] font-fredoka focus:outline-none focus:border-[#a78bfa] transition"
-                  />
+                  <input type="text" value={msgTitre} onChange={e => setMsgTitre(e.target.value)} placeholder="Objet du message..." className="bg-[#0f0e17] border border-[#2a2830] rounded-xl px-4 py-3 text-[#eeeaf8] font-fredoka focus:outline-none focus:border-[#a78bfa] transition" />
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="font-fredoka text-[#9b96b8] text-sm">Message</label>
-                  <textarea
-                    value={msgContenu}
-                    onChange={e => setMsgContenu(e.target.value)}
-                    placeholder="Ton message..."
-                    rows={4}
-                    className="bg-[#0f0e17] border border-[#2a2830] rounded-xl px-4 py-3 text-[#eeeaf8] font-fredoka focus:outline-none focus:border-[#a78bfa] transition resize-none"
-                  />
+                  <textarea value={msgContenu} onChange={e => setMsgContenu(e.target.value)} placeholder="Ton message..." rows={4} className="bg-[#0f0e17] border border-[#2a2830] rounded-xl px-4 py-3 text-[#eeeaf8] font-fredoka focus:outline-none focus:border-[#a78bfa] transition resize-none" />
                 </div>
-                <button
-                  onClick={envoyerMessage}
-                  disabled={msgEnvoi || !msgTitre.trim() || !msgContenu.trim()}
-                  className="w-full font-fredoka text-lg rounded-2xl py-4 hover:opacity-90 transition disabled:opacity-50"
-                  style={{ background: '#a78bfa', color: '#0f0e17' }}
-                >
+                <button onClick={envoyerMessage} disabled={msgEnvoi || !msgTitre.trim() || !msgContenu.trim()} className="w-full font-fredoka text-lg rounded-2xl py-4 hover:opacity-90 transition disabled:opacity-50" style={{ background: '#a78bfa', color: '#0f0e17' }}>
                   {msgEnvoi ? 'Envoi...' : 'Envoyer →'}
                 </button>
-                <button
-                  onClick={() => { setModalMessage({ open: false, userId: '', pseudo: '' }); setMsgTitre(''); setMsgContenu('') }}
-                  className="w-full text-[#6b6880] text-sm font-semibold hover:text-[#9b96b8] transition"
-                >
-                  Annuler
-                </button>
+                <button onClick={() => { setModalMessage({ open: false, userId: '', pseudo: '' }); setMsgTitre(''); setMsgContenu('') }} className="w-full text-[#6b6880] text-sm font-semibold hover:text-[#9b96b8] transition">Annuler</button>
               </>
             )}
           </div>
@@ -444,12 +421,7 @@ export default function Admin() {
       {/* Sidebar */}
       <div style={{ width: '220px', background: '#0a0910', borderRight: '1px solid #1e1c2e', display: 'flex', flexDirection: 'column', padding: '24px 0', flexShrink: 0 }}>
         <div className="font-fredoka text-lg" style={{ padding: '0 20px 24px', borderBottom: '1px solid #1e1c2e', marginBottom: '16px' }}>
-          <span className="text-[#ff6b6b]">C</span>
-          <span className="text-[#ff9f43]">o</span>
-          <span className="text-[#ffd93d]">o</span>
-          <span className="text-[#6bcb77]">l</span>
-          <span className="text-[#4ecdc4]">o</span>
-          <span className="text-[#a78bfa]">s</span>
+          <span className="text-[#ff6b6b]">C</span><span className="text-[#ff9f43]">o</span><span className="text-[#ffd93d]">o</span><span className="text-[#6bcb77]">l</span><span className="text-[#4ecdc4]">o</span><span className="text-[#a78bfa]">s</span>
           <span className="text-[#6b6880] text-sm"> admin</span>
         </div>
 
@@ -459,17 +431,7 @@ export default function Admin() {
           { id: 'questions', label: 'Questions', color: '#ffd93d' },
           { id: 'categories', label: 'Catégories', color: '#4ecdc4' },
         ].map(item => (
-          <button
-            key={item.id}
-            onClick={() => setPanel(item.id as any)}
-            className="flex items-center gap-3 font-fredoka text-sm text-left"
-            style={{
-              padding: '10px 20px',
-              background: panel === item.id ? '#1a1828' : 'transparent',
-              color: panel === item.id ? '#eeeaf8' : '#6b6880',
-              borderRight: panel === item.id ? `3px solid ${item.color}` : '3px solid transparent',
-            }}
-          >
+          <button key={item.id} onClick={() => setPanel(item.id as any)} className="flex items-center gap-3 font-fredoka text-sm text-left" style={{ padding: '10px 20px', background: panel === item.id ? '#1a1828' : 'transparent', color: panel === item.id ? '#eeeaf8' : '#6b6880', borderRight: panel === item.id ? `3px solid ${item.color}` : '3px solid transparent' }}>
             <div className="w-2 h-2 rounded-full" style={{ background: item.color }}></div>
             {item.label}
           </button>
@@ -477,36 +439,16 @@ export default function Admin() {
 
         <p className="text-[#4a4760] text-xs font-bold uppercase tracking-widest" style={{ padding: '16px 20px 8px' }}>Communauté</p>
 
-        <button
-          onClick={() => setPanel('users')}
-          className="flex items-center gap-3 font-fredoka text-sm text-left"
-          style={{
-            padding: '10px 20px',
-            background: panel === 'users' ? '#1a1828' : 'transparent',
-            color: panel === 'users' ? '#eeeaf8' : '#6b6880',
-            borderRight: panel === 'users' ? '3px solid #a78bfa' : '3px solid transparent',
-          }}
-        >
+        <button onClick={() => setPanel('users')} className="flex items-center gap-3 font-fredoka text-sm text-left" style={{ padding: '10px 20px', background: panel === 'users' ? '#1a1828' : 'transparent', color: panel === 'users' ? '#eeeaf8' : '#6b6880', borderRight: panel === 'users' ? '3px solid #a78bfa' : '3px solid transparent' }}>
           <div className="w-2 h-2 rounded-full bg-[#a78bfa]"></div>
           Utilisateurs
         </button>
 
-        <button
-          onClick={() => setPanel('messages')}
-          className="flex items-center gap-3 font-fredoka text-sm text-left"
-          style={{
-            padding: '10px 20px',
-            background: panel === 'messages' ? '#1a1828' : 'transparent',
-            color: panel === 'messages' ? '#eeeaf8' : '#6b6880',
-            borderRight: panel === 'messages' ? '3px solid #ff9f43' : '3px solid transparent',
-          }}
-        >
+        <button onClick={() => setPanel('messages')} className="flex items-center gap-3 font-fredoka text-sm text-left" style={{ padding: '10px 20px', background: panel === 'messages' ? '#1a1828' : 'transparent', color: panel === 'messages' ? '#eeeaf8' : '#6b6880', borderRight: panel === 'messages' ? '3px solid #ff9f43' : '3px solid transparent' }}>
           <div className="w-2 h-2 rounded-full bg-[#ff9f43]"></div>
           <span style={{ flex: 1 }}>Messages</span>
           {nonLus > 0 && (
-            <span className="font-fredoka text-xs rounded-full flex items-center justify-center" style={{ background: '#ff6b6b', color: '#fff', minWidth: '18px', height: '18px', padding: '0 5px' }}>
-              {nonLus}
-            </span>
+            <span className="font-fredoka text-xs rounded-full flex items-center justify-center" style={{ background: '#ff6b6b', color: '#fff', minWidth: '18px', height: '18px', padding: '0 5px' }}>{nonLus}</span>
           )}
         </button>
 
@@ -528,9 +470,7 @@ export default function Admin() {
                 <h2 className="font-fredoka text-2xl text-[#eeeaf8]">Questions</h2>
                 <p className="text-[#6b6880] text-sm" style={{ marginTop: '4px' }}>Gérer toutes les questions du quiz</p>
               </div>
-              <Link href="/admin/question/nouvelle" className="font-fredoka text-sm hover:opacity-90 transition" style={{ background: '#ffd93d', color: '#0f0e17', borderRadius: '12px', padding: '10px 20px' }}>
-                + Ajouter
-              </Link>
+              <Link href="/admin/question/nouvelle" className="font-fredoka text-sm hover:opacity-90 transition" style={{ background: '#ffd93d', color: '#0f0e17', borderRadius: '12px', padding: '10px 20px' }}>+ Ajouter</Link>
             </div>
 
             <div className="grid grid-cols-3 gap-4" style={{ marginBottom: '24px' }}>
@@ -548,14 +488,7 @@ export default function Admin() {
               </div>
             </div>
 
-            <input
-              type="text"
-              placeholder="Rechercher une question..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full text-[#eeeaf8] text-sm outline-none"
-              style={{ background: '#1a1828', border: `1.5px solid ${search ? '#ffd93d' : '#2a2830'}`, borderRadius: '12px', padding: '12px 16px', marginBottom: '16px' }}
-            />
+            <input type="text" placeholder="Rechercher une question..." value={search} onChange={e => setSearch(e.target.value)} className="w-full text-[#eeeaf8] text-sm outline-none" style={{ background: '#1a1828', border: `1.5px solid ${search ? '#ffd93d' : '#2a2830'}`, borderRadius: '12px', padding: '12px 16px', marginBottom: '16px' }} />
 
             <div className="grid grid-cols-4 gap-4" style={{ padding: '0 12px', marginBottom: '8px' }}>
               <p className="text-[#4a4760] text-xs font-bold uppercase tracking-wider col-span-2">Question</p>
@@ -596,11 +529,9 @@ export default function Admin() {
             <div className="flex justify-between items-start" style={{ marginBottom: '24px' }}>
               <div>
                 <h2 className="font-fredoka text-2xl text-[#eeeaf8]">Catégories</h2>
-                <p className="text-[#6b6880] text-sm" style={{ marginTop: '4px' }}>Gérer les thèmes disponibles</p>
+                <p className="text-[#6b6880] text-sm" style={{ marginTop: '4px' }}>Gérer les thèmes et sous-catégories</p>
               </div>
-              <Link href="/admin/categorie/nouvelle" className="font-fredoka text-sm hover:opacity-90 transition" style={{ background: '#ffd93d', color: '#0f0e17', borderRadius: '12px', padding: '10px 20px' }}>
-                + Ajouter
-              </Link>
+              <Link href="/admin/categorie/nouvelle" className="font-fredoka text-sm hover:opacity-90 transition" style={{ background: '#ffd93d', color: '#0f0e17', borderRadius: '12px', padding: '10px 20px' }}>+ Ajouter</Link>
             </div>
 
             <div className="grid grid-cols-3 gap-4" style={{ marginBottom: '24px' }}>
@@ -613,28 +544,97 @@ export default function Admin() {
                 <div className="text-[#6b6880] text-xs" style={{ marginTop: '4px' }}>Actives</div>
               </div>
               <div className="bg-[#1a1828] border border-[#2a2830] rounded-xl p-4 text-center">
-                <div className="font-fredoka text-2xl text-[#ff6b6b]">{categories.filter(c => !c.active).length}</div>
-                <div className="text-[#6b6880] text-xs" style={{ marginTop: '4px' }}>Inactives</div>
+                <div className="font-fredoka text-2xl text-[#a78bfa]">{subcategories.length}</div>
+                <div className="text-[#6b6880] text-xs" style={{ marginTop: '4px' }}>Sous-catégories</div>
               </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {categories.map(c => (
-                <div key={c.id} className="flex items-center gap-4" style={{ background: '#1a1828', border: '1px solid #2a2830', borderRadius: '12px', padding: '12px 16px' }}>
-                  <div className="w-2 h-2 rounded-full bg-[#4ecdc4]"></div>
-                  <span className="font-fredoka text-[#eeeaf8] text-sm" style={{ flex: 1 }}>{c.name}</span>
-                  <span className="text-[#6b6880] text-xs">{c.count} questions</span>
-                  <div onClick={() => toggleCategory(c.id)} className="rounded-full cursor-pointer relative" style={{ width: '40px', height: '20px', background: c.active ? '#6bcb77' : '#2a2830' }}>
-                    <div className="rounded-full bg-white absolute" style={{ width: '16px', height: '16px', top: '2px', left: c.active ? '22px' : '2px', transition: 'left 0.2s' }}></div>
+              {categories.map(c => {
+                const subs = subcategories.filter(s => s.category_id === c.id)
+                const isExpanded = expandedCategory === c.id
+                return (
+                  <div key={c.id}>
+                    {/* Ligne catégorie */}
+                    <div className="flex items-center gap-4" style={{ background: '#1a1828', border: `1px solid ${isExpanded ? '#4ecdc4' : '#2a2830'}`, borderRadius: isExpanded ? '12px 12px 0 0' : '12px', padding: '12px 16px' }}>
+                      <button
+                        onClick={() => setExpandedCategory(isExpanded ? null : c.id)}
+                        className="font-fredoka text-xs text-[#4ecdc4] hover:opacity-80"
+                        style={{ width: '20px', flexShrink: 0 }}
+                      >
+                        {isExpanded ? '▼' : '▶'}
+                      </button>
+                      <div className="w-2 h-2 rounded-full bg-[#4ecdc4]"></div>
+                      <span className="font-fredoka text-[#eeeaf8] text-sm" style={{ flex: 1 }}>{c.name}</span>
+                      <span className="text-[#6b6880] text-xs">{c.count} questions</span>
+                      {subs.length > 0 && (
+                        <span className="font-fredoka text-xs rounded-full px-2 py-0.5" style={{ background: '#1a2a2d', color: '#4ecdc4' }}>
+                          {subs.length} sous-cat.
+                        </span>
+                      )}
+                      <div onClick={() => toggleCategory(c.id)} className="rounded-full cursor-pointer relative" style={{ width: '40px', height: '20px', background: c.active ? '#6bcb77' : '#2a2830' }}>
+                        <div className="rounded-full bg-white absolute" style={{ width: '16px', height: '16px', top: '2px', left: c.active ? '22px' : '2px', transition: 'left 0.2s' }}></div>
+                      </div>
+                      <Link href={`/admin/categorie/modifier/${c.id}`} className="flex items-center justify-center hover:opacity-80" style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#1a2a2d' }}>
+                        <div className="w-3 h-3 rounded bg-[#4ecdc4]"></div>
+                      </Link>
+                      <button onClick={() => deleteCategory(c.id)} className="flex items-center justify-center hover:opacity-80" style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#2e1a1a' }}>
+                        <div className="rounded bg-[#ff6b6b]" style={{ width: '12px', height: '3px' }}></div>
+                      </button>
+                    </div>
+
+                    {/* Sous-catégories dépliées */}
+                    {isExpanded && (
+                      <div style={{ background: '#141320', border: '1px solid #4ecdc4', borderTop: 'none', borderRadius: '0 0 12px 12px', padding: '8px 16px 12px' }}>
+                        {subs.length === 0 && (
+                          <p className="text-[#4a4760] text-xs font-fredoka py-2">Aucune sous-catégorie pour l'instant</p>
+                        )}
+                        {subs.map(s => (
+                          <div key={s.id} className="flex items-center gap-3 py-2" style={{ borderBottom: '1px solid #1e1c2e' }}>
+                            <div className="w-1.5 h-1.5 rounded-full bg-[#4ecdc4] opacity-50 ml-4"></div>
+                            <span className="font-fredoka text-[#c9c4e0] text-sm" style={{ flex: 1 }}>{s.name}</span>
+                            <div onClick={() => toggleSubcategory(s.id)} className="rounded-full cursor-pointer relative" style={{ width: '36px', height: '18px', background: s.active ? '#6bcb77' : '#2a2830' }}>
+                              <div className="rounded-full bg-white absolute" style={{ width: '14px', height: '14px', top: '2px', left: s.active ? '20px' : '2px', transition: 'left 0.2s' }}></div>
+                            </div>
+                            <button onClick={() => deleteSubcategory(s.id)} className="flex items-center justify-center hover:opacity-80" style={{ width: '24px', height: '24px', borderRadius: '6px', background: '#2e1a1a' }}>
+                              <div className="rounded bg-[#ff6b6b]" style={{ width: '10px', height: '2px' }}></div>
+                            </button>
+                          </div>
+                        ))}
+
+                        {/* Ajouter une sous-catégorie */}
+                        {addingSubFor === c.id ? (
+                          <div className="flex gap-2 mt-3">
+                            <input
+                              type="text"
+                              value={newSubName}
+                              onChange={e => setNewSubName(e.target.value)}
+                              onKeyDown={e => e.key === 'Enter' && addSubcategory(c.id)}
+                              placeholder="Nom de la sous-catégorie..."
+                              autoFocus
+                              className="flex-1 bg-[#0f0e17] border border-[#4ecdc4] rounded-xl px-3 py-2 text-[#eeeaf8] font-fredoka text-sm focus:outline-none"
+                            />
+                            <button onClick={() => addSubcategory(c.id)} className="font-fredoka text-sm rounded-xl px-4 py-2 hover:opacity-90 transition" style={{ background: '#4ecdc4', color: '#0f0e17' }}>
+                              Ajouter
+                            </button>
+                            <button onClick={() => { setAddingSubFor(null); setNewSubName('') }} className="font-fredoka text-sm text-[#6b6880] hover:text-[#9b96b8] transition">
+                              Annuler
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => { setAddingSubFor(c.id); setNewSubName('') }}
+                            className="font-fredoka text-xs mt-3 hover:opacity-80 transition"
+                            style={{ color: '#4ecdc4' }}
+                          >
+                            + Ajouter une sous-catégorie
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <Link href={`/admin/categorie/modifier/${c.id}`} className="flex items-center justify-center hover:opacity-80" style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#1a2a2d' }}>
-                    <div className="w-3 h-3 rounded bg-[#4ecdc4]"></div>
-                  </Link>
-                  <button onClick={() => deleteCategory(c.id)} className="flex items-center justify-center hover:opacity-80" style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#2e1a1a' }}>
-                    <div className="rounded bg-[#ff6b6b]" style={{ width: '12px', height: '3px' }}></div>
-                  </button>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         )}
@@ -666,38 +666,17 @@ export default function Admin() {
               {users.map((u, i) => {
                 const badge = getStatutBadge(u)
                 return (
-                  <div
-                    key={u.id}
-                    style={{
-                      background: badge ? (u.statut === 'banni' ? '#1a0f0f' : '#1a1510') : (i === 0 ? '#1f1e10' : '#1a1828'),
-                      border: `1px solid ${badge ? badge.color : (i === 0 ? '#ffd93d' : '#2a2830')}`,
-                      borderRadius: '12px',
-                      padding: '12px 16px',
-                    }}
-                  >
+                  <div key={u.id} style={{ background: badge ? (u.statut === 'banni' ? '#1a0f0f' : '#1a1510') : (i === 0 ? '#1f1e10' : '#1a1828'), border: `1px solid ${badge ? badge.color : (i === 0 ? '#ffd93d' : '#2a2830')}`, borderRadius: '12px', padding: '12px 16px' }}>
                     <div className="flex items-center gap-4">
-                      <div className="font-fredoka text-sm w-6 flex-shrink-0" style={{ color: i === 0 ? '#ffd93d' : i === 1 ? '#9b96b8' : i === 2 ? '#ff9f43' : '#4a4760' }}>
-                        {i + 1}
-                      </div>
+                      <div className="font-fredoka text-sm w-6 flex-shrink-0" style={{ color: i === 0 ? '#ffd93d' : i === 1 ? '#9b96b8' : i === 2 ? '#ff9f43' : '#4a4760' }}>{i + 1}</div>
                       <div className="flex items-center gap-3 flex-1">
-                        <div
-                          className="rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center"
-                          style={{ width: '32px', height: '32px', border: '2px solid #2a2830', background: '#2a1f3d' }}
-                        >
-                          {u.avatar_url ? (
-                            <img src={u.avatar_url} alt="avatar" className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-4 h-4 rounded-full bg-[#a78bfa]"></div>
-                          )}
+                        <div className="rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center" style={{ width: '32px', height: '32px', border: '2px solid #2a2830', background: '#2a1f3d' }}>
+                          {u.avatar_url ? <img src={u.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : <div className="w-4 h-4 rounded-full bg-[#a78bfa]"></div>}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
                             <p className="font-fredoka text-[#eeeaf8] text-sm">{u.pseudo}</p>
-                            {badge && (
-                              <span className="font-fredoka text-xs rounded-full px-2 py-0.5" style={{ background: badge.bg, color: badge.color }}>
-                                {badge.label}
-                              </span>
-                            )}
+                            {badge && <span className="font-fredoka text-xs rounded-full px-2 py-0.5" style={{ background: badge.bg, color: badge.color }}>{badge.label}</span>}
                           </div>
                           <p className="text-[#4a4760] text-xs">{u.email}</p>
                         </div>
@@ -705,29 +684,11 @@ export default function Admin() {
                       <div className="font-fredoka text-sm w-16 text-center" style={{ color: '#ffd93d' }}>{u.questions.toLocaleString()}</div>
                       <div className="font-fredoka text-sm w-12 text-center" style={{ color: u.reussite >= 70 ? '#6bcb77' : '#ffd93d' }}>{u.reussite}%</div>
                       <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setModalMessage({ open: true, userId: u.id, pseudo: u.pseudo })}
-                          className="font-fredoka text-xs rounded-lg px-3 py-1.5 hover:opacity-80 transition"
-                          style={{ background: '#2a1f3d', color: '#a78bfa', border: '1px solid #3a2d5a' }}
-                        >
-                          ✉ Message
-                        </button>
+                        <button onClick={() => setModalMessage({ open: true, userId: u.id, pseudo: u.pseudo })} className="font-fredoka text-xs rounded-lg px-3 py-1.5 hover:opacity-80 transition" style={{ background: '#2a1f3d', color: '#a78bfa', border: '1px solid #3a2d5a' }}>✉ Message</button>
                         {badge ? (
-                          <button
-                            onClick={() => leverSanction(u.id)}
-                            className="font-fredoka text-xs rounded-lg px-3 py-1.5 hover:opacity-80 transition"
-                            style={{ background: '#1a2e1f', color: '#6bcb77', border: '1px solid #1f3a28' }}
-                          >
-                            Lever
-                          </button>
+                          <button onClick={() => leverSanction(u.id)} className="font-fredoka text-xs rounded-lg px-3 py-1.5 hover:opacity-80 transition" style={{ background: '#1a2e1f', color: '#6bcb77', border: '1px solid #1f3a28' }}>Lever</button>
                         ) : (
-                          <button
-                            onClick={() => setModalSanction({ open: true, userId: u.id, pseudo: u.pseudo })}
-                            className="font-fredoka text-xs rounded-lg px-3 py-1.5 hover:opacity-80 transition"
-                            style={{ background: '#2e1a1a', color: '#ff6b6b', border: '1px solid #3a2020' }}
-                          >
-                            Sanctionner
-                          </button>
+                          <button onClick={() => setModalSanction({ open: true, userId: u.id, pseudo: u.pseudo })} className="font-fredoka text-xs rounded-lg px-3 py-1.5 hover:opacity-80 transition" style={{ background: '#2e1a1a', color: '#ff6b6b', border: '1px solid #3a2020' }}>Sanctionner</button>
                         )}
                       </div>
                     </div>
@@ -768,81 +729,24 @@ export default function Admin() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {messages.map(m => (
-                  <div
-                    key={m.id}
-                    style={{
-                      background: m.lu ? '#141320' : '#1a1828',
-                      border: `1px solid ${m.lu ? '#1e1c2e' : m.type === 'signalement' ? '#ff6b6b' : '#ff9f43'}`,
-                      borderRadius: '12px',
-                      padding: '16px',
-                      opacity: m.lu ? 0.6 : 1,
-                    }}
-                  >
+                  <div key={m.id} style={{ background: m.lu ? '#141320' : '#1a1828', border: `1px solid ${m.lu ? '#1e1c2e' : m.type === 'signalement' ? '#ff6b6b' : '#ff9f43'}`, borderRadius: '12px', padding: '16px', opacity: m.lu ? 0.6 : 1 }}>
                     <div className="flex items-center justify-between" style={{ marginBottom: '10px' }}>
                       <div className="flex items-center gap-3">
-                        <span
-                          className="font-fredoka text-xs rounded-full px-3 py-1"
-                          style={{
-                            background: m.type === 'signalement' ? '#2e1a1a' : '#1f1a10',
-                            color: m.type === 'signalement' ? '#ff6b6b' : '#ff9f43',
-                          }}
-                        >
+                        <span className="font-fredoka text-xs rounded-full px-3 py-1" style={{ background: m.type === 'signalement' ? '#2e1a1a' : '#1f1a10', color: m.type === 'signalement' ? '#ff6b6b' : '#ff9f43' }}>
                           {m.type === 'signalement' ? '⚑ Signalement' : '✉ Message'}
                         </span>
                         <span className="font-fredoka text-sm text-[#eeeaf8]">{m.pseudo}</span>
-                        {!m.lu && (
-                          <span className="font-fredoka text-xs rounded-full px-2 py-0.5" style={{ background: '#ff6b6b', color: '#fff' }}>
-                            Nouveau
-                          </span>
-                        )}
+                        {!m.lu && <span className="font-fredoka text-xs rounded-full px-2 py-0.5" style={{ background: '#ff6b6b', color: '#fff' }}>Nouveau</span>}
                       </div>
-                      <span className="text-[#4a4760] text-xs">
-                        {new Date(m.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                      </span>
+                      <span className="text-[#4a4760] text-xs">{new Date(m.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
-
-                    {m.sujet && m.type === 'message' && (
-                      <p className="font-fredoka text-[#c9c4e0] text-sm" style={{ marginBottom: '6px' }}>
-                        Sujet : {m.sujet}
-                      </p>
-                    )}
-
-                    {m.question_id && (
-                      <p className="text-[#6b6880] text-xs" style={{ marginBottom: '6px' }}>
-                        Question ID : <span className="text-[#9b96b8]">{m.question_id}</span>
-                      </p>
-                    )}
-
-                    <p className="text-[#9b96b8] text-sm" style={{ marginBottom: '12px', lineHeight: '1.5' }}>
-                      {m.contenu}
-                    </p>
-
+                    {m.sujet && m.type === 'message' && <p className="font-fredoka text-[#c9c4e0] text-sm" style={{ marginBottom: '6px' }}>Sujet : {m.sujet}</p>}
+                    {m.question_id && <p className="text-[#6b6880] text-xs" style={{ marginBottom: '6px' }}>Question ID : <span className="text-[#9b96b8]">{m.question_id}</span></p>}
+                    <p className="text-[#9b96b8] text-sm" style={{ marginBottom: '12px', lineHeight: '1.5' }}>{m.contenu}</p>
                     <div className="flex items-center gap-3">
-                      {!m.lu && (
-                        <button
-                          onClick={() => marquerLu(m.id)}
-                          className="font-fredoka text-xs hover:opacity-80 transition rounded-lg px-3 py-1.5"
-                          style={{ background: '#1a2e1f', color: '#6bcb77', border: '1px solid #1f3a28' }}
-                        >
-                          ✓ Marquer comme lu
-                        </button>
-                      )}
-                      {m.question_id && (
-                        <Link
-                          href={`/admin/question/modifier/${m.question_id}`}
-                          className="font-fredoka text-xs hover:opacity-80 transition rounded-lg px-3 py-1.5"
-                          style={{ background: '#2a1f3d', color: '#a78bfa', border: '1px solid #3a2d5a' }}
-                        >
-                          Voir la question →
-                        </Link>
-                      )}
-                      <button
-                        onClick={() => supprimerMessage(m.id)}
-                        className="font-fredoka text-xs hover:opacity-80 transition rounded-lg px-3 py-1.5"
-                        style={{ background: '#2e1a1a', color: '#ff6b6b', border: '1px solid #3a2020' }}
-                      >
-                        Supprimer
-                      </button>
+                      {!m.lu && <button onClick={() => marquerLu(m.id)} className="font-fredoka text-xs hover:opacity-80 transition rounded-lg px-3 py-1.5" style={{ background: '#1a2e1f', color: '#6bcb77', border: '1px solid #1f3a28' }}>✓ Marquer comme lu</button>}
+                      {m.question_id && <Link href={`/admin/question/modifier/${m.question_id}`} className="font-fredoka text-xs hover:opacity-80 transition rounded-lg px-3 py-1.5" style={{ background: '#2a1f3d', color: '#a78bfa', border: '1px solid #3a2d5a' }}>Voir la question →</Link>}
+                      <button onClick={() => supprimerMessage(m.id)} className="font-fredoka text-xs hover:opacity-80 transition rounded-lg px-3 py-1.5" style={{ background: '#2e1a1a', color: '#ff6b6b', border: '1px solid #3a2020' }}>Supprimer</button>
                     </div>
                   </div>
                 ))}
