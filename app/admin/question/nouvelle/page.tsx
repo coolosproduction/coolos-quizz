@@ -10,11 +10,13 @@ export default function NouvelleQuestion() {
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState('')
   const [categoryId, setCategoryId] = useState('')
+  const [subcategoryId, setSubcategoryId] = useState('')
   const [difficulty, setDifficulty] = useState('')
   const [active, setActive] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [categories, setCategories] = useState<{ id: string, name: string }[]>([])
+  const [subcategories, setSubcategories] = useState<{ id: string, name: string, category_id: string }[]>([])
   const [images, setImages] = useState<File[]>([])
   const [previews, setPreviews] = useState<string[]>([])
 
@@ -26,17 +28,33 @@ export default function NouvelleQuestion() {
   ]
 
   useEffect(() => {
-    const loadCategories = async () => {
+    const loadData = async () => {
       const supabase = createClient()
-      const { data } = await supabase
+      const { data: catsData } = await supabase
         .from('categories')
         .select('id, name')
         .eq('active', true)
         .order('name')
-      if (data) setCategories(data)
+      if (catsData) setCategories(catsData)
+
+      const { data: subsData } = await supabase
+        .from('subcategories')
+        .select('id, name, category_id')
+        .eq('active', true)
+        .order('name')
+      if (subsData) setSubcategories(subsData)
     }
-    loadCategories()
+    loadData()
   }, [])
+
+  // Sous-catégories filtrées selon la catégorie sélectionnée
+  const subcategoriesFiltrees = subcategories.filter(s => s.category_id === categoryId)
+
+  // Reset la sous-catégorie quand on change de catégorie
+  const handleCategoryChange = (newCategoryId: string) => {
+    setCategoryId(newCategoryId)
+    setSubcategoryId('')
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
@@ -55,57 +73,59 @@ export default function NouvelleQuestion() {
   }
 
   const handleSave = async () => {
-  if (!question || !answer || !categoryId || !difficulty) {
-    setError('Tous les champs obligatoires doivent être remplis.')
-    return
-  }
-  setLoading(true)
-  setError('')
-  const supabase = createClient()
-
-  const { data: newQuestion, error: insertError } = await supabase
-    .from('questions')
-    .insert({
-      question_text: question,
-      answer_text: answer,
-      category_id: categoryId,
-      difficulty,
-      active,
-    })
-    .select()
-    .single()
-
-  if (insertError) {
-    setError('Erreur lors de la création : ' + insertError.message)
-    setLoading(false)
-    return
-  }
-
-  if (images.length > 0 && newQuestion) {
-    for (let i = 0; i < images.length; i++) {
-      const file = images[i]
-      const ext = file.name.split('.').pop()
-      const path = `${newQuestion.id}-${i + 1}.${ext}`
-
-      const { error: uploadError } = await supabase.storage
-        .from('question-images')
-        .upload(path, file, { upsert: true })
-
-      if (uploadError) {
-        console.error('Upload error:', uploadError.message)
-        continue
-      }
-
-      await supabase.from('question_images').insert({
-        question_id: newQuestion.id,
-        file_path: path,
-        position: i + 1,
-      })
+    if (!question || !answer || !categoryId || !difficulty) {
+      setError('Tous les champs obligatoires doivent être remplis.')
+      return
     }
+    setLoading(true)
+    setError('')
+    const supabase = createClient()
+
+    const { data: newQuestion, error: insertError } = await supabase
+      .from('questions')
+      .insert({
+        question_text: question,
+        answer_text: answer,
+        category_id: categoryId,
+        subcategory_id: subcategoryId || null,
+        difficulty,
+        active,
+      })
+      .select()
+      .single()
+
+    if (insertError) {
+      setError('Erreur lors de la création : ' + insertError.message)
+      setLoading(false)
+      return
+    }
+
+    if (images.length > 0 && newQuestion) {
+      for (let i = 0; i < images.length; i++) {
+        const file = images[i]
+        const ext = file.name.split('.').pop()
+        const path = `${newQuestion.id}-${i + 1}.${ext}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('question-images')
+          .upload(path, file, { upsert: true })
+
+        if (uploadError) {
+          console.error('Upload error:', uploadError.message)
+          continue
+        }
+
+        await supabase.from('question_images').insert({
+          question_id: newQuestion.id,
+          file_path: path,
+          position: i + 1,
+        })
+      }
+    }
+
+    router.push('/admin')
   }
 
-  router.push('/admin')
-}
   return (
     <div className="min-h-screen bg-[#0f0e17] flex">
 
@@ -199,7 +219,7 @@ export default function NouvelleQuestion() {
               <label className="block font-fredoka text-[#9b96b8] text-sm" style={{ marginBottom: '8px' }}>Catégorie *</label>
               <select
                 value={categoryId}
-                onChange={e => setCategoryId(e.target.value)}
+                onChange={e => handleCategoryChange(e.target.value)}
                 className="w-full text-[#eeeaf8] text-sm outline-none cursor-pointer"
                 style={{ background: '#1a1828', border: `1.5px solid ${categoryId ? '#ffd93d' : '#3a3650'}`, borderRadius: '14px', padding: '14px 16px' }}
               >
@@ -229,6 +249,42 @@ export default function NouvelleQuestion() {
               </div>
             </div>
           </div>
+
+          {/* Sous-catégorie — apparaît seulement si la catégorie choisie en a */}
+          {categoryId && subcategoriesFiltrees.length > 0 && (
+            <div>
+              <label className="block font-fredoka text-[#9b96b8] text-sm" style={{ marginBottom: '8px' }}>
+                Sous-catégorie <span className="text-[#4a4760]">(optionnel)</span>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setSubcategoryId('')}
+                  className="font-fredoka text-sm rounded-xl px-4 py-2"
+                  style={{
+                    background: subcategoryId === '' ? '#1a2a2d' : '#1a1828',
+                    border: `1.5px solid ${subcategoryId === '' ? '#4ecdc4' : '#3a3650'}`,
+                    color: subcategoryId === '' ? '#4ecdc4' : '#9b96b8',
+                  }}
+                >
+                  Aucune
+                </button>
+                {subcategoriesFiltrees.map(s => (
+                  <button
+                    key={s.id}
+                    onClick={() => setSubcategoryId(s.id)}
+                    className="font-fredoka text-sm rounded-xl px-4 py-2"
+                    style={{
+                      background: subcategoryId === s.id ? '#1a2a2d' : '#1a1828',
+                      border: `1.5px solid ${subcategoryId === s.id ? '#4ecdc4' : '#3a3650'}`,
+                      color: subcategoryId === s.id ? '#4ecdc4' : '#9b96b8',
+                    }}
+                  >
+                    {s.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Images */}
           <div>
