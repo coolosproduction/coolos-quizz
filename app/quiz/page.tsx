@@ -63,6 +63,7 @@ function QuizContent() {
   const timerDuration = parseInt(searchParams.get('timer') || '20')
   const categoriesParam = searchParams.get('categories') || ''
   const difficultiesParam = searchParams.get('difficulties') || ''
+  const subcategoriesParam = searchParams.get('subcategories') || ''
 
   const circumference = 2 * Math.PI * 22
 
@@ -71,6 +72,7 @@ function QuizContent() {
       const supabase = createClient()
       const categoryIds = categoriesParam.split(',').filter(Boolean)
       const difficulties = difficultiesParam.split(',').filter(Boolean)
+      const subcategoryIds = subcategoriesParam.split(',').filter(Boolean)
 
       let query = supabase
         .from('questions')
@@ -82,6 +84,10 @@ function QuizContent() {
       }
       if (difficulties.length > 0) {
         query = query.in('difficulty', difficulties)
+      }
+      // Filtre par sous-catégories si sélectionnées
+      if (subcategoryIds.length > 0) {
+        query = query.in('subcategory_id', subcategoryIds)
       }
 
       const { data } = await query
@@ -99,12 +105,10 @@ function QuizContent() {
         .in('question_id', questionIds)
         .order('position', { ascending: true })
 
-      // Construit les URLs publiques et associe les images aux questions
       const imagesParQuestion: Record<string, { url: string, position: number }[]> = {}
       if (imagesData) {
         imagesData.forEach((img: any) => {
           if (!imagesParQuestion[img.question_id]) imagesParQuestion[img.question_id] = []
-          // Construction manuelle de l'URL publique sans destructuring
           const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
           const publicUrl = `${supabaseUrl}/storage/v1/object/public/question-images/${img.file_path}`
           imagesParQuestion[img.question_id].push({ url: publicUrl, position: img.position })
