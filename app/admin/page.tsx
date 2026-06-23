@@ -466,13 +466,15 @@ export default function Admin() {
         {panel === 'questions' && (
           <div>
             <div className="flex justify-between items-start" style={{ marginBottom: '24px' }}>
-              <div>
-                <h2 className="font-fredoka text-2xl text-[#eeeaf8]">Questions</h2>
-                <p className="text-[#6b6880] text-sm" style={{ marginTop: '4px' }}>Gérer toutes les questions du quiz</p>
-              </div>
-              <Link href="/admin/question/nouvelle" className="font-fredoka text-sm hover:opacity-90 transition" style={{ background: '#ffd93d', color: '#0f0e17', borderRadius: '12px', padding: '10px 20px' }}>+ Ajouter</Link>
-            </div>
-
+  <div>
+    <h2 className="font-fredoka text-2xl text-[#eeeaf8]">Questions</h2>
+    <p className="text-[#6b6880] text-sm" style={{ marginTop: '4px' }}>Gérer toutes les questions du quiz</p>
+  </div>
+  <div className="flex gap-2">
+    <Link href="/admin/questions/import" className="font-fredoka text-sm hover:opacity-80 transition" style={{ border: '1.5px solid #4ecdc4', color: '#4ecdc4', borderRadius: '12px', padding: '10px 20px' }}>Importer CSV</Link>
+    <Link href="/admin/question/nouvelle" className="font-fredoka text-sm hover:opacity-90 transition" style={{ background: '#ffd93d', color: '#0f0e17', borderRadius: '12px', padding: '10px 20px' }}>+ Ajouter</Link>
+  </div>
+</div>
             <div className="grid grid-cols-3 gap-4" style={{ marginBottom: '24px' }}>
               <div className="bg-[#1a1828] border border-[#2a2830] rounded-xl p-4 text-center">
                 <div className="font-fredoka text-2xl text-[#ffd93d]">{questions.length}</div>
