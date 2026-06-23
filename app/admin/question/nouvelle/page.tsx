@@ -1,12 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { createClient } from '../../../../lib/supabase'
 
 export default function NouvelleQuestion() {
-  const router = useRouter()
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState('')
   const [categoryId, setCategoryId] = useState('')
@@ -15,10 +13,13 @@ export default function NouvelleQuestion() {
   const [active, setActive] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
   const [categories, setCategories] = useState<{ id: string, name: string }[]>([])
   const [subcategories, setSubcategories] = useState<{ id: string, name: string, category_id: string }[]>([])
   const [images, setImages] = useState<File[]>([])
   const [previews, setPreviews] = useState<string[]>([])
+
+  const questionRef = useRef<HTMLTextAreaElement>(null)
 
   const difficultes = [
     { id: 'facile', label: 'Facile', color: '#6bcb77', bg: '#1a2e1f' },
@@ -27,6 +28,7 @@ export default function NouvelleQuestion() {
     { id: 'hardcore', label: 'Hardcore', color: '#a78bfa', bg: '#2a1f3d' },
   ]
 
+  // Charge les catégories/sous-catégories, puis pré-remplit avec le dernier choix utilisé
   useEffect(() => {
     const loadData = async () => {
       const supabase = createClient()
@@ -43,14 +45,32 @@ export default function NouvelleQuestion() {
         .eq('active', true)
         .order('name')
       if (subsData) setSubcategories(subsData)
+
+      const dernierCategoryId = localStorage.getItem('coolos_derniere_categorie')
+      const dernierDifficulty = localStorage.getItem('coolos_derniere_difficulte')
+      const dernierSubcategoryId = localStorage.getItem('coolos_derniere_souscategorie')
+
+      if (dernierCategoryId && catsData?.some(c => c.id === dernierCategoryId)) {
+        setCategoryId(dernierCategoryId)
+      }
+      if (dernierDifficulty) {
+        setDifficulty(dernierDifficulty)
+      }
+      if (dernierSubcategoryId && subsData?.some(s => s.id === dernierSubcategoryId)) {
+        setSubcategoryId(dernierSubcategoryId)
+      }
     }
     loadData()
+  }, [])
+
+  // Auto-focus sur le champ Question à l'ouverture
+  useEffect(() => {
+    questionRef.current?.focus()
   }, [])
 
   // Sous-catégories filtrées selon la catégorie sélectionnée
   const subcategoriesFiltrees = subcategories.filter(s => s.category_id === categoryId)
 
-  // Reset la sous-catégorie quand on change de catégorie
   const handleCategoryChange = (newCategoryId: string) => {
     setCategoryId(newCategoryId)
     setSubcategoryId('')
@@ -70,6 +90,18 @@ export default function NouvelleQuestion() {
     const newPreviews = previews.filter((_, i) => i !== index)
     setImages(newImages)
     setPreviews(newPreviews)
+  }
+
+  const resetFormulaire = () => {
+    // On garde categoryId, subcategoryId et difficulty : ce sont les valeurs
+    // qu'on vient de pré-remplir avec le dernier choix utilisé
+    setQuestion('')
+    setAnswer('')
+    setActive(true)
+    setImages([])
+    setPreviews([])
+    setError('')
+    questionRef.current?.focus()
   }
 
   const handleSave = async () => {
@@ -123,11 +155,36 @@ export default function NouvelleQuestion() {
       }
     }
 
-    router.push('/admin')
+    // Mémorise le choix catégorie/sous-catégorie/difficulté pour la prochaine question
+    localStorage.setItem('coolos_derniere_categorie', categoryId)
+    localStorage.setItem('coolos_derniere_difficulte', difficulty)
+    if (subcategoryId) {
+      localStorage.setItem('coolos_derniere_souscategorie', subcategoryId)
+    } else {
+      localStorage.removeItem('coolos_derniere_souscategorie')
+    }
+
+    setLoading(false)
+    setSuccess(true)
+    setTimeout(() => setSuccess(false), 1500)
+    resetFormulaire()
+  }
+
+  // Enter valide le formulaire. Dans les textarea, on exige Ctrl+Enter
+  // pour ne pas gêner la saisie de retours à la ligne dans la question/réponse.
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    const target = e.target as HTMLElement
+    const estTextarea = target.tagName === 'TEXTAREA'
+
+    if (e.key === 'Enter') {
+      if (estTextarea && !e.ctrlKey) return
+      e.preventDefault()
+      handleSave()
+    }
   }
 
   return (
-    <div className="min-h-screen bg-[#0f0e17] flex">
+    <div className="min-h-screen bg-[#0f0e17] flex" onKeyDown={handleKeyDown}>
 
       {/* Sidebar */}
       <div style={{ width: '220px', background: '#0a0910', borderRight: '1px solid #1e1c2e', display: 'flex', flexDirection: 'column', padding: '24px 0', flexShrink: 0 }}>
@@ -172,7 +229,9 @@ export default function NouvelleQuestion() {
         <div className="flex justify-between items-center" style={{ marginBottom: '32px' }}>
           <div>
             <h2 className="font-fredoka text-2xl text-[#eeeaf8]">Ajouter une question</h2>
-            <p className="text-[#6b6880] text-sm" style={{ marginTop: '4px' }}>Remplis tous les champs obligatoires</p>
+            <p className="text-[#6b6880] text-sm" style={{ marginTop: '4px' }}>
+              Ctrl+Enter (ou Enter hors zone de texte) pour valider et enchaîner directement sur la suivante
+            </p>
           </div>
           <Link href="/admin" className="font-fredoka text-sm hover:opacity-80 transition" style={{ border: '1.5px solid #3a3650', color: '#9b96b8', borderRadius: '12px', padding: '10px 20px' }}>
             ← Retour
@@ -180,6 +239,12 @@ export default function NouvelleQuestion() {
         </div>
 
         <div style={{ maxWidth: '700px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+
+          {success && (
+            <div style={{ background: '#1a2e1f', border: '1px solid #6bcb77', borderRadius: '14px', padding: '14px 16px' }}>
+              <p className="text-[#6bcb77] text-sm font-fredoka">✓ Question enregistrée — prêt pour la suivante</p>
+            </div>
+          )}
 
           {error && (
             <div style={{ background: '#2e1a1a', border: '1px solid #ff6b6b', borderRadius: '14px', padding: '14px 16px' }}>
@@ -191,6 +256,7 @@ export default function NouvelleQuestion() {
           <div>
             <label className="block font-fredoka text-[#9b96b8] text-sm" style={{ marginBottom: '8px' }}>Question *</label>
             <textarea
+              ref={questionRef}
               value={question}
               onChange={e => setQuestion(e.target.value)}
               placeholder="Écris ta question ici..."
@@ -235,6 +301,7 @@ export default function NouvelleQuestion() {
                 {difficultes.map(d => (
                   <button
                     key={d.id}
+                    type="button"
                     onClick={() => setDifficulty(d.id)}
                     className="font-fredoka text-sm rounded-xl py-3"
                     style={{
@@ -258,6 +325,7 @@ export default function NouvelleQuestion() {
               </label>
               <div className="flex flex-wrap gap-2">
                 <button
+                  type="button"
                   onClick={() => setSubcategoryId('')}
                   className="font-fredoka text-sm rounded-xl px-4 py-2"
                   style={{
@@ -271,6 +339,7 @@ export default function NouvelleQuestion() {
                 {subcategoriesFiltrees.map(s => (
                   <button
                     key={s.id}
+                    type="button"
                     onClick={() => setSubcategoryId(s.id)}
                     className="font-fredoka text-sm rounded-xl px-4 py-2"
                     style={{
@@ -303,6 +372,7 @@ export default function NouvelleQuestion() {
                       style={{ border: '2px solid #2a2830' }}
                     />
                     <button
+                      type="button"
                       onClick={() => supprimerImage(i)}
                       className="absolute flex items-center justify-center font-fredoka text-xs"
                       style={{ top: '-6px', right: '-6px', width: '20px', height: '20px', background: '#ff6b6b', color: '#fff', borderRadius: '50%' }}
@@ -359,15 +429,16 @@ export default function NouvelleQuestion() {
           {/* Boutons */}
           <div className="flex gap-3">
             <Link href="/admin" className="font-fredoka text-sm text-center hover:opacity-80 transition" style={{ border: '1.5px solid #3a3650', color: '#9b96b8', borderRadius: '14px', padding: '14px 24px' }}>
-              Annuler
+              Terminer la session
             </Link>
             <button
+              type="button"
               onClick={handleSave}
               disabled={loading}
               className="flex-1 font-fredoka text-lg hover:opacity-90 transition"
               style={{ background: '#ffd93d', color: '#0f0e17', borderRadius: '14px', padding: '14px' }}
             >
-              {loading ? 'Enregistrement...' : 'Enregistrer la question'}
+              {loading ? 'Enregistrement...' : 'Enregistrer et continuer'}
             </button>
           </div>
 
