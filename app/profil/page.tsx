@@ -291,6 +291,10 @@ export default function Profil() {
             <Link href="/historique" className="block w-full border rounded-2xl py-4 font-fredoka text-lg text-center hover:bg-[#1f1e10] transition" style={{ borderColor: '#ffd93d', color: '#ffd93d' }}>
               Voir mon historique →
             </Link>
+
+            <Link href="/classement" className="block w-full border rounded-2xl py-4 font-fredoka text-lg text-center hover:bg-[#2a1f3d] transition" style={{ borderColor: '#a78bfa', color: '#a78bfa' }}>
+              Voir le classement →
+            </Link>
           </div>
         )}
 

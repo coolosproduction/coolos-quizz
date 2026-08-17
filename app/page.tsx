@@ -101,6 +101,12 @@ export default function Home() {
     connecte ? (
       <div className="flex items-center gap-3">
         <Link
+          href="/classement"
+          className="font-fredoka text-sm text-[#6b6880] hover:text-[#c9c4e0] transition"
+        >
+          Classement
+        </Link>
+        <Link
           href="/contact"
           className="font-fredoka text-sm text-[#6b6880] hover:text-[#c9c4e0] transition"
         >
@@ -121,6 +127,12 @@ export default function Home() {
       </div>
     ) : (
       <div className="flex items-center gap-3">
+        <Link
+          href="/classement"
+          className="font-fredoka text-sm text-[#6b6880] hover:text-[#c9c4e0] transition"
+        >
+          Classement
+        </Link>
         <Link
           href="/contact"
           className="font-fredoka text-sm text-[#6b6880] hover:text-[#c9c4e0] transition"

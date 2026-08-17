@@ -686,6 +686,7 @@ export default function Admin() {
                       <div className="font-fredoka text-sm w-16 text-center" style={{ color: '#ffd93d' }}>{u.questions.toLocaleString()}</div>
                       <div className="font-fredoka text-sm w-12 text-center" style={{ color: u.reussite >= 70 ? '#6bcb77' : '#ffd93d' }}>{u.reussite}%</div>
                       <div className="flex items-center gap-2">
+                        <Link href={`/admin/joueur/${u.id}`} className="font-fredoka text-xs rounded-lg px-3 py-1.5 hover:opacity-80 transition" style={{ background: '#1a2a2d', color: '#4ecdc4', border: '1px solid #1f3a3a' }}>Profil complet</Link>
                         <button onClick={() => setModalMessage({ open: true, userId: u.id, pseudo: u.pseudo })} className="font-fredoka text-xs rounded-lg px-3 py-1.5 hover:opacity-80 transition" style={{ background: '#2a1f3d', color: '#a78bfa', border: '1px solid #3a2d5a' }}>✉ Message</button>
                         {badge ? (
                           <button onClick={() => leverSanction(u.id)} className="font-fredoka text-xs rounded-lg px-3 py-1.5 hover:opacity-80 transition" style={{ background: '#1a2e1f', color: '#6bcb77', border: '1px solid #1f3a28' }}>Lever</button>
