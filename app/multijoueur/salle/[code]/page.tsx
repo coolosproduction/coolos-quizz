@@ -4,9 +4,10 @@ import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '../../../../lib/supabase'
-import { getMultiplayerIdentity, subscribeRoomRealtime } from '../../../../lib/multiplayer'
+import { getMultiplayerIdentity, subscribeRoomRealtime, fetchRoomPlayers } from '../../../../lib/multiplayer'
 import BackButton from '@/components/BackButton'
 import Avatar from '@/components/Avatar'
+import ChatPanel from '@/components/ChatPanel'
 
 type Game = {
   id: string
@@ -30,10 +31,24 @@ type Player = {
   avatar_url: string | null
   status: 'actif' | 'abandonne'
   joined_at: string
+  muted: boolean
 }
 
 const difficulteLabels: Record<string, string> = {
   facile: 'Facile', moyen: 'Moyen', difficile: 'Difficile', hardcore: 'Hardcore',
+}
+
+// Forme minimale du payload postgres_changes utile côté client (on ne lit
+// jamais que .new/.old.user_id et .status pour détecter une expulsion).
+type PlayersChangePayload = {
+  new?: { user_id?: string; status?: string } | null
+  old?: { status?: string } | null
+}
+
+// Web Share API : pas toujours dans le lib DOM ciblé par ce projet, d'où ce
+// typage minimal plutôt qu'un `as any` sur navigator.
+type NavigatorWithShare = Navigator & {
+  share?: (data?: { title?: string; text?: string; url?: string }) => Promise<void>
 }
 
 export default function SalleAttente() {
@@ -42,6 +57,7 @@ export default function SalleAttente() {
   const code = (params.code as string || '').toUpperCase()
 
   const [myUserId, setMyUserId] = useState<string | null>(null)
+  const [myPlayerId, setMyPlayerId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [closed, setClosed] = useState<string | null>(null)
@@ -58,13 +74,8 @@ export default function SalleAttente() {
   const isHost = !!game && !!myUserId && game.host_id === myUserId
 
   const reloadPlayers = useCallback(async (gameId: string) => {
-    const supabase = supabaseRef.current
-    const { data } = await supabase
-      .from('multiplayer_players')
-      .select('id, user_id, pseudo, is_guest, avatar_url, status, joined_at')
-      .eq('game_id', gameId)
-      .order('joined_at', { ascending: true })
-    if (data) setPlayers(data as Player[])
+    const rows = await fetchRoomPlayers(supabaseRef.current, gameId)
+    setPlayers(rows as Player[])
   }, [])
 
   useEffect(() => {
@@ -111,7 +122,7 @@ export default function SalleAttente() {
             setLoading(false)
             return
           }
-          const { error: joinError } = await supabase
+          const { data: joinedPlayer, error: joinError } = await supabase
             .from('multiplayer_players')
             .insert({
               game_id: gameData.id,
@@ -120,16 +131,22 @@ export default function SalleAttente() {
               pseudo: identity.pseudo,
               avatar_url: identity.avatarUrl,
             })
+            .select('id')
+            .single()
           if (joinError) {
             setClosed('Cette salle est complète.')
             setLoading(false)
             return
           }
-        } else if (gameData.status !== 'attente') {
-          // Déjà membre, la partie est déjà lancée : on rejoint la phase en cours.
-          if (gameData.status === 'en_cours') { router.replace(`/multijoueur/quiz/${code}`); return }
-          if (gameData.status === 'correction') { router.replace(`/multijoueur/correction/${code}`); return }
-          if (gameData.status === 'terminee') { router.replace(`/multijoueur/resultats/${code}`); return }
+          if (joinedPlayer) setMyPlayerId(joinedPlayer.id)
+        } else {
+          setMyPlayerId(existingPlayer.id)
+          if (gameData.status !== 'attente') {
+            // Déjà membre, la partie est déjà lancée : on rejoint la phase en cours.
+            if (gameData.status === 'en_cours') { router.replace(`/multijoueur/quiz/${code}`); return }
+            if (gameData.status === 'correction') { router.replace(`/multijoueur/correction/${code}`); return }
+            if (gameData.status === 'terminee') { router.replace(`/multijoueur/resultats/${code}`); return }
+          }
         }
 
         if (cancelled) return
@@ -144,13 +161,13 @@ export default function SalleAttente() {
             .in('id', gameData.config.category_ids)
           if (cats) {
             const map: Record<string, string> = {}
-            cats.forEach((c: any) => { map[c.id] = c.name })
+            cats.forEach((c: { id: string; name: string }) => { map[c.id] = c.name })
             setCategoryNames(map)
           }
         }
 
         setLoading(false)
-      } catch (e) {
+      } catch {
         setClosed("Impossible de rejoindre cette salle.")
         setLoading(false)
       }
@@ -174,7 +191,16 @@ export default function SalleAttente() {
         if (newGame.status === 'en_cours') router.replace(`/multijoueur/quiz/${code}`)
         if (newGame.status === 'annulee') setClosed('Cette salle a été fermée.')
       },
-      onPlayersChange: () => reloadPlayers(gameId),
+      onPlayersChange: (payload: PlayersChangePayload) => {
+        reloadPlayers(gameId)
+        // Mon propre statut vient de passer à "abandonne" alors que j'étais
+        // encore actif : je viens d'être expulsé par l'hôte (un abandon
+        // volontaire ne me laisse pas en train d'écouter ce canal, puisque
+        // handleQuitter navigue immédiatement ailleurs).
+        if (payload?.new?.user_id === myUserId && payload?.new?.status === 'abandonne' && payload?.old?.status === 'actif') {
+          setClosed("Tu as été expulsé de cette salle par l'hôte.")
+        }
+      },
       onAnswersChange: () => {},
     })
 
@@ -191,15 +217,16 @@ export default function SalleAttente() {
   // (la page de salle crée automatiquement une session invité au besoin).
   const handleShare = async () => {
     const url = `${window.location.origin}/multijoueur/salle/${code}`
-    if (typeof navigator !== 'undefined' && (navigator as any).share) {
+    const nav = typeof navigator !== 'undefined' ? (navigator as NavigatorWithShare) : null
+    if (nav?.share) {
       try {
-        await (navigator as any).share({
+        await nav.share({
           title: 'Coolos Quiz',
           text: `Rejoins ma salle multijoueur sur Coolos Quiz (code ${code}) !`,
           url,
         })
         return
-      } catch (e) {
+      } catch {
         // Partage annulé par l'utilisateur ou non supporté au final : on
         // retombe sur la copie du lien plutôt que de laisser un état bloqué.
       }
@@ -244,7 +271,7 @@ export default function SalleAttente() {
     }
 
     const shuffled = [...questionsData].sort(() => Math.random() - 0.5)
-    const questionIds = shuffled.slice(0, nb).map((q: any) => q.id)
+    const questionIds = shuffled.slice(0, nb).map((q: { id: string }) => q.id)
 
     const { error: launchError } = await supabase.rpc('launch_multiplayer_game', {
       p_game_id: game.id,
@@ -385,11 +412,22 @@ export default function SalleAttente() {
           </button>
         ) : (
           <div className="bg-[#1e1c2e] border border-[#2a2830] rounded-2xl py-5 text-center">
-            <p className="font-fredoka text-[#9b96b8] text-base">En attente que l'hôte lance la partie...</p>
+            <p className="font-fredoka text-[#9b96b8] text-base">En attente que l&apos;hôte lance la partie...</p>
           </div>
         )}
 
       </div>
+
+      {myPlayerId && myUserId && (
+        <ChatPanel
+          gameId={game.id}
+          gameStatus={game.status}
+          myPlayerId={myPlayerId}
+          myUserId={myUserId}
+          isHost={isHost}
+          players={players}
+        />
+      )}
     </main>
   )
 }

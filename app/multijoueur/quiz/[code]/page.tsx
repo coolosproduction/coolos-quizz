@@ -1,10 +1,12 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '../../../../lib/supabase'
-import { getMultiplayerIdentity, subscribeRoomRealtime, roomPathForStatus } from '../../../../lib/multiplayer'
+import { getMultiplayerIdentity, subscribeRoomRealtime, roomPathForStatus, fetchRoomPlayers } from '../../../../lib/multiplayer'
+import ChatPanel from '@/components/ChatPanel'
 
 type Game = {
   id: string
@@ -25,6 +27,23 @@ type QuestionData = {
   images: { url: string, position: number }[]
 }
 
+type ChatPlayer = {
+  id: string
+  user_id: string
+  pseudo: string
+  is_guest: boolean
+  avatar_url: string | null
+  status: 'actif' | 'abandonne'
+  muted: boolean
+}
+
+// Forme minimale du payload postgres_changes utile côté client (on ne lit
+// jamais que .new/.old.user_id et .status pour détecter une expulsion).
+type PlayersChangePayload = {
+  new?: { user_id?: string; status?: string } | null
+  old?: { status?: string } | null
+}
+
 export default function QuizMultijoueur() {
   const params = useParams()
   const router = useRouter()
@@ -37,6 +56,7 @@ export default function QuizMultijoueur() {
   const [game, setGame] = useState<Game | null>(null)
   const [questionsById, setQuestionsById] = useState<Record<string, QuestionData>>({})
   const [activePlayersCount, setActivePlayersCount] = useState(0)
+  const [players, setPlayers] = useState<ChatPlayer[]>([])
   const [reponse, setReponse] = useState('')
   const [answered, setAnswered] = useState(false)
   const [timeLeft, setTimeLeft] = useState(0)
@@ -56,6 +76,11 @@ export default function QuizMultijoueur() {
       .eq('game_id', gameId)
       .eq('status', 'actif')
     setActivePlayersCount(count || 0)
+  }, [])
+
+  const reloadPlayers = useCallback(async (gameId: string) => {
+    const rows = await fetchRoomPlayers(supabaseRef.current, gameId)
+    setPlayers(rows as ChatPlayer[])
   }, [])
 
   useEffect(() => {
@@ -129,7 +154,7 @@ export default function QuizMultijoueur() {
           const imagesByQuestion: Record<string, { url: string, position: number }[]> = {}
           if (imagesData) {
             const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-            imagesData.forEach((img: any) => {
+            imagesData.forEach((img: { question_id: string; file_path: string; position: number }) => {
               if (!imagesByQuestion[img.question_id]) imagesByQuestion[img.question_id] = []
               imagesByQuestion[img.question_id].push({
                 url: `${supabaseUrl}/storage/v1/object/public/question-images/${img.file_path}`,
@@ -140,6 +165,12 @@ export default function QuizMultijoueur() {
 
           const map: Record<string, QuestionData> = {}
           if (qData) {
+            // category:categories(name) est une relation to-one (FK sur
+            // category_id) et renvoie bien un objet unique à l'exécution,
+            // mais l'inférence de type de supabase-js sans Database générés
+            // suppose un tableau pour toute relation embarquée — d'où le any
+            // ici plutôt qu'un type qui mentirait sur la vraie forme.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             qData.forEach((q: any) => {
               map[q.id] = {
                 id: q.id,
@@ -165,11 +196,12 @@ export default function QuizMultijoueur() {
         }
 
         await refreshActiveCount(gameData.id)
+        await reloadPlayers(gameData.id)
 
         currentIndexRef.current = gameData.current_question_index
         setGame(gameData as Game)
         setLoading(false)
-      } catch (e) {
+      } catch {
         setClosedMsg('Impossible de charger cette partie.')
         setLoading(false)
       }
@@ -177,7 +209,7 @@ export default function QuizMultijoueur() {
 
     init()
     return () => { cancelled = true }
-  }, [code, router, refreshActiveCount])
+  }, [code, router, refreshActiveCount, reloadPlayers])
 
   // Applique un nouvel état de partie reçu (par Realtime ou par une relecture
   // manuelle de la DB) — factorisé pour être utilisé par les deux canaux.
@@ -212,12 +244,19 @@ export default function QuizMultijoueur() {
       gameId,
       myUserId,
       onGameChange: applyGameUpdate,
-      onPlayersChange: () => refreshActiveCount(gameId),
+      onPlayersChange: (payload: PlayersChangePayload) => {
+        refreshActiveCount(gameId)
+        reloadPlayers(gameId)
+        // Cf. page salle : je viens d'être expulsé par l'hôte en plein quiz.
+        if (payload?.new?.user_id === myUserId && payload?.new?.status === 'abandonne' && payload?.old?.status === 'actif') {
+          setClosedMsg("Tu as été expulsé de cette salle par l'hôte.")
+        }
+      },
       onAnswersChange: () => {},
     })
 
     return cleanup
-  }, [game?.id, myUserId, code, router, refreshActiveCount, applyGameUpdate])
+  }, [game?.id, myUserId, code, router, refreshActiveCount, reloadPlayers, applyGameUpdate])
 
   // Minuteur local, recalculé depuis l'heure serveur (question_started_at) —
   // jamais depuis un décompte purement client, pour rester synchronisé avec
@@ -308,6 +347,7 @@ export default function QuizMultijoueur() {
 
   if (!game) return null
 
+  const isHost = game.host_id === myUserId
   const total = game.question_ids.length
   const index = game.current_question_index
   const currentQuestionId = game.question_ids[index]
@@ -379,12 +419,14 @@ export default function QuizMultijoueur() {
         {question.images.length > 0 && (
           <div className="flex gap-3 flex-wrap">
             {question.images.map((img, i) => (
-              <img
+              <Image
                 key={i}
                 src={img.url}
                 alt={`image ${i + 1}`}
+                width={320}
+                height={240}
                 className="rounded-2xl object-cover"
-                style={{ maxHeight: '240px', maxWidth: '100%', border: '2px solid #2a2830' }}
+                style={{ maxHeight: '240px', maxWidth: '100%', width: 'auto', height: 'auto', border: '2px solid #2a2830' }}
               />
             ))}
           </div>
@@ -427,6 +469,17 @@ export default function QuizMultijoueur() {
         )}
 
       </div>
+
+      {myPlayerId && myUserId && (
+        <ChatPanel
+          gameId={game.id}
+          gameStatus={game.status}
+          myPlayerId={myPlayerId}
+          myUserId={myUserId}
+          isHost={isHost}
+          players={players}
+        />
+      )}
     </main>
   )
 }

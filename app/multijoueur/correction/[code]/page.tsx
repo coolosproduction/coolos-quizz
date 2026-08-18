@@ -4,9 +4,10 @@ import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '../../../../lib/supabase'
-import { getMultiplayerIdentity, subscribeRoomRealtime, roomPathForStatus } from '../../../../lib/multiplayer'
+import { getMultiplayerIdentity, subscribeRoomRealtime, roomPathForStatus, fetchRoomPlayers } from '../../../../lib/multiplayer'
 import BackButton from '@/components/BackButton'
 import Avatar from '@/components/Avatar'
+import ChatPanel from '@/components/ChatPanel'
 
 type Game = {
   id: string
@@ -16,6 +17,23 @@ type Game = {
 }
 
 type Eval = 'oui' | 'en_partie' | 'non' | null
+
+type ChatPlayer = {
+  id: string
+  user_id: string
+  pseudo: string
+  is_guest: boolean
+  avatar_url: string | null
+  status: 'actif' | 'abandonne'
+  muted: boolean
+}
+
+// Forme minimale du payload postgres_changes utile côté client (on ne lit
+// jamais que .new/.old.user_id et .status pour détecter une expulsion).
+type PlayersChangePayload = {
+  new?: { user_id?: string; status?: string } | null
+  old?: { status?: string } | null
+}
 
 type AnswerRow = {
   id: string
@@ -46,11 +64,13 @@ export default function CorrectionMultijoueur() {
   const code = (params.code as string || '').toUpperCase()
 
   const [myUserId, setMyUserId] = useState<string | null>(null)
+  const [myPlayerId, setMyPlayerId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [closedMsg, setClosedMsg] = useState<string | null>(null)
   const [game, setGame] = useState<Game | null>(null)
   const [answers, setAnswers] = useState<AnswerRow[]>([])
   const [evaluating, setEvaluating] = useState(false)
+  const [players, setPlayers] = useState<ChatPlayer[]>([])
 
   const supabaseRef = useRef(createClient())
   const evaluatingRef = useRef(false)
@@ -77,6 +97,18 @@ export default function CorrectionMultijoueur() {
       .select(ANSWERS_SELECT)
       .eq('game_id', gameId)
     if (data) setAnswers(sortAnswers(data as unknown as AnswerRow[]))
+  }, [])
+
+  // Roster complet de la salle (au-delà des seuls joueurs ayant déjà une
+  // réponse à corriger) — nécessaire pour le chat : résoudre pseudo/avatar
+  // par player_id, et donner à l'hôte la liste des joueurs à modérer.
+  const reloadPlayers = useCallback(async (gameId: string, myUid?: string | null) => {
+    const rows = await fetchRoomPlayers(supabaseRef.current, gameId)
+    setPlayers(rows as ChatPlayer[])
+    const uid = myUid ?? myUserId
+    const mine = rows.find((p: ChatPlayer) => p.user_id === uid)
+    if (mine) setMyPlayerId(mine.id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // amIHost est passé explicitement par l'appelant plutôt que lu depuis un
@@ -135,13 +167,15 @@ export default function CorrectionMultijoueur() {
         const sorted = sortAnswers((answersData || []) as unknown as AnswerRow[])
         if (cancelled) return
         setAnswers(sorted)
+        await reloadPlayers(gameData.id, identity.user.id)
+        if (cancelled) return
         setGame(gameData as Game)
         setLoading(false)
 
         if (gameData.host_id === identity.user.id) {
           await maybeFinalize(gameData.id, sorted, true)
         }
-      } catch (e) {
+      } catch {
         setClosedMsg('Impossible de charger la correction.')
         setLoading(false)
       }
@@ -149,7 +183,7 @@ export default function CorrectionMultijoueur() {
 
     init()
     return () => { cancelled = true }
-  }, [code, router, maybeFinalize])
+  }, [code, router, maybeFinalize, reloadPlayers])
 
   useEffect(() => {
     if (!game?.id || !myUserId) return
@@ -172,12 +206,18 @@ export default function CorrectionMultijoueur() {
           maybeFinalize(gameId, answersRef.current, true)
         }
       },
-      onPlayersChange: () => {},
+      onPlayersChange: (payload: PlayersChangePayload) => {
+        reloadPlayers(gameId, myUserId)
+        // Cf. page salle : je viens d'être expulsé par l'hôte en pleine correction.
+        if (payload?.new?.user_id === myUserId && payload?.new?.status === 'abandonne' && payload?.old?.status === 'actif') {
+          setClosedMsg("Tu as été expulsé de cette salle par l'hôte.")
+        }
+      },
       onAnswersChange: () => reloadAnswers(gameId),
     })
 
     return cleanup
-  }, [game?.id, myUserId, code, router, reloadAnswers, maybeFinalize])
+  }, [game?.id, myUserId, code, router, reloadAnswers, reloadPlayers, maybeFinalize])
 
   const handleEvaluer = async (item: AnswerRow, verdict: 'oui' | 'en_partie' | 'non') => {
     if (evaluatingRef.current || !game) return
@@ -312,7 +352,7 @@ export default function CorrectionMultijoueur() {
               </div>
             ) : (
               <div className="bg-[#1e1c2e] border border-[#2a2830] rounded-2xl py-5 text-center">
-                <p className="font-fredoka text-[#9b96b8] text-base">L'hôte évalue cette réponse...</p>
+                <p className="font-fredoka text-[#9b96b8] text-base">L&apos;hôte évalue cette réponse...</p>
               </div>
             )}
           </div>
@@ -350,6 +390,17 @@ export default function CorrectionMultijoueur() {
         )}
 
       </div>
+
+      {myPlayerId && myUserId && (
+        <ChatPanel
+          gameId={game.id}
+          gameStatus={game.status}
+          myPlayerId={myPlayerId}
+          myUserId={myUserId}
+          isHost={isHost}
+          players={players}
+        />
+      )}
     </main>
   )
 }
