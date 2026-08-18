@@ -101,6 +101,12 @@ export default function Home() {
     connecte ? (
       <div className="flex items-center gap-3">
         <Link
+          href="/multijoueur"
+          className="font-fredoka text-sm text-[#6b6880] hover:text-[#c9c4e0] transition"
+        >
+          Multijoueur
+        </Link>
+        <Link
           href="/classement"
           className="font-fredoka text-sm text-[#6b6880] hover:text-[#c9c4e0] transition"
         >
@@ -133,6 +139,12 @@ export default function Home() {
       </div>
     ) : (
       <div className="flex items-center gap-3">
+        <Link
+          href="/multijoueur"
+          className="font-fredoka text-sm text-[#6b6880] hover:text-[#c9c4e0] transition"
+        >
+          Multijoueur
+        </Link>
         <Link
           href="/classement"
           className="font-fredoka text-sm text-[#6b6880] hover:text-[#c9c4e0] transition"
@@ -172,12 +184,20 @@ export default function Home() {
 
           <div className="flex flex-col gap-4 w-full max-w-sm">
             {connecte ? (
-              <Link
-                href="/configuration"
-                className="block w-full bg-[#ffd93d] text-[#0f0e17] rounded-2xl py-5 font-fredoka text-xl hover:opacity-90 transition text-center"
-              >
-                Lancer un quiz !
-              </Link>
+              <>
+                <Link
+                  href="/configuration"
+                  className="block w-full bg-[#ffd93d] text-[#0f0e17] rounded-2xl py-5 font-fredoka text-xl hover:opacity-90 transition text-center"
+                >
+                  Lancer un quiz !
+                </Link>
+                <Link
+                  href="/multijoueur"
+                  className="block w-full border border-[#3a3650] text-[#c9c4e0] rounded-2xl py-4 font-fredoka text-lg hover:bg-[#1e1c2e] transition text-center"
+                >
+                  Jouer en multijoueur →
+                </Link>
+              </>
             ) : (
               <>
                 <Link
@@ -192,6 +212,13 @@ export default function Home() {
                   className="block w-full border border-[#3a3650] text-[#c9c4e0] rounded-2xl py-4 font-fredoka text-lg hover:bg-[#1e1c2e] transition text-center"
                 >
                   J'ai déjà un compte →
+                </Link>
+
+                <Link
+                  href="/multijoueur"
+                  className="w-full text-[#9b96b8] text-sm font-semibold hover:text-[#c9c4e0] transition py-3"
+                >
+                  Jouer en multijoueur
                 </Link>
 
                 <button
