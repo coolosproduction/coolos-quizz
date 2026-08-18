@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '../../../lib/supabase'
+import Avatar from '@/components/Avatar'
+import BackButton from '@/components/BackButton'
 
 type Identite = {
   pseudo: string
@@ -239,13 +241,8 @@ export default function ProfilPublic() {
         <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl" style={{ padding: '24px' }}>
           <div className="flex items-center gap-5 flex-wrap justify-between">
             <div className="flex items-center gap-5">
-              <div className="rounded-full overflow-hidden flex items-center justify-center flex-shrink-0" style={{ width: '64px', height: '64px', border: '3px solid #a78bfa', background: '#2a1f3d' }}>
-                {identite.avatar_url ? (
-                  <img src={identite.avatar_url} alt="avatar" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-[#a78bfa]"></div>
-                )}
-              </div>
+              <BackButton />
+              <Avatar url={identite.avatar_url} size={64} border="accent" />
               <div>
                 <h1 className="font-fredoka text-2xl text-[#eeeaf8]">{identite.pseudo}</h1>
                 {stats && (

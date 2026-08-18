@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '../../lib/supabase'
+import Avatar from '@/components/Avatar'
+import BackButton from '@/components/BackButton'
 
 type Identite = { pseudo: string, avatar_url: string | null }
 
@@ -146,9 +148,12 @@ export default function Amis() {
       <div style={{ maxWidth: '700px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="font-fredoka text-3xl text-[#eeeaf8] mb-1">Amis</h1>
-            <p className="text-[#9b96b8] text-sm">Gère tes amis, tes demandes et les joueurs bloqués</p>
+          <div className="flex items-center gap-3">
+            <BackButton />
+            <div>
+              <h1 className="font-fredoka text-3xl text-[#eeeaf8] mb-1">Amis</h1>
+              <p className="text-[#9b96b8] text-sm">Gère tes amis, tes demandes et les joueurs bloqués</p>
+            </div>
           </div>
           <Link href="/classement" className="font-fredoka text-sm text-[#a78bfa] hover:opacity-80 transition flex-shrink-0">
             Chercher un joueur →
@@ -299,13 +304,7 @@ function CarteJoueur({ userId, identites, sousTitre, children }: { userId: strin
   return (
     <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl flex items-center gap-4 flex-wrap" style={{ padding: '14px 18px' }}>
       <Link href={`/joueur/${userId}`} className="flex items-center gap-3 flex-1 min-w-0">
-        <div className="rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center" style={{ width: '40px', height: '40px', border: '2px solid #2a2830', background: '#2a1f3d' }}>
-          {id?.avatar_url ? (
-            <img src={id.avatar_url} alt="avatar" className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-5 h-5 rounded-full bg-[#a78bfa]"></div>
-          )}
-        </div>
+        <Avatar url={id?.avatar_url} size={40} border="subtle" />
         <div className="min-w-0">
           <p className="font-fredoka text-[#eeeaf8] text-sm truncate">{id?.pseudo || 'Joueur'}</p>
           {sousTitre && <p className="text-[#6b6880] text-xs">{sousTitre}</p>}
