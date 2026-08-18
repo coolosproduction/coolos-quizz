@@ -6,10 +6,13 @@ import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '../../../lib/supabase'
 import Avatar from '@/components/Avatar'
 import BackButton from '@/components/BackButton'
+import RoleBadge from '@/components/RoleBadge'
 
 type Identite = {
   pseudo: string
   avatar_url: string | null
+  role: string | null
+  is_premium: boolean | null
 }
 
 type StatsGenerales = {
@@ -98,7 +101,12 @@ export default function ProfilPublic() {
         return
       }
 
-      setIdentite({ pseudo: idData[0].pseudo, avatar_url: idData[0].avatar_url })
+      setIdentite({
+        pseudo: idData[0].pseudo,
+        avatar_url: idData[0].avatar_url,
+        role: idData[0].role ?? null,
+        is_premium: idData[0].is_premium ?? null,
+      })
 
       const { data: rankData } = await supabase
         .rpc('get_user_rank', { p_user_id: targetId, p_category_id: null })
@@ -244,7 +252,10 @@ export default function ProfilPublic() {
               <BackButton />
               <Avatar url={identite.avatar_url} size={64} border="accent" />
               <div>
-                <h1 className="font-fredoka text-2xl text-[#eeeaf8]">{identite.pseudo}</h1>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="font-fredoka text-2xl text-[#eeeaf8]">{identite.pseudo}</h1>
+                  <RoleBadge role={identite.role} isPremium={identite.is_premium} size="sm" />
+                </div>
                 {stats && (
                   <p className="text-[#6b6880] text-sm">Rang #{stats.rank} au classement général</p>
                 )}

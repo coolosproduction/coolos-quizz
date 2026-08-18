@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { createClient } from '../../lib/supabase'
 import Avatar from '@/components/Avatar'
 import BackButton from '@/components/BackButton'
+import RoleBadge from '@/components/RoleBadge'
 
 type Category = { id: string, name: string, color: string, bg: string }
 
@@ -13,6 +14,8 @@ type LeaderboardRow = {
   user_id: string
   pseudo: string
   avatar_url: string | null
+  role: string | null
+  is_premium: boolean | null
   total_score: number
   questions_played: number
   correct_answers: number
@@ -23,6 +26,8 @@ type SearchResult = {
   user_id: string
   pseudo: string
   avatar_url: string | null
+  role: string | null
+  is_premium: boolean | null
 }
 
 const themeColors = [
@@ -50,6 +55,8 @@ const normalizeRow = (r: any): LeaderboardRow => ({
   user_id: r.user_id,
   pseudo: r.pseudo,
   avatar_url: r.avatar_url,
+  role: r.role ?? null,
+  is_premium: r.is_premium ?? null,
   total_score: Number(r.total_score),
   questions_played: Number(r.questions_played),
   correct_answers: Number(r.correct_answers),
@@ -154,6 +161,8 @@ export default function Classement() {
           user_id: r.user_id,
           pseudo: r.pseudo,
           avatar_url: r.avatar_url,
+          role: r.role ?? null,
+          is_premium: r.is_premium ?? null,
         })))
       } else {
         setResultats([])
@@ -268,6 +277,7 @@ export default function Classement() {
                       <Avatar url={r.avatar_url} size={28} border="subtle" />
                       <span className="font-fredoka text-[#eeeaf8] text-sm truncate">{r.pseudo}</span>
                       {r.user_id === userId && <span className="text-[#a78bfa] text-xs">(toi)</span>}
+                      <RoleBadge role={r.role} isPremium={r.is_premium} />
                     </Link>
                   ))
                 )}
@@ -389,9 +399,10 @@ function LigneClassement({ row, highlight }: { row: LeaderboardRow, highlight?: 
         </div>
         <Avatar url={row.avatar_url} size={32} border="subtle" />
         <div className="flex-1 min-w-0">
-          <p className="font-fredoka text-[#eeeaf8] text-sm truncate">
-            {row.pseudo}
-            {highlight && <span className="text-[#a78bfa] text-xs"> (toi)</span>}
+          <p className="font-fredoka text-[#eeeaf8] text-sm truncate flex items-center gap-2">
+            <span className="truncate">{row.pseudo}</span>
+            {highlight && <span className="text-[#a78bfa] text-xs flex-shrink-0">(toi)</span>}
+            <RoleBadge role={row.role} isPremium={row.is_premium} />
           </p>
         </div>
         <div className="font-fredoka text-sm w-14 text-center flex-shrink-0" style={{ color: '#ffd93d' }}>

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Nunito } from 'next/font/google'
+import SitePresence from '@/components/SitePresence'
 import './globals.css'
 
 const nunito = Nunito({
@@ -27,6 +28,7 @@ export default function RootLayout({
         />
       </head>
       <body className={`${nunito.variable} font-sans`}>
+        <SitePresence />
         {children}
       </body>
     </html>

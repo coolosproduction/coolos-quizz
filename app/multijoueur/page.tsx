@@ -30,6 +30,7 @@ export default function Multijoueur() {
   const [connecte, setConnecte] = useState(false)
   const [checkingAuth, setCheckingAuth] = useState(true)
   const [pseudo, setPseudo] = useState('')
+  const [maxPlayersAllowed, setMaxPlayersAllowed] = useState(MP_DEFAULT_MAX_PLAYERS)
 
   const [themes, setThemes] = useState<Category[]>([])
   const [themesSelec, setThemesSelec] = useState<string[]>([])
@@ -48,6 +49,14 @@ export default function Multijoueur() {
       const { data: { user } } = await supabase.auth.getUser()
       setConnecte(!!user && !user.is_anonymous)
       setCheckingAuth(false)
+
+      // Le plafond réel est de toute façon imposé côté serveur (trigger sur
+      // multiplayer_games, jamais la valeur envoyée par le client) — cet
+      // appel ne sert qu'à afficher le bon chiffre avant la création.
+      if (user) {
+        const { data: premiumAccess } = await supabase.rpc('has_premium_access')
+        setMaxPlayersAllowed(premiumAccess ? 16 : MP_DEFAULT_MAX_PLAYERS)
+      }
 
       const { data: catsData } = await supabase
         .from('categories')
@@ -225,7 +234,10 @@ export default function Multijoueur() {
 
         <div>
           <h2 className="font-fredoka text-4xl text-[#eeeaf8] mb-4">Multijoueur</h2>
-          <p className="text-[#9b96b8] text-base">Joue en direct avec tes amis, jusqu'à {MP_DEFAULT_MAX_PLAYERS} par salle.</p>
+          <p className="text-[#9b96b8] text-base">Joue en direct avec tes amis, jusqu'à {maxPlayersAllowed} par salle.</p>
+          {connecte && maxPlayersAllowed === MP_DEFAULT_MAX_PLAYERS && (
+            <p className="text-[#ffd93d] text-sm mt-1">★ Passe premium pour aller jusqu'à 16 joueurs par salle.</p>
+          )}
         </div>
 
         {/* Tabs */}

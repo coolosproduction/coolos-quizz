@@ -59,11 +59,15 @@ function QuizContent() {
   const timerRef = useRef(20)
   const reponseRef = useRef('')
 
+  const [poolVide, setPoolVide] = useState(false)
+
   const nb = parseInt(searchParams.get('nb') || '20')
   const timerDuration = parseInt(searchParams.get('timer') || '20')
   const categoriesParam = searchParams.get('categories') || ''
   const difficultiesParam = searchParams.get('difficulties') || ''
   const subcategoriesParam = searchParams.get('subcategories') || ''
+  const mode = searchParams.get('mode') || 'classique' // 'classique' | 'jamais_vues' | 'revision' — modes premium, ignorés si non applicables (ex. invité)
+  const evalFiltreParam = searchParams.get('evalFiltre') || ''
 
   const circumference = 2 * Math.PI * 22
 
@@ -124,26 +128,56 @@ function QuizContent() {
       const { data: { user } } = await supabase.auth.getUser()
 
       let poids: Record<string, number> = {}
+      let pool: any[] = dataAvecImages
 
       if (user) {
         const { data: answers } = await supabase
           .from('game_answers')
-          .select('question_id, self_eval, game:games!inner(user_id)')
+          .select('question_id, self_eval, game:games!inner(user_id, played_at)')
           .in('question_id', questionIds)
 
         const statsParQuestion: Record<string, { total: number, oui: number }> = {}
+        const dernierEvalParQuestion: Record<string, { eval: string, date: string }> = {}
 
         if (answers) {
-          answers.forEach((a: any) => {
-            if (a.game?.user_id !== user.id) return
-            const id = a.question_id
-            if (!statsParQuestion[id]) statsParQuestion[id] = { total: 0, oui: 0 }
-            statsParQuestion[id].total++
-            if (a.self_eval === 'oui') statsParQuestion[id].oui++
+          answers
+            .filter((a: any) => a.game?.user_id === user.id)
+            .forEach((a: any) => {
+              const id = a.question_id
+              if (!statsParQuestion[id]) statsParQuestion[id] = { total: 0, oui: 0 }
+              statsParQuestion[id].total++
+              if (a.self_eval === 'oui') statsParQuestion[id].oui++
+
+              // Garde la dernière évaluation (par date de partie) pour le mode révision
+              const playedAt = a.game?.played_at || ''
+              if (!dernierEvalParQuestion[id] || playedAt > dernierEvalParQuestion[id].date) {
+                dernierEvalParQuestion[id] = { eval: a.self_eval, date: playedAt }
+              }
+            })
+        }
+
+        // Modes premium : filtre le pool avant le tirage (côté /configuration on ne
+        // laisse passer ces params que si l'utilisateur a effectivement accès premium,
+        // mais on ne fait pas confiance à l'URL — un pool vide déclenche juste le
+        // message "aucune question trouvée" existant, aucune conséquence si trafiqué)
+        if (mode === 'jamais_vues') {
+          pool = dataAvecImages.filter((q: any) => !statsParQuestion[q.id] || statsParQuestion[q.id].total === 0)
+        } else if (mode === 'revision') {
+          const filtresEval = evalFiltreParam.split(',').filter(Boolean)
+          pool = dataAvecImages.filter((q: any) => {
+            const dernier = dernierEvalParQuestion[q.id]
+            return dernier && filtresEval.includes(dernier.eval)
           })
         }
 
         dataAvecImages.forEach((q: any) => {
+          if (mode === 'revision') {
+            // Tirage uniforme parmi le pool ciblé plutôt que la pondération adaptative
+            // habituelle : on a déjà choisi le sous-ensemble à réviser, pas besoin de le
+            // rebiaiser une seconde fois.
+            poids[q.id] = 1
+            return
+          }
           const stats = statsParQuestion[q.id]
           if (!stats || stats.total === 0) {
             poids[q.id] = 5
@@ -162,7 +196,8 @@ function QuizContent() {
         dataAvecImages.forEach((q: any) => { poids[q.id] = 1 })
       }
 
-      const selection = tirerQuestions(dataAvecImages as any, poids, nb)
+      const selection = tirerQuestions(pool as any, poids, nb)
+      setPoolVide(pool.length === 0)
       setQuestions(selection)
       setLoading(false)
       timerRef.current = timerDuration
@@ -231,9 +266,14 @@ function QuizContent() {
   }
 
   if (questions.length === 0) {
+    const messageVide = poolVide && mode === 'jamais_vues'
+      ? "Tu as déjà répondu à toutes les questions de cette sélection — aucune question inédite à te proposer."
+      : poolVide && mode === 'revision'
+        ? "Aucune question déjà rencontrée ne correspond aux évaluations choisies pour cette sélection."
+        : "Aucune question trouvée pour cette configuration."
     return (
       <main className="min-h-screen bg-[#0f0e17] flex flex-col items-center justify-center gap-6">
-        <p className="font-fredoka text-[#ff6b6b] text-xl">Aucune question trouvée pour cette configuration.</p>
+        <p className="font-fredoka text-[#ff6b6b] text-xl" style={{ maxWidth: '500px', textAlign: 'center' }}>{messageVide}</p>
         <button
           onClick={() => router.push('/configuration')}
           className="bg-[#ffd93d] text-[#0f0e17] rounded-2xl py-3 px-8 font-fredoka text-lg"

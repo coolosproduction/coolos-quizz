@@ -5,9 +5,19 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '../../../../lib/supabase'
 import { getMultiplayerIdentity, subscribeRoomRealtime, fetchRoomPlayers } from '../../../../lib/multiplayer'
+import { onSitePresenceChange } from '../../../../lib/presence'
 import BackButton from '@/components/BackButton'
 import Avatar from '@/components/Avatar'
 import ChatPanel from '@/components/ChatPanel'
+import RoleBadge from '@/components/RoleBadge'
+
+type Friend = {
+  id: string
+  pseudo: string
+  avatar_url: string | null
+  role: string | null
+  is_premium: boolean | null
+}
 
 type Game = {
   id: string
@@ -32,6 +42,8 @@ type Player = {
   status: 'actif' | 'abandonne'
   joined_at: string
   muted: boolean
+  role?: string | null
+  is_premium?: boolean | null
 }
 
 const difficulteLabels: Record<string, string> = {
@@ -67,6 +79,12 @@ export default function SalleAttente() {
   const [launching, setLaunching] = useState(false)
   const [copied, setCopied] = useState(false)
   const [shared, setShared] = useState(false)
+
+  const [hasPremiumAccess, setHasPremiumAccess] = useState(false)
+  const [friends, setFriends] = useState<Friend[]>([])
+  const [onlineIds, setOnlineIds] = useState<Set<string>>(new Set())
+  const [inviteStatus, setInviteStatus] = useState<Record<string, 'sending' | 'sent' | 'error'>>({})
+  const [inviteErrorMsg, setInviteErrorMsg] = useState<Record<string, string>>({})
 
   const gameIdRef = useRef<string | null>(null)
   const supabaseRef = useRef(createClient())
@@ -207,6 +225,72 @@ export default function SalleAttente() {
     return cleanup
   }, [game?.id, myUserId, code, router, reloadPlayers])
 
+  // Présence site-wide (pour savoir quels amis sont en ligne, cf. panneau
+  // d'invitation) — abonnement bon marché, autant l'avoir tout le temps
+  // plutôt que de le conditionner à isHost avec un effet en plus.
+  useEffect(() => {
+    const unsub = onSitePresenceChange((ids: Set<string>) => setOnlineIds(ids))
+    return unsub
+  }, [])
+
+  // Amis à inviter — chargé une fois qu'on sait qu'on est l'hôte d'une salle
+  // encore ouverte, et seulement effectivement utilisé si le compte est
+  // premium/admin.
+  useEffect(() => {
+    if (!isHost || !myUserId || game?.status !== 'attente') return
+    let cancelled = false
+    const supabase = supabaseRef.current
+
+    const loadInvitePanel = async () => {
+      const { data: premiumAccess } = await supabase.rpc('has_premium_access')
+      if (cancelled) return
+      setHasPremiumAccess(!!premiumAccess)
+      if (!premiumAccess) return
+
+      const { data: friendRows } = await supabase
+        .from('friend_requests')
+        .select('requester_id, recipient_id')
+        .eq('status', 'accepted')
+        .or(`requester_id.eq.${myUserId},recipient_id.eq.${myUserId}`)
+
+      if (cancelled || !friendRows) return
+      const friendIds = friendRows.map((r: any) => r.requester_id === myUserId ? r.recipient_id : r.requester_id)
+      if (friendIds.length === 0) { setFriends([]); return }
+
+      const results = await Promise.all(
+        friendIds.map((id: string) => supabase.rpc('get_user_public_identity', { p_user_id: id }))
+      )
+      if (cancelled) return
+      const list: Friend[] = []
+      results.forEach((res: any, i: number) => {
+        const row = res.data && res.data.length > 0 ? res.data[0] : null
+        if (row) list.push({ id: friendIds[i], pseudo: row.pseudo, avatar_url: row.avatar_url, role: row.role ?? null, is_premium: row.is_premium ?? null })
+      })
+      setFriends(list)
+    }
+
+    loadInvitePanel()
+    return () => { cancelled = true }
+  }, [isHost, myUserId, game?.status])
+
+  const handleInvite = async (friendId: string) => {
+    if (!game) return
+    setInviteStatus(prev => ({ ...prev, [friendId]: 'sending' }))
+    setInviteErrorMsg(prev => {
+      const next = { ...prev }
+      delete next[friendId]
+      return next
+    })
+    const supabase = supabaseRef.current
+    const { error: inviteError } = await supabase.rpc('send_room_invite', { p_recipient_id: friendId, p_game_id: game.id })
+    if (inviteError) {
+      setInviteStatus(prev => ({ ...prev, [friendId]: 'error' }))
+      setInviteErrorMsg(prev => ({ ...prev, [friendId]: inviteError.message || "Impossible d'envoyer l'invitation." }))
+      return
+    }
+    setInviteStatus(prev => ({ ...prev, [friendId]: 'sent' }))
+  }
+
   const handleCopyCode = () => {
     navigator.clipboard.writeText(code)
     setCopied(true)
@@ -314,6 +398,8 @@ export default function SalleAttente() {
   if (!game) return null
 
   const activePlayers = players.filter(p => p.status === 'actif')
+  const activePlayerIds = new Set(activePlayers.map(p => p.user_id))
+  const onlineFriendsToInvite = friends.filter(f => onlineIds.has(f.id) && !activePlayerIds.has(f.id))
   const nb = game.config?.questions_count || 20
   const timerDuration = game.config?.timer_duration || 20
   const themesLabel = (game.config?.category_ids?.length || 0) === 0
@@ -382,6 +468,7 @@ export default function SalleAttente() {
                   {p.user_id === myUserId && (
                     <span className="text-[#6b6880] text-xs">(toi)</span>
                   )}
+                  <RoleBadge role={p.role} isPremium={p.is_premium} />
                 </div>
                 <div className="flex items-center gap-2">
                   {p.is_guest && (
@@ -395,6 +482,56 @@ export default function SalleAttente() {
             ))}
           </div>
         </div>
+
+        {/* Invitation d'amis — hôte uniquement, tant que la salle est ouverte */}
+        {isHost && (
+          <div>
+            <p className="font-fredoka text-[#c9c4e0] text-xl mb-4">★ Inviter des amis</p>
+            {!hasPremiumAccess ? (
+              <p className="text-[#ffd93d] text-sm">★ Passe premium pour voir tes amis en ligne et les inviter directement dans cette salle.</p>
+            ) : onlineFriendsToInvite.length === 0 ? (
+              <p className="text-[#6b6880] text-sm">Aucun ami en ligne pour le moment.</p>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {onlineFriendsToInvite.map(f => {
+                  const status = inviteStatus[f.id]
+                  return (
+                    <div key={f.id} className="bg-[#1a1828] border border-[#2a2830] rounded-xl px-5 py-4 flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-3">
+                        <Avatar url={f.avatar_url} size={36} border="subtle" />
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-fredoka text-[#eeeaf8] text-base">{f.pseudo}</span>
+                          <RoleBadge role={f.role} isPremium={f.is_premium} />
+                          <span className="inline-flex items-center gap-1">
+                            <span className="w-2 h-2 rounded-full" style={{ background: '#6bcb77' }}></span>
+                            <span className="text-[#6bcb77] text-xs font-fredoka">En ligne</span>
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <button
+                          onClick={() => handleInvite(f.id)}
+                          disabled={status === 'sending' || status === 'sent'}
+                          className="font-fredoka text-xs rounded-full px-4 py-2 disabled:opacity-50"
+                          style={{
+                            background: status === 'sent' ? '#1a2e1f' : '#2a1f3d',
+                            color: status === 'sent' ? '#6bcb77' : '#a78bfa',
+                            border: `1px solid ${status === 'sent' ? '#6bcb77' : '#a78bfa'}`,
+                          }}
+                        >
+                          {status === 'sending' ? 'Envoi...' : status === 'sent' ? '✓ Invité' : 'Inviter'}
+                        </button>
+                        {status === 'error' && inviteErrorMsg[f.id] && (
+                          <span className="text-[#ff6b6b] text-xs" style={{ maxWidth: '180px', textAlign: 'right' }}>{inviteErrorMsg[f.id]}</span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {error && (
           <div className="bg-[#2e1a1a] border border-[#ff6b6b] rounded-xl px-4 py-3">

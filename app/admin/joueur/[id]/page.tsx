@@ -6,6 +6,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '../../../../lib/supabase'
 import Avatar from '@/components/Avatar'
 import BackButton from '@/components/BackButton'
+import RoleBadge from '@/components/RoleBadge'
 
 type Question = {
   question: string
@@ -34,6 +35,7 @@ type Joueur = {
   email: string
   avatar_url: string | null
   role: string
+  is_premium: boolean
   statut: string
   suspendu_jusqu_au: string | null
   created_at: string
@@ -72,7 +74,7 @@ export default function AdminJoueurDetail() {
         .eq('id', user.id)
         .single()
 
-      if (data?.role !== 'admin') { router.push('/'); return }
+      if (data?.role !== 'admin' && data?.role !== 'owner') { router.push('/'); return }
       setAuthorized(true)
       setChecking(false)
       loadJoueur()
@@ -85,7 +87,7 @@ export default function AdminJoueurDetail() {
 
     const { data: userData } = await supabase
       .from('users')
-      .select('id, pseudo, email, avatar_url, role, statut, suspendu_jusqu_au, created_at')
+      .select('id, pseudo, email, avatar_url, role, is_premium, statut, suspendu_jusqu_au, created_at')
       .eq('id', targetId)
       .single()
 
@@ -202,9 +204,7 @@ export default function AdminJoueurDetail() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="font-fredoka text-2xl text-[#eeeaf8]">{joueur.pseudo}</h1>
-                {joueur.role === 'admin' && (
-                  <span className="font-fredoka text-xs rounded-full px-2 py-0.5" style={{ background: '#2a1f3d', color: '#a78bfa' }}>Admin</span>
-                )}
+                <RoleBadge role={joueur.role} isPremium={joueur.is_premium} size="sm" />
                 {badge && (
                   <span className="font-fredoka text-xs rounded-full px-2 py-0.5" style={{ background: badge.bg, color: badge.color }}>{badge.label}</span>
                 )}

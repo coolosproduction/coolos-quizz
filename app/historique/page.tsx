@@ -25,18 +25,39 @@ type Partie = {
   questions: Question[]
 }
 
+type FlatAnswer = {
+  id: string
+  question: string
+  reponseOfficielle: string
+  reponseUtilisateur: string
+  eval: string
+  categorie: string
+  date: string
+}
+
 const evalConfig = {
   oui: { label: 'Oui', color: '#6bcb77', bg: '#1a2e1f' },
   en_partie: { label: 'En partie', color: '#ffd93d', bg: '#1f1e10' },
   non: { label: 'Non', color: '#ff6b6b', bg: '#2e1a1a' },
 }
 
+const filtresEval: { key: 'tous' | 'oui' | 'en_partie' | 'non', label: string }[] = [
+  { key: 'tous', label: 'Toutes' },
+  { key: 'oui', label: 'Bonnes' },
+  { key: 'en_partie', label: 'En partie' },
+  { key: 'non', label: 'Mauvaises' },
+]
+
 const themeColors = ['#ff6b6b', '#ffd93d', '#6bcb77', '#4ecdc4', '#a78bfa', '#ff9f43']
 
 export default function Historique() {
   const [parties, setParties] = useState<Partie[]>([])
+  const [allAnswers, setAllAnswers] = useState<FlatAnswer[]>([])
   const [loading, setLoading] = useState(true)
   const [ouvert, setOuvert] = useState<string | null>(null)
+  const [hasPremiumAccess, setHasPremiumAccess] = useState(false)
+  const [vue, setVue] = useState<'parties' | 'detaillee'>('parties')
+  const [filtreEval, setFiltreEval] = useState<'tous' | 'oui' | 'en_partie' | 'non'>('tous')
 
   useEffect(() => {
     const loadHistorique = async () => {
@@ -46,6 +67,15 @@ export default function Historique() {
         setLoading(false)
         return
       }
+
+      const { data: roleData } = await supabase
+        .from('users')
+        .select('role, is_premium')
+        .eq('id', user.id)
+        .single()
+
+      const premiumAccess = roleData?.role === 'admin' || roleData?.role === 'owner' || !!roleData?.is_premium
+      setHasPremiumAccess(premiumAccess)
 
       const { data: games } = await supabase
         .from('games')
@@ -58,10 +88,12 @@ export default function Historique() {
         return
       }
 
+      const flatAnswers: FlatAnswer[] = []
+
       const partiesAvecReponses = await Promise.all(games.map(async (game) => {
         const { data: answers } = await supabase
           .from('game_answers')
-          .select('*, question:questions(question_text, answer_text)')
+          .select('*, question:questions(question_text, answer_text, categories(name))')
           .eq('game_id', game.id)
           .order('position', { ascending: true })
 
@@ -81,6 +113,20 @@ export default function Historique() {
         else if (jours === 1) dateStr = `Hier à ${date.getHours()}h${String(date.getMinutes()).padStart(2, '0')}`
         else dateStr = `${date.toLocaleDateString('fr-FR')} à ${date.getHours()}h${String(date.getMinutes()).padStart(2, '0')}`
 
+        if (premiumAccess) {
+          ;(answers || []).forEach((a: any) => {
+            flatAnswers.push({
+              id: a.id,
+              question: a.question?.question_text || '',
+              reponseOfficielle: a.question?.answer_text || '',
+              reponseUtilisateur: a.user_answer || '',
+              eval: a.self_eval || 'non',
+              categorie: a.question?.categories?.name || 'Autre',
+              date: dateStr,
+            })
+          })
+        }
+
         return {
           id: game.id,
           score: game.score,
@@ -96,10 +142,13 @@ export default function Historique() {
       }))
 
       setParties(partiesAvecReponses)
+      if (premiumAccess) setAllAnswers(flatAnswers)
       setLoading(false)
     }
     loadHistorique()
   }, [])
+
+  const reponsesFiltrees = filtreEval === 'tous' ? allAnswers : allAnswers.filter(a => a.eval === filtreEval)
 
   const totalQuestions = parties.reduce((acc, p) => acc + p.nbQuestions, 0)
   const tauxReussite = parties.length === 0 ? 0 : Math.round(
@@ -172,7 +221,25 @@ export default function Historique() {
           </div>
         </div>
 
-        {parties.length === 0 ? (
+        <div className="flex bg-[#1a1828] rounded-xl p-1 gap-1">
+          <button
+            onClick={() => setVue('parties')}
+            className="flex-1 text-center font-fredoka text-sm py-3 rounded-lg"
+            style={{ background: vue === 'parties' ? '#0f0e17' : 'transparent', color: vue === 'parties' ? '#eeeaf8' : '#9b96b8' }}
+          >
+            Par partie
+          </button>
+          <button
+            onClick={() => setVue('detaillee')}
+            className="flex-1 text-center font-fredoka text-sm py-3 rounded-lg"
+            style={{ background: vue === 'detaillee' ? '#0f0e17' : 'transparent', color: vue === 'detaillee' ? '#ffd93d' : '#9b96b8' }}
+          >
+            ★ Détail filtrable
+          </button>
+        </div>
+
+        {vue === 'parties' && (
+        parties.length === 0 ? (
           <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-10 text-center">
             <p className="font-fredoka text-[#9b96b8] text-xl mb-2">Aucune partie pour l'instant</p>
             <p className="text-[#6b6880] text-sm mb-6">Lance ton premier quiz pour voir ton historique ici !</p>
@@ -252,6 +319,82 @@ export default function Historique() {
               </div>
             ))}
           </div>
+        )
+        )}
+
+        {vue === 'detaillee' && (
+          !hasPremiumAccess ? (
+            <div className="bg-[#1a1828] border rounded-2xl p-10 text-center" style={{ borderColor: '#4a3a10' }}>
+              <p className="font-fredoka text-[#ffd93d] text-xl mb-2">★ Fonctionnalité Premium</p>
+              <p className="text-[#9b96b8] text-sm leading-relaxed">
+                Le détail filtrable de toutes tes réponses (toutes parties confondues, filtrable par
+                bonnes / partielles / mauvaises) est réservé aux comptes premium.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div className="flex gap-2 flex-wrap">
+                {filtresEval.map(f => (
+                  <button
+                    key={f.key}
+                    onClick={() => setFiltreEval(f.key)}
+                    className="font-fredoka text-sm rounded-full px-4 py-2 transition"
+                    style={{
+                      background: filtreEval === f.key ? '#2a1f3d' : '#1a1828',
+                      color: filtreEval === f.key ? '#a78bfa' : '#9b96b8',
+                      border: `1px solid ${filtreEval === f.key ? '#a78bfa' : '#2a2830'}`,
+                    }}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+                <span className="font-fredoka text-xs text-[#4a4760] self-center" style={{ marginLeft: 'auto' }}>
+                  {reponsesFiltrees.length} réponse{reponsesFiltrees.length > 1 ? 's' : ''}
+                </span>
+              </div>
+
+              {reponsesFiltrees.length === 0 ? (
+                <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-10 text-center">
+                  <p className="font-fredoka text-[#9b96b8] text-lg">Aucune réponse pour ce filtre.</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {reponsesFiltrees.map((a) => {
+                    const e = evalConfig[a.eval as keyof typeof evalConfig] || evalConfig.non
+                    return (
+                      <div key={a.id} className="rounded-xl" style={{ background: '#1a1828', border: '1px solid #2a2830', padding: '14px 16px' }}>
+                        <div className="flex justify-between items-start mb-3 flex-wrap gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="bg-[#0f0e17] rounded-full px-3 py-1 font-fredoka text-xs text-[#9b96b8]">{a.categorie}</span>
+                            <span className="text-[#4a4760] text-xs">{a.date}</span>
+                          </div>
+                          <span className="rounded-full px-3 py-1 font-fredoka text-xs" style={{ background: e.bg, color: e.color, border: `1px solid ${e.color}` }}>
+                            {e.label}
+                          </span>
+                        </div>
+                        <p className="text-[#eeeaf8] text-sm font-semibold mb-3">{a.question}</p>
+                        <div className="rounded-lg p-3 mb-2" style={{ background: '#1a2e1f' }}>
+                          <p className="font-fredoka text-[#6bcb77] text-xs mb-1">Bonne réponse</p>
+                          <p className="text-[#eeeaf8] text-sm">{a.reponseOfficielle}</p>
+                        </div>
+                        {a.reponseUtilisateur ? (
+                          <div className="rounded-lg p-3" style={{ background: '#1e1c2e' }}>
+                            <p className="font-fredoka text-[#9b96b8] text-xs mb-1">Ta réponse</p>
+                            <p className="text-[#c9c4e0] text-sm">{a.reponseUtilisateur}</p>
+                          </div>
+                        ) : (
+                          <div className="inline-flex items-center gap-2 rounded-full px-3 py-1" style={{ background: '#2e1a1a', border: '1px solid #ff6b6b' }}>
+                            <div className="w-2 h-2 rounded-full bg-[#ff6b6b]"></div>
+                            <span className="font-fredoka text-[#ff6b6b] text-xs">Temps écoulé</span>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )
         )}
 
       </div>

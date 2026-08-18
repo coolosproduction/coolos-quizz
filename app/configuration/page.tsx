@@ -16,6 +16,20 @@ const difficultes = [
 const nbQuestions = [10, 20, 30, 40, 50]
 const timers = [10, 15, 20, 30, 45, 60]
 
+type QuizMode = 'classique' | 'jamais_vues' | 'revision'
+
+const modes: { id: QuizMode, label: string, sub: string, premium: boolean }[] = [
+  { id: 'classique', label: 'Classique', sub: 'Tirage habituel', premium: false },
+  { id: 'jamais_vues', label: 'Jamais vues ★', sub: 'Que du nouveau', premium: true },
+  { id: 'revision', label: 'Réviser mes erreurs ★', sub: 'Questions déjà faites', premium: true },
+]
+
+const evalFiltres = [
+  { key: 'oui', label: 'Bonnes', color: '#6bcb77', bg: '#1a2e1f' },
+  { key: 'en_partie', label: 'En partie', color: '#ffd93d', bg: '#1f1e10' },
+  { key: 'non', label: 'Mauvaises', color: '#ff6b6b', bg: '#2e1a1a' },
+]
+
 const themeColors = [
   '#ff6b6b', '#ffd93d', '#6bcb77', '#4ecdc4', '#a78bfa', '#ff9f43',
   '#4ecdc4', '#ff6b6b', '#6bcb77', '#ffd93d',
@@ -39,6 +53,9 @@ export default function Configuration() {
   const [search, setSearch] = useState('')
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [isInvite, setIsInvite] = useState(false)
+  const [hasPremiumAccess, setHasPremiumAccess] = useState(false)
+  const [mode, setMode] = useState<QuizMode>('classique')
+  const [evalFiltreSelec, setEvalFiltreSelec] = useState<string[]>(['en_partie', 'non'])
   const router = useRouter()
 
   useEffect(() => {
@@ -46,6 +63,13 @@ export default function Configuration() {
 
     const loadData = async () => {
       const supabase = createClient()
+
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: premiumAccess } = await supabase.rpc('has_premium_access')
+        setHasPremiumAccess(!!premiumAccess)
+      }
+
       const { data: catsData } = await supabase
         .from('categories')
         .select('id, name')
@@ -101,6 +125,18 @@ export default function Configuration() {
     )
   }
 
+  const toggleEvalFiltre = (key: string) => {
+    setEvalFiltreSelec(prev =>
+      prev.includes(key) ? prev.filter(e => e !== key) : [...prev, key]
+    )
+  }
+
+  const choisirMode = (id: QuizMode) => {
+    const m = modes.find(x => x.id === id)
+    if (m?.premium && !hasPremiumAccess) return
+    setMode(id)
+  }
+
   // Sous-catégories visibles = celles dont la catégorie parente est sélectionnée (une seule sélectionnée)
   const subcatsVisibles = themesSelec.length === 1
     ? subcategories.filter(s => s.category_id === themesSelec[0])
@@ -131,8 +167,17 @@ export default function Configuration() {
     if (subcatsSelec.length > 0) {
       params.set('subcategories', subcatsSelec.join(','))
     }
+    // Modes premium (ignorés côté /quiz si l'utilisateur n'a en fait pas accès premium)
+    if (mode !== 'classique' && hasPremiumAccess) {
+      params.set('mode', mode)
+      if (mode === 'revision') {
+        params.set('evalFiltre', evalFiltreSelec.join(','))
+      }
+    }
     router.push(`/quiz?${params.toString()}`)
   }
+
+  const lancerDesactive = mode === 'revision' && evalFiltreSelec.length === 0
 
   return (
     <main className="min-h-screen bg-[#0f0e17]" style={{ padding: '32px 24px 80px' }}>
@@ -302,6 +347,65 @@ export default function Configuration() {
           )}
         </div>
 
+        {/* Mode de quiz */}
+        <div>
+          <p className="font-fredoka text-[#c9c4e0] text-xl mb-4">Mode de quiz</p>
+          <div className="flex gap-4 flex-wrap">
+            {modes.map(m => {
+              const locked = m.premium && !hasPremiumAccess
+              const active = mode === m.id
+              return (
+                <button
+                  key={m.id}
+                  onClick={() => choisirMode(m.id)}
+                  className="flex-1 rounded-xl py-4 font-fredoka text-base"
+                  style={{
+                    background: active ? '#2a1f3d' : '#1a1828',
+                    border: `2px solid ${active ? '#a78bfa' : '#2a2830'}`,
+                    color: locked ? '#4a4760' : active ? '#a78bfa' : '#9b96b8',
+                    cursor: locked ? 'not-allowed' : 'pointer',
+                    opacity: locked ? 0.6 : 1,
+                    minWidth: '160px',
+                  }}
+                >
+                  {m.label}
+                  <div className="text-sm font-sans mt-1 opacity-70">{m.sub}</div>
+                </button>
+              )
+            })}
+          </div>
+          {!hasPremiumAccess && (
+            <p className="text-[#ffd93d] text-sm mt-2">★ Passe premium pour réviser tes erreurs ou ne tirer que des questions jamais vues.</p>
+          )}
+
+          {mode === 'revision' && hasPremiumAccess && (
+            <div className="mt-4">
+              <p className="font-fredoka text-[#c9c4e0] text-base mb-3">
+                Réviser les questions dont ta dernière évaluation était
+              </p>
+              <div className="flex gap-3 flex-wrap">
+                {evalFiltres.map(f => (
+                  <button
+                    key={f.key}
+                    onClick={() => toggleEvalFiltre(f.key)}
+                    className="font-fredoka text-sm rounded-xl px-4 py-3"
+                    style={{
+                      background: evalFiltreSelec.includes(f.key) ? f.bg : '#1a1828',
+                      border: `2px solid ${evalFiltreSelec.includes(f.key) ? f.color : '#2a2830'}`,
+                      color: evalFiltreSelec.includes(f.key) ? f.color : '#9b96b8',
+                    }}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+              {evalFiltreSelec.length === 0 && (
+                <p className="text-[#ff6b6b] text-sm mt-2">Choisis au moins une évaluation pour lancer ce mode.</p>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Nombre de questions */}
         <div>
           <p className="font-fredoka text-[#c9c4e0] text-xl mb-4">Nombre de questions</p>
@@ -355,12 +459,24 @@ export default function Configuration() {
           <span className="bg-[#2a2830] rounded-full px-4 py-2 font-fredoka text-sm text-[#ffd93d]">{diffLabel}</span>
           <span className="bg-[#2a2830] rounded-full px-4 py-2 font-fredoka text-sm text-[#4ecdc4]">{nb} questions</span>
           <span className="bg-[#2a2830] rounded-full px-4 py-2 font-fredoka text-sm text-[#ff9f43]">{timer}s / question</span>
+          {mode !== 'classique' && hasPremiumAccess && (
+            <span className="bg-[#2a1f3d] rounded-full px-4 py-2 font-fredoka text-sm text-[#a78bfa]">
+              {modes.find(m => m.id === mode)?.label}
+            </span>
+          )}
         </div>
 
         {/* Bouton lancer */}
         <button
           onClick={handleLancer}
-          className="block w-full bg-[#ffd93d] text-[#0f0e17] rounded-2xl py-5 font-fredoka text-2xl hover:opacity-90 transition text-center"
+          disabled={lancerDesactive}
+          className="block w-full rounded-2xl py-5 font-fredoka text-2xl transition text-center"
+          style={{
+            background: lancerDesactive ? '#2a2830' : '#ffd93d',
+            color: lancerDesactive ? '#4a4760' : '#0f0e17',
+            cursor: lancerDesactive ? 'not-allowed' : 'pointer',
+            opacity: lancerDesactive ? 0.7 : 1,
+          }}
         >
           Lancer le quiz !
         </button>

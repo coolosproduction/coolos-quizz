@@ -20,6 +20,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createClient } from '../lib/supabase'
 import { subscribeChatRealtime } from '../lib/multiplayer'
 import Avatar from './Avatar'
+import RoleBadge from './RoleBadge'
 
 type ChatPlayer = {
   id: string
@@ -29,6 +30,8 @@ type ChatPlayer = {
   avatar_url: string | null
   status: 'actif' | 'abandonne'
   muted?: boolean
+  role?: string | null
+  is_premium?: boolean | null
 }
 
 type ChatMessage = {
@@ -186,6 +189,7 @@ export default function ChatPanel({ gameId, gameStatus, myPlayerId, myUserId, is
                     {!isMe && <Avatar url={sender?.avatar_url ?? null} size={20} border="subtle" />}
                     <span className="text-[#9b96b8] text-xs font-fredoka">{isMe ? 'Toi' : (sender?.pseudo || 'Joueur')}</span>
                     {sender?.is_guest && <span className="text-[#6b6880] text-[10px]">(invité)</span>}
+                    <RoleBadge role={sender?.role} isPremium={sender?.is_premium} />
                     {canModerate && (
                       <span className="flex items-center gap-1">
                         <button

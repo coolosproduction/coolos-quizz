@@ -35,6 +35,8 @@ type ChatPlayer = {
   avatar_url: string | null
   status: 'actif' | 'abandonne'
   muted: boolean
+  role?: string | null
+  is_premium?: boolean | null
 }
 
 // Forme minimale du payload postgres_changes utile côté client (on ne lit

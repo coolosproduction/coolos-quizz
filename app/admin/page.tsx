@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '../../lib/supabase'
 import Avatar from '@/components/Avatar'
 import BackButton from '@/components/BackButton'
+import RoleBadge from '@/components/RoleBadge'
 
 const diffColors: Record<string, string> = {
   facile: '#6bcb77',
@@ -42,10 +43,20 @@ type UserStat = {
   pseudo: string
   email: string
   avatar_url: string | null
+  role: string
+  is_premium: boolean
   questions: number
   reussite: number
   statut: string
   suspendu_jusqu_au: string | null
+}
+
+type RoleSearchResult = {
+  user_id: string
+  pseudo: string
+  avatar_url: string | null
+  role: string
+  is_premium: boolean
 }
 
 type Message = {
@@ -73,7 +84,7 @@ type ModalMessage = {
 
 export default function Admin() {
   const router = useRouter()
-  const [panel, setPanel] = useState<'questions' | 'categories' | 'users' | 'messages'>('questions')
+  const [panel, setPanel] = useState<'questions' | 'categories' | 'users' | 'messages' | 'roles'>('questions')
   const [questions, setQuestions] = useState<Question[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [subcategories, setSubcategories] = useState<Subcategory[]>([])
@@ -83,7 +94,16 @@ export default function Admin() {
   const [totalQuestions, setTotalQuestions] = useState(0)
   const [search, setSearch] = useState('')
   const [authorized, setAuthorized] = useState(false)
+  const [isOwner, setIsOwner] = useState(false)
+  const [myUserId, setMyUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+
+  // Panel Rôles (propriétaire uniquement)
+  const [roleSearch, setRoleSearch] = useState('')
+  const [roleResults, setRoleResults] = useState<RoleSearchResult[]>([])
+  const [roleSearchLoading, setRoleSearchLoading] = useState(false)
+  const [roleActionId, setRoleActionId] = useState<string | null>(null)
+  const [roleError, setRoleError] = useState('')
 
   // Nouvelle sous-catégorie
   const [newSubName, setNewSubName] = useState('')
@@ -114,7 +134,9 @@ export default function Admin() {
         .eq('id', user.id)
         .single()
 
-      if (data?.role !== 'admin') { router.push('/'); return }
+      if (data?.role !== 'admin' && data?.role !== 'owner') { router.push('/'); return }
+      setMyUserId(user.id)
+      setIsOwner(data.role === 'owner')
       setAuthorized(true)
       loadData()
     }
@@ -167,7 +189,7 @@ export default function Admin() {
 
     const { data: usersData } = await supabase
       .from('users')
-      .select('id, pseudo, email, avatar_url, statut, suspendu_jusqu_au')
+      .select('id, pseudo, email, avatar_url, role, is_premium, statut, suspendu_jusqu_au')
 
     if (usersData) {
       const usersWithStats = await Promise.all(usersData.map(async (u: any) => {
@@ -186,6 +208,8 @@ export default function Admin() {
           pseudo: u.pseudo || u.email?.split('@')[0],
           email: u.email,
           avatar_url: u.avatar_url || null,
+          role: u.role || 'user',
+          is_premium: !!u.is_premium,
           questions: totalQ,
           reussite,
           statut: u.statut || 'actif',
@@ -311,6 +335,57 @@ export default function Admin() {
     const supabase = createClient()
     await supabase.from('users').update({ statut: 'actif', suspendu_jusqu_au: null }).eq('id', id)
     setUsers(prev => prev.map(u => u.id === id ? { ...u, statut: 'actif', suspendu_jusqu_au: null } : u))
+  }
+
+  // Recherche débouncée par pseudo pour le panel Rôles (réservé au
+  // propriétaire) — même RPC search_users que le classement, qui renvoie
+  // maintenant role/is_premium.
+  useEffect(() => {
+    if (!isOwner) return
+    const query = roleSearch.trim()
+    if (query.length === 0) {
+      setRoleResults([])
+      setRoleSearchLoading(false)
+      return
+    }
+    setRoleSearchLoading(true)
+    const timeout = setTimeout(async () => {
+      const supabase = createClient()
+      const { data, error } = await supabase.rpc('search_users', { p_query: query, p_limit: 20 })
+      if (!error && data) {
+        setRoleResults((data as any[]).map(r => ({
+          user_id: r.user_id,
+          pseudo: r.pseudo,
+          avatar_url: r.avatar_url,
+          role: r.role,
+          is_premium: r.is_premium,
+        })))
+      } else {
+        setRoleResults([])
+      }
+      setRoleSearchLoading(false)
+    }, 300)
+    return () => clearTimeout(timeout)
+  }, [roleSearch, isOwner])
+
+  // Attribue/retire le rôle admin — réservé au propriétaire. Le trigger
+  // prevent_users_privilege_escalation refuse de toute façon côté serveur
+  // toute tentative sur un compte owner ou sur son propre compte : ces
+  // garde-fous côté client évitent juste l'aller-retour inutile.
+  const toggleAdminRole = async (target: RoleSearchResult) => {
+    if (!isOwner || target.role === 'owner' || target.user_id === myUserId) return
+    setRoleError('')
+    setRoleActionId(target.user_id)
+    const supabase = createClient()
+    const nextRole = target.role === 'admin' ? 'user' : 'admin'
+    const { error } = await supabase.from('users').update({ role: nextRole }).eq('id', target.user_id)
+    if (error) {
+      setRoleError("Impossible de modifier le rôle de cet utilisateur.")
+    } else {
+      setRoleResults(prev => prev.map(r => r.user_id === target.user_id ? { ...r, role: nextRole } : r))
+      setUsers(prev => prev.map(u => u.id === target.user_id ? { ...u, role: nextRole } : u))
+    }
+    setRoleActionId(null)
   }
 
   const envoyerMessage = async () => {
@@ -457,9 +532,19 @@ export default function Admin() {
           )}
         </button>
 
+        {isOwner && (
+          <>
+            <p className="text-[#4a4760] text-xs font-bold uppercase tracking-widest" style={{ padding: '16px 20px 8px' }}>Propriétaire</p>
+            <button onClick={() => setPanel('roles')} className="flex items-center gap-3 font-fredoka text-sm text-left" style={{ padding: '10px 20px', background: panel === 'roles' ? '#1a1828' : 'transparent', color: panel === 'roles' ? '#eeeaf8' : '#6b6880', borderRight: panel === 'roles' ? '3px solid #ffd93d' : '3px solid transparent' }}>
+              <div className="w-2 h-2 rounded-full bg-[#ffd93d]"></div>
+              Rôles
+            </button>
+          </>
+        )}
+
         <div style={{ flex: 1 }}></div>
         <div style={{ padding: '16px 20px', borderTop: '1px solid #1e1c2e' }}>
-          <p className="font-fredoka text-sm text-[#9b96b8]">Admin</p>
+          <p className="font-fredoka text-sm text-[#9b96b8]">{isOwner ? 'Propriétaire' : 'Admin'}</p>
           <p className="text-xs text-[#6b6880]">connecté</p>
         </div>
       </div>
@@ -681,6 +766,7 @@ export default function Admin() {
                         <div>
                           <div className="flex items-center gap-2">
                             <p className="font-fredoka text-[#eeeaf8] text-sm">{u.pseudo}</p>
+                            <RoleBadge role={u.role} isPremium={u.is_premium} />
                             {badge && <span className="font-fredoka text-xs rounded-full px-2 py-0.5" style={{ background: badge.bg, color: badge.color }}>{badge.label}</span>}
                           </div>
                           <p className="text-[#4a4760] text-xs">{u.email}</p>
@@ -702,6 +788,66 @@ export default function Admin() {
                 )
               })}
             </div>
+          </div>
+        )}
+
+        {/* Panel Rôles (propriétaire uniquement) */}
+        {panel === 'roles' && isOwner && (
+          <div>
+            <div style={{ marginBottom: '24px' }}>
+              <h2 className="font-fredoka text-2xl text-[#eeeaf8]">Rôles</h2>
+              <p className="text-[#6b6880] text-sm" style={{ marginTop: '4px' }}>Attribue ou retire le rôle admin — réservé au propriétaire</p>
+            </div>
+
+            <input
+              type="text"
+              placeholder="Rechercher un joueur par pseudo..."
+              value={roleSearch}
+              onChange={e => setRoleSearch(e.target.value)}
+              className="w-full text-[#eeeaf8] text-sm outline-none"
+              style={{ background: '#1a1828', border: `1.5px solid ${roleSearch ? '#ffd93d' : '#2a2830'}`, borderRadius: '12px', padding: '12px 16px', marginBottom: '16px' }}
+            />
+
+            {roleError && (
+              <p className="text-[#ff6b6b] text-sm" style={{ marginBottom: '16px' }}>{roleError}</p>
+            )}
+
+            {roleSearch.trim().length === 0 ? (
+              <p className="text-[#6b6880] text-sm">Cherche un pseudo pour lui attribuer ou retirer le rôle admin.</p>
+            ) : roleSearchLoading ? (
+              <p className="text-[#6b6880] text-sm">Recherche...</p>
+            ) : roleResults.length === 0 ? (
+              <p className="text-[#6b6880] text-sm">Aucun joueur trouvé.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {roleResults.map(r => (
+                  <div key={r.user_id} style={{ background: '#1a1828', border: '1px solid #2a2830', borderRadius: '12px', padding: '12px 16px' }} className="flex items-center gap-4">
+                    <Avatar url={r.avatar_url} size={32} border="subtle" />
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <p className="font-fredoka text-[#eeeaf8] text-sm truncate">{r.pseudo}</p>
+                      <RoleBadge role={r.role} isPremium={r.is_premium} />
+                      {r.user_id === myUserId && <span className="text-[#6b6880] text-xs flex-shrink-0">(toi)</span>}
+                    </div>
+                    {r.role === 'owner' ? (
+                      <span className="text-[#4a4760] text-xs flex-shrink-0">Rôle non modifiable ici</span>
+                    ) : r.user_id === myUserId ? (
+                      <span className="text-[#4a4760] text-xs flex-shrink-0">Tu ne peux pas modifier ton propre rôle</span>
+                    ) : (
+                      <button
+                        onClick={() => toggleAdminRole(r)}
+                        disabled={roleActionId === r.user_id}
+                        className="font-fredoka text-xs rounded-lg px-3 py-1.5 hover:opacity-80 transition disabled:opacity-50 flex-shrink-0"
+                        style={r.role === 'admin'
+                          ? { background: '#2e1a1a', color: '#ff6b6b', border: '1px solid #3a2020' }
+                          : { background: '#2a1f3d', color: '#a78bfa', border: '1px solid #3a2d5a' }}
+                      >
+                        {roleActionId === r.user_id ? '...' : r.role === 'admin' ? 'Retirer admin' : 'Rendre admin'}
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

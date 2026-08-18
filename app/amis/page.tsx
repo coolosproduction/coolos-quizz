@@ -6,8 +6,9 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '../../lib/supabase'
 import Avatar from '@/components/Avatar'
 import BackButton from '@/components/BackButton'
+import RoleBadge from '@/components/RoleBadge'
 
-type Identite = { pseudo: string, avatar_url: string | null }
+type Identite = { pseudo: string, avatar_url: string | null, role: string | null, is_premium: boolean | null }
 
 type FriendRequestRow = {
   id: string
@@ -53,7 +54,7 @@ export default function Amis() {
       const next = { ...prev }
       results.forEach((res, i) => {
         const row = res.data && res.data.length > 0 ? res.data[0] : null
-        if (row) next[uniques[i]] = { pseudo: row.pseudo, avatar_url: row.avatar_url }
+        if (row) next[uniques[i]] = { pseudo: row.pseudo, avatar_url: row.avatar_url, role: row.role ?? null, is_premium: row.is_premium ?? null }
       })
       return next
     })
@@ -306,7 +307,10 @@ function CarteJoueur({ userId, identites, sousTitre, children }: { userId: strin
       <Link href={`/joueur/${userId}`} className="flex items-center gap-3 flex-1 min-w-0">
         <Avatar url={id?.avatar_url} size={40} border="subtle" />
         <div className="min-w-0">
-          <p className="font-fredoka text-[#eeeaf8] text-sm truncate">{id?.pseudo || 'Joueur'}</p>
+          <div className="flex items-center gap-2">
+            <p className="font-fredoka text-[#eeeaf8] text-sm truncate">{id?.pseudo || 'Joueur'}</p>
+            <RoleBadge role={id?.role} isPremium={id?.is_premium} />
+          </div>
           {sousTitre && <p className="text-[#6b6880] text-xs">{sousTitre}</p>}
         </div>
       </Link>

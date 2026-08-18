@@ -8,6 +8,7 @@ import { getMultiplayerIdentity, subscribeRoomRealtime, roomPathForStatus, fetch
 import BackButton from '@/components/BackButton'
 import Avatar from '@/components/Avatar'
 import ChatPanel from '@/components/ChatPanel'
+import RoleBadge from '@/components/RoleBadge'
 
 type Game = {
   id: string
@@ -26,6 +27,8 @@ type ChatPlayer = {
   avatar_url: string | null
   status: 'actif' | 'abandonne'
   muted: boolean
+  role?: string | null
+  is_premium?: boolean | null
 }
 
 // Forme minimale du payload postgres_changes utile côté client (on ne lit
@@ -42,7 +45,7 @@ type AnswerRow = {
   user_answer: string | null
   timed_out: boolean
   self_eval: Eval
-  player: { user_id: string, pseudo: string, is_guest: boolean, avatar_url: string | null, joined_at: string } | null
+  player: { user_id: string, pseudo: string, is_guest: boolean, avatar_url: string | null, joined_at: string, role?: string | null, is_premium?: boolean | null } | null
   question: { question_text: string, answer_text: string, category: { name: string } | null } | null
 }
 
@@ -54,7 +57,7 @@ const evalConfig: Record<'oui' | 'en_partie' | 'non', { label: string, color: st
 
 const ANSWERS_SELECT = `
   id, player_id, question_index, user_answer, timed_out, self_eval,
-  player:multiplayer_players(user_id, pseudo, is_guest, avatar_url, joined_at),
+  player:multiplayer_players(user_id, pseudo, is_guest, avatar_url, joined_at, role, is_premium),
   question:questions(question_text, answer_text, category:categories(name))
 `
 
@@ -299,6 +302,7 @@ export default function CorrectionMultijoueur() {
               <div className="flex items-center gap-2">
                 <Avatar url={current.player?.avatar_url ?? null} size={28} border="accent" />
                 <span className="font-fredoka text-[#eeeaf8] text-base">{current.player?.pseudo}</span>
+                <RoleBadge role={current.player?.role} isPremium={current.player?.is_premium} />
                 {current.player?.is_guest && (
                   <span className="bg-[#2a2830] text-[#9b96b8] rounded-full px-3 py-1 text-xs font-fredoka">Invité</span>
                 )}

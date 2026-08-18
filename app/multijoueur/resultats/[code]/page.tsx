@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '../../../../lib/supabase'
 import { getMultiplayerIdentity, roomPathForStatus, subscribeNewGameOnCode } from '../../../../lib/multiplayer'
 import Avatar from '@/components/Avatar'
+import RoleBadge from '@/components/RoleBadge'
 
 type Player = {
   id: string
@@ -15,6 +16,8 @@ type Player = {
   avatar_url: string | null
   status: 'actif' | 'abandonne'
   score: number
+  role?: string | null
+  is_premium?: boolean | null
 }
 
 const podiumStyle: Record<number, { color: string, bg: string, label: string }> = {
@@ -78,7 +81,7 @@ export default function ResultatsMultijoueur() {
 
         const { data: playersData } = await supabase
           .from('multiplayer_players')
-          .select('id, user_id, pseudo, is_guest, avatar_url, status, score')
+          .select('id, user_id, pseudo, is_guest, avatar_url, status, score, role, is_premium')
           .eq('game_id', gameData.id)
           .order('score', { ascending: false })
 
@@ -198,6 +201,7 @@ export default function ResultatsMultijoueur() {
                       <div className="flex items-center gap-2">
                         <span className="font-fredoka text-lg text-[#eeeaf8]">{p.pseudo}</span>
                         {p.user_id === myUserId && <span className="text-[#6b6880] text-xs">(toi)</span>}
+                        <RoleBadge role={p.role} isPremium={p.is_premium} />
                       </div>
                       <div className="flex items-center gap-2 mt-1">
                         {p.is_guest && <span className="bg-[#2a2830] text-[#9b96b8] rounded-full px-2 py-0.5 text-xs font-fredoka">Invité</span>}
@@ -222,6 +226,7 @@ export default function ResultatsMultijoueur() {
                   <Avatar url={p.avatar_url} size={28} border="subtle" />
                   <span className="font-fredoka text-[#eeeaf8] text-base">{p.pseudo}</span>
                   {p.user_id === myUserId && <span className="text-[#6b6880] text-xs">(toi)</span>}
+                  <RoleBadge role={p.role} isPremium={p.is_premium} />
                   {p.is_guest && <span className="bg-[#2a2830] text-[#9b96b8] rounded-full px-2 py-0.5 text-xs font-fredoka">Invité</span>}
                   {p.status === 'abandonne' && <span className="bg-[#2e1a1a] text-[#ff6b6b] rounded-full px-2 py-0.5 text-xs font-fredoka">A quitté la partie</span>}
                 </div>
