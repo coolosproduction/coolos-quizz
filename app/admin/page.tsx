@@ -15,6 +15,11 @@ const diffColors: Record<string, string> = {
   hardcore: '#a78bfa',
 }
 
+// Taille de page pour la liste des questions côté admin. PostgREST plafonne
+// silencieusement à 1000 lignes par requête sans .range() explicite : on
+// pagine donc côté serveur plutôt que de tenter de tout charger d'un coup.
+const QUESTIONS_PAGE_SIZE = 50
+
 type Question = {
   id: string
   question: string
@@ -92,7 +97,18 @@ export default function Admin() {
   const [users, setUsers] = useState<UserStat[]>([])
   const [messages, setMessages] = useState<Message[]>([])
   const [totalQuestions, setTotalQuestions] = useState(0)
+
+  // Compteurs globaux de la table questions (comptage exact côté base,
+  // indépendant de la page ou de la recherche affichées).
+  const [questionsTotalCount, setQuestionsTotalCount] = useState(0)
+  const [questionsActiveCount, setQuestionsActiveCount] = useState(0)
+  // Nombre de résultats correspondant à la recherche en cours (pour la
+  // pagination de la liste filtrée), et pagination elle-même.
+  const [questionsFilteredCount, setQuestionsFilteredCount] = useState(0)
+  const [questionsPage, setQuestionsPage] = useState(1)
+  const [questionsLoading, setQuestionsLoading] = useState(false)
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [authorized, setAuthorized] = useState(false)
   const [isOwner, setIsOwner] = useState(false)
   const [myUserId, setMyUserId] = useState<string | null>(null)
@@ -143,13 +159,78 @@ export default function Admin() {
     checkAdmin()
   }, [])
 
-  const loadData = async () => {
-    const supabase = createClient()
+  // Débounce de la recherche : on attend que l'utilisateur arrête de taper
+  // avant de relancer une requête côté serveur, et on revient à la page 1.
+  useEffect(() => {
+    const timeout = setTimeout(() => setDebouncedSearch(search), 300)
+    return () => clearTimeout(timeout)
+  }, [search])
 
-    const { data: questionsData } = await supabase
+  useEffect(() => {
+    setQuestionsPage(1)
+  }, [debouncedSearch])
+
+  // Recharge la page de questions courante à chaque changement de page ou
+  // de recherche (une fois l'admin authentifié).
+  useEffect(() => {
+    if (!authorized) return
+    loadQuestionsPage(questionsPage, debouncedSearch)
+  }, [authorized, questionsPage, debouncedSearch])
+
+  // Compteurs "Questions totales / Actives / Inactives" : un vrai comptage
+  // exact côté base (count: 'exact', head: true — aucune ligne renvoyée,
+  // donc pas concerné par le plafond de 1000 lignes de PostgREST), plutôt
+  // que la taille du tableau de résultats récupéré par la page en cours.
+  const loadQuestionsStats = async () => {
+    const supabase = createClient()
+    const [{ count: total }, { count: active }] = await Promise.all([
+      supabase.from('questions').select('*', { count: 'exact', head: true }),
+      supabase.from('questions').select('*', { count: 'exact', head: true }).eq('active', true),
+    ])
+    setQuestionsTotalCount(total || 0)
+    setQuestionsActiveCount(active || 0)
+  }
+
+  // Charge une page de la liste des questions (pagination réelle via
+  // .range() côté Supabase) plutôt qu'une requête unique qui tenterait de
+  // tout récupérer d'un coup et plafonnerait silencieusement à 1000 lignes.
+  // La recherche est appliquée côté serveur (texte de la question/réponse,
+  // ou catégorie correspondante) pour rester cohérente avec la pagination.
+  const loadQuestionsPage = async (pageNum: number, searchTerm: string) => {
+    const supabase = createClient()
+    setQuestionsLoading(true)
+
+    const term = searchTerm.trim()
+    let matchingCategoryIds: string[] = []
+    if (term) {
+      const { data: matchingCats } = await supabase
+        .from('categories')
+        .select('id')
+        .ilike('name', `%${term}%`)
+      matchingCategoryIds = (matchingCats || []).map((c: any) => c.id)
+    }
+
+    // Beaucoup de questions partagent le même created_at (import en lot) :
+    // un tri unique sur created_at n'est pas déterministe pour .range(),
+    // ce qui ferait apparaître des doublons ou des trous entre les pages.
+    // On ajoute l'id comme second critère pour un ordre stable.
+    let query = supabase
       .from('questions')
-      .select('id, question_text, answer_text, difficulty, active, category_id, categories(name)')
+      .select('id, question_text, answer_text, difficulty, active, category_id, categories(name)', { count: 'exact' })
       .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+
+    if (term) {
+      const orParts = [`question_text.ilike.%${term}%`, `answer_text.ilike.%${term}%`]
+      if (matchingCategoryIds.length > 0) {
+        orParts.push(`category_id.in.(${matchingCategoryIds.join(',')})`)
+      }
+      query = query.or(orParts.join(','))
+    }
+
+    const from = (pageNum - 1) * QUESTIONS_PAGE_SIZE
+    const to = from + QUESTIONS_PAGE_SIZE - 1
+    const { data: questionsData, count } = await query.range(from, to)
 
     if (questionsData) {
       setQuestions(questionsData.map((q: any) => ({
@@ -161,6 +242,14 @@ export default function Admin() {
         active: q.active,
       })))
     }
+    setQuestionsFilteredCount(count || 0)
+    setQuestionsLoading(false)
+  }
+
+  const loadData = async () => {
+    const supabase = createClient()
+
+    await loadQuestionsStats()
 
     const { data: catsData } = await supabase
       .from('categories')
@@ -238,6 +327,7 @@ export default function Admin() {
     if (!question) return
     await supabase.from('questions').update({ active: !question.active }).eq('id', id)
     setQuestions(prev => prev.map(q => q.id === id ? { ...q, active: !q.active } : q))
+    loadQuestionsStats()
   }
 
   const toggleCategory = async (id: string) => {
@@ -260,7 +350,14 @@ export default function Admin() {
     if (!confirm('Supprimer cette question ?')) return
     const supabase = createClient()
     await supabase.from('questions').delete().eq('id', id)
-    setQuestions(prev => prev.filter(q => q.id !== id))
+    await loadQuestionsStats()
+    // Si on supprime le dernier élément d'une page qui n'est plus la
+    // première, on recule d'une page plutôt que d'afficher une page vide.
+    if (questions.length === 1 && questionsPage > 1) {
+      setQuestionsPage(p => p - 1)
+    } else {
+      loadQuestionsPage(questionsPage, debouncedSearch)
+    }
   }
 
   const deleteCategory = async (id: string) => {
@@ -415,12 +512,8 @@ export default function Admin() {
     return null
   }
 
-  const questionsFiltrees = questions.filter(q =>
-    q.question.toLowerCase().includes(search.toLowerCase()) ||
-    q.category.toLowerCase().includes(search.toLowerCase())
-  )
-
   const nonLus = messages.filter(m => !m.lu).length
+  const questionsTotalPages = Math.max(1, Math.ceil(questionsFilteredCount / QUESTIONS_PAGE_SIZE))
 
   if (!authorized || loading) {
     return (
@@ -567,15 +660,15 @@ export default function Admin() {
 </div>
             <div className="grid grid-cols-3 gap-4" style={{ marginBottom: '24px' }}>
               <div className="bg-[#1a1828] border border-[#2a2830] rounded-xl p-4 text-center">
-                <div className="font-fredoka text-2xl text-[#ffd93d]">{questions.length}</div>
+                <div className="font-fredoka text-2xl text-[#ffd93d]">{questionsTotalCount.toLocaleString()}</div>
                 <div className="text-[#6b6880] text-xs" style={{ marginTop: '4px' }}>Questions totales</div>
               </div>
               <div className="bg-[#1a1828] border border-[#2a2830] rounded-xl p-4 text-center">
-                <div className="font-fredoka text-2xl text-[#6bcb77]">{questions.filter(q => q.active).length}</div>
+                <div className="font-fredoka text-2xl text-[#6bcb77]">{questionsActiveCount.toLocaleString()}</div>
                 <div className="text-[#6b6880] text-xs" style={{ marginTop: '4px' }}>Actives</div>
               </div>
               <div className="bg-[#1a1828] border border-[#2a2830] rounded-xl p-4 text-center">
-                <div className="font-fredoka text-2xl text-[#ff6b6b]">{questions.filter(q => !q.active).length}</div>
+                <div className="font-fredoka text-2xl text-[#ff6b6b]">{(questionsTotalCount - questionsActiveCount).toLocaleString()}</div>
                 <div className="text-[#6b6880] text-xs" style={{ marginTop: '4px' }}>Inactives</div>
               </div>
             </div>
@@ -588,9 +681,15 @@ export default function Admin() {
               <p className="text-[#4a4760] text-xs font-bold uppercase tracking-wider text-right">Actions</p>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {questionsFiltrees.map(q => (
-                <div key={q.id} className="grid grid-cols-4 gap-4 items-center" style={{ background: '#1a1828', border: '1px solid #2a2830', borderRadius: '12px', padding: '12px 16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minHeight: '120px' }}>
+              {questionsLoading && questions.length === 0 && (
+                <p className="text-[#6b6880] text-sm text-center" style={{ padding: '24px 0' }}>Chargement...</p>
+              )}
+              {!questionsLoading && questions.length === 0 && (
+                <p className="text-[#6b6880] text-sm text-center" style={{ padding: '24px 0' }}>Aucune question trouvée.</p>
+              )}
+              {questions.map(q => (
+                <div key={q.id} className="grid grid-cols-4 gap-4 items-center" style={{ background: '#1a1828', border: '1px solid #2a2830', borderRadius: '12px', padding: '12px 16px', opacity: questionsLoading ? 0.5 : 1 }}>
                   <div className="col-span-2">
                     <p className="text-[#c9c4e0] text-sm font-semibold truncate">{q.question}</p>
                   </div>
@@ -611,6 +710,28 @@ export default function Admin() {
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* Pagination */}
+            <div className="flex items-center justify-between" style={{ marginTop: '20px' }}>
+              <p className="text-[#6b6880] text-xs">
+                {questionsFilteredCount.toLocaleString()} résultat{questionsFilteredCount > 1 ? 's' : ''}
+                {debouncedSearch ? ' (recherche)' : ''} — page {questionsPage} sur {questionsTotalPages}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setQuestionsPage(p => Math.max(1, p - 1))}
+                  disabled={questionsPage <= 1 || questionsLoading}
+                  className="font-fredoka text-xs rounded-lg px-3 py-2 hover:opacity-80 transition disabled:opacity-40"
+                  style={{ background: '#1a1828', color: '#c9c4e0', border: '1px solid #2a2830' }}
+                >← Précédent</button>
+                <button
+                  onClick={() => setQuestionsPage(p => Math.min(questionsTotalPages, p + 1))}
+                  disabled={questionsPage >= questionsTotalPages || questionsLoading}
+                  className="font-fredoka text-xs rounded-lg px-3 py-2 hover:opacity-80 transition disabled:opacity-40"
+                  style={{ background: '#1a1828', color: '#c9c4e0', border: '1px solid #2a2830' }}
+                >Suivant →</button>
+              </div>
             </div>
           </div>
         )}
