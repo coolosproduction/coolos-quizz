@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '../../lib/supabase'
+import BackButton from '@/components/BackButton'
 
 type ReponsePartie = {
   questionId: string
@@ -225,9 +226,12 @@ export default function Correction() {
       <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
 
         <div className="flex justify-between items-center">
-          <span className="font-fredoka text-[#9b96b8] text-base">
-            Correction <span className="text-[#eeeaf8]">{index + 1}</span> / {total}
-          </span>
+          <div className="flex items-center gap-3">
+            <BackButton />
+            <span className="font-fredoka text-[#9b96b8] text-base">
+              Correction <span className="text-[#eeeaf8]">{index + 1}</span> / {total}
+            </span>
+          </div>
           <span className="bg-[#1e1c2e] border border-[#3a3650] rounded-full px-4 py-2 font-fredoka text-sm text-[#a78bfa]">
             Phase de correction
           </span>

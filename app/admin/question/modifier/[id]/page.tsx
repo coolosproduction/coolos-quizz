@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '../../../../../lib/supabase'
+import BackButton from '@/components/BackButton'
 
 export default function ModifierQuestion() {
   const router = useRouter()
@@ -155,9 +156,12 @@ export default function ModifierQuestion() {
       <div style={{ flex: 1, padding: '40px', overflow: 'auto' }}>
 
         <div className="flex justify-between items-center" style={{ marginBottom: '32px' }}>
-          <div>
-            <h2 className="font-fredoka text-2xl text-[#eeeaf8]">Modifier la question</h2>
-            <p className="text-[#6b6880] text-sm" style={{ marginTop: '4px' }}>Modifie les champs et enregistre</p>
+          <div className="flex items-center gap-3">
+            <BackButton />
+            <div>
+              <h2 className="font-fredoka text-2xl text-[#eeeaf8]">Modifier la question</h2>
+              <p className="text-[#6b6880] text-sm" style={{ marginTop: '4px' }}>Modifie les champs et enregistre</p>
+            </div>
           </div>
           <Link href="/admin" className="font-fredoka text-sm hover:opacity-80 transition" style={{ border: '1.5px solid #3a3650', color: '#9b96b8', borderRadius: '12px', padding: '10px 20px' }}>
             ← Retour

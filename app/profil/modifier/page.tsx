@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '../../../lib/supabase'
+import BackButton from '@/components/BackButton'
 
 export default function ModifierProfil() {
   const router = useRouter()
@@ -82,15 +83,18 @@ export default function ModifierProfil() {
   return (
     <main className="min-h-screen bg-[#0f0e17]" style={{ padding: '32px 24px' }}>
       <nav className="flex justify-between items-center" style={{ maxWidth: '600px', margin: '0 auto 40px' }}>
-        <Link href="/" className="font-fredoka text-2xl">
-          <span className="text-[#ff6b6b]">C</span>
-          <span className="text-[#ff9f43]">o</span>
-          <span className="text-[#ffd93d]">o</span>
-          <span className="text-[#6bcb77]">l</span>
-          <span className="text-[#4ecdc4]">o</span>
-          <span className="text-[#a78bfa]">s</span>
-          <span className="text-[#c9c4e0]"> Quiz</span>
-        </Link>
+        <div className="flex items-center gap-3">
+          <BackButton />
+          <Link href="/" className="font-fredoka text-2xl">
+            <span className="text-[#ff6b6b]">C</span>
+            <span className="text-[#ff9f43]">o</span>
+            <span className="text-[#ffd93d]">o</span>
+            <span className="text-[#6bcb77]">l</span>
+            <span className="text-[#4ecdc4]">o</span>
+            <span className="text-[#a78bfa]">s</span>
+            <span className="text-[#c9c4e0]"> Quiz</span>
+          </Link>
+        </div>
       </nav>
 
       <div style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>

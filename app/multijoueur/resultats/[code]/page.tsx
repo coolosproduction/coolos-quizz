@@ -1,16 +1,18 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '../../../../lib/supabase'
-import { getMultiplayerIdentity, roomPathForStatus } from '../../../../lib/multiplayer'
+import { getMultiplayerIdentity, roomPathForStatus, subscribeNewGameOnCode } from '../../../../lib/multiplayer'
+import Avatar from '@/components/Avatar'
 
 type Player = {
   id: string
   user_id: string
   pseudo: string
   is_guest: boolean
+  avatar_url: string | null
   status: 'actif' | 'abandonne'
   score: number
 }
@@ -30,11 +32,17 @@ export default function ResultatsMultijoueur() {
   const [connecte, setConnecte] = useState(false)
   const [loading, setLoading] = useState(true)
   const [closedMsg, setClosedMsg] = useState<string | null>(null)
+  const [gameId, setGameId] = useState<string | null>(null)
   const [players, setPlayers] = useState<Player[]>([])
   const [totalQuestions, setTotalQuestions] = useState(0)
+  const [replaying, setReplaying] = useState(false)
+  const [replayError, setReplayError] = useState('')
+
+  const supabaseRef = useRef(createClient())
 
   useEffect(() => {
     let cancelled = false
+    const supabase = supabaseRef.current
 
     const init = async () => {
       if (!code) return
@@ -44,11 +52,12 @@ export default function ResultatsMultijoueur() {
         setMyUserId(identity.user.id)
         setConnecte(!identity.isGuest)
 
-        const supabase = createClient()
         const { data: gameData, error: gameError } = await supabase
           .from('multiplayer_games')
           .select('id, code, status, question_ids')
           .eq('code', code)
+          .order('created_at', { ascending: false })
+          .limit(1)
           .maybeSingle()
 
         if (gameError || !gameData) {
@@ -69,11 +78,12 @@ export default function ResultatsMultijoueur() {
 
         const { data: playersData } = await supabase
           .from('multiplayer_players')
-          .select('id, user_id, pseudo, is_guest, status, score')
+          .select('id, user_id, pseudo, is_guest, avatar_url, status, score')
           .eq('game_id', gameData.id)
           .order('score', { ascending: false })
 
         if (cancelled) return
+        setGameId(gameData.id)
         setPlayers((playersData || []) as Player[])
         setTotalQuestions((gameData.question_ids || []).length)
         setLoading(false)
@@ -86,6 +96,45 @@ export default function ResultatsMultijoueur() {
     init()
     return () => { cancelled = true }
   }, [code, router])
+
+  // Détecte qu'un autre joueur resté sur cette page a relancé la partie
+  // (bouton "Rejouer") : la salle redevient ouverte, on rejoint directement
+  // la nouvelle salle d'attente (on y sera déjà membre si on était encore
+  // actif à la fin de la partie précédente — le RPC de rejeu nous y a ajouté).
+  useEffect(() => {
+    if (!gameId) return
+    const supabase = supabaseRef.current
+    const cleanup = subscribeNewGameOnCode(supabase, {
+      code,
+      currentGameId: gameId,
+      onNewGame: (newGame: { status: string }) => {
+        if (newGame.status === 'attente') {
+          router.replace(`/multijoueur/salle/${code}`)
+        }
+      },
+    })
+    return cleanup
+  }, [gameId, code, router])
+
+  const handleRejouer = async () => {
+    if (!gameId || replaying) return
+    setReplayError('')
+    setReplaying(true)
+    const supabase = supabaseRef.current
+
+    const { error } = await supabase.rpc('replay_multiplayer_game', { p_old_game_id: gameId })
+
+    if (error) {
+      // Un autre joueur a peut-être relancé la partie au même moment (le
+      // code ne peut être réutilisé que par une seule nouvelle salle) : dans
+      // ce cas on rejoint simplement la salle, plutôt que d'afficher une
+      // erreur pour un rejeu qui a en réalité bien eu lieu.
+      router.push(`/multijoueur/salle/${code}`)
+      return
+    }
+
+    router.push(`/multijoueur/salle/${code}`)
+  }
 
   if (loading) {
     return (
@@ -108,6 +157,7 @@ export default function ResultatsMultijoueur() {
 
   const podium = players.slice(0, 3)
   const rest = players.slice(3)
+  const myAvatarUrl = players.find(p => p.user_id === myUserId)?.avatar_url ?? null
 
   return (
     <main className="min-h-screen bg-[#0f0e17]" style={{ padding: '100px 24px 80px' }}>
@@ -117,8 +167,8 @@ export default function ResultatsMultijoueur() {
           <span className="text-[#c9c4e0]"> Quiz</span>
         </Link>
         {connecte && (
-          <Link href="/profil" className="w-9 h-9 rounded-full bg-[#2a1f3d] border-2 border-[#a78bfa] flex items-center justify-center">
-            <div className="w-4 h-4 rounded-full bg-[#a78bfa]"></div>
+          <Link href="/profil">
+            <Avatar url={myAvatarUrl} size={36} border="accent" />
           </Link>
         )}
       </nav>
@@ -143,6 +193,7 @@ export default function ResultatsMultijoueur() {
                 >
                   <div className="flex items-center gap-4">
                     <span className="font-fredoka text-2xl" style={{ color: style.color }}>{style.label}</span>
+                    <Avatar url={p.avatar_url} size={40} border="accent" />
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-fredoka text-lg text-[#eeeaf8]">{p.pseudo}</span>
@@ -168,6 +219,7 @@ export default function ResultatsMultijoueur() {
               <div key={p.id} className="bg-[#1a1828] border border-[#2a2830] rounded-xl px-5 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className="font-fredoka text-[#6b6880] w-6 text-right">{i + 4}</span>
+                  <Avatar url={p.avatar_url} size={28} border="subtle" />
                   <span className="font-fredoka text-[#eeeaf8] text-base">{p.pseudo}</span>
                   {p.user_id === myUserId && <span className="text-[#6b6880] text-xs">(toi)</span>}
                   {p.is_guest && <span className="bg-[#2a2830] text-[#9b96b8] rounded-full px-2 py-0.5 text-xs font-fredoka">Invité</span>}
@@ -189,11 +241,25 @@ export default function ResultatsMultijoueur() {
           </div>
         )}
 
+        <button
+          onClick={handleRejouer}
+          disabled={replaying}
+          className="w-full bg-[#ffd93d] text-[#0f0e17] rounded-2xl py-5 font-fredoka text-xl hover:opacity-90 transition text-center disabled:opacity-50"
+        >
+          {replaying ? 'Relance...' : 'Rejouer (même salle) →'}
+        </button>
+
+        {replayError && (
+          <div className="bg-[#2e1a1a] border border-[#ff6b6b] rounded-xl px-4 py-3">
+            <p className="text-[#ff6b6b] text-sm">{replayError}</p>
+          </div>
+        )}
+
         <Link
           href="/multijoueur"
-          className="w-full bg-[#ffd93d] text-[#0f0e17] rounded-2xl py-5 font-fredoka text-xl hover:opacity-90 transition text-center block"
+          className="w-full border border-[#3a3650] text-[#c9c4e0] rounded-2xl py-4 font-fredoka text-base hover:bg-[#1e1c2e] transition text-center block"
         >
-          Rejouer en multijoueur →
+          Créer une nouvelle salle →
         </Link>
 
         <div className="flex gap-4">

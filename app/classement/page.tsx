@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { createClient } from '../../lib/supabase'
+import Avatar from '@/components/Avatar'
+import BackButton from '@/components/BackButton'
 
 type Category = { id: string, name: string, color: string, bg: string }
 
@@ -178,15 +180,18 @@ export default function Classement() {
     <main className="min-h-screen bg-[#0f0e17]">
 
       <nav className="fixed top-0 left-0 right-0 flex justify-between items-center bg-[#0f0e17] border-b border-[#1e1c2e] z-10 px-4 md:px-8 py-4">
-        <Link href="/" className="font-fredoka text-xl md:text-2xl">
-          <span className="text-[#ff6b6b]">C</span>
-          <span className="text-[#ff9f43]">o</span>
-          <span className="text-[#ffd93d]">o</span>
-          <span className="text-[#6bcb77]">l</span>
-          <span className="text-[#4ecdc4]">o</span>
-          <span className="text-[#a78bfa]">s</span>
-          <span className="text-[#c9c4e0]"> Quiz</span>
-        </Link>
+        <div className="flex items-center gap-3">
+          <BackButton />
+          <Link href="/" className="font-fredoka text-xl md:text-2xl">
+            <span className="text-[#ff6b6b]">C</span>
+            <span className="text-[#ff9f43]">o</span>
+            <span className="text-[#ffd93d]">o</span>
+            <span className="text-[#6bcb77]">l</span>
+            <span className="text-[#4ecdc4]">o</span>
+            <span className="text-[#a78bfa]">s</span>
+            <span className="text-[#c9c4e0]"> Quiz</span>
+          </Link>
+        </div>
         {!checkingAuth && (
           connecte ? (
             <div className="flex items-center gap-3">
@@ -260,13 +265,7 @@ export default function Classement() {
                       className="flex items-center gap-3 hover:bg-[#231f38] transition"
                       style={{ padding: '10px 16px' }}
                     >
-                      <div className="rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center" style={{ width: '28px', height: '28px', border: '2px solid #2a2830', background: '#2a1f3d' }}>
-                        {r.avatar_url ? (
-                          <img src={r.avatar_url} alt="avatar" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-3 h-3 rounded-full bg-[#a78bfa]"></div>
-                        )}
-                      </div>
+                      <Avatar url={r.avatar_url} size={28} border="subtle" />
                       <span className="font-fredoka text-[#eeeaf8] text-sm truncate">{r.pseudo}</span>
                       {r.user_id === userId && <span className="text-[#a78bfa] text-xs">(toi)</span>}
                     </Link>
@@ -388,13 +387,7 @@ function LigneClassement({ row, highlight }: { row: LeaderboardRow, highlight?: 
         <div className="font-fredoka text-sm w-7 flex-shrink-0 text-center" style={{ color: rankColor(row.rank) }}>
           {row.rank}
         </div>
-        <div className="rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center" style={{ width: '32px', height: '32px', border: '2px solid #2a2830', background: '#2a1f3d' }}>
-          {row.avatar_url ? (
-            <img src={row.avatar_url} alt="avatar" className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-4 h-4 rounded-full bg-[#a78bfa]"></div>
-          )}
-        </div>
+        <Avatar url={row.avatar_url} size={32} border="subtle" />
         <div className="flex-1 min-w-0">
           <p className="font-fredoka text-[#eeeaf8] text-sm truncate">
             {row.pseudo}

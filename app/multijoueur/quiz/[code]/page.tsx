@@ -73,6 +73,8 @@ export default function QuizMultijoueur() {
           .from('multiplayer_games')
           .select('id, code, status, host_id, question_ids, current_question_index, current_question_answered_count, question_started_at, config')
           .eq('code', code)
+          .order('created_at', { ascending: false })
+          .limit(1)
           .maybeSingle()
 
         if (gameError || !gameData) {

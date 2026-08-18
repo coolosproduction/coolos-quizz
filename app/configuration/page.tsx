@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '../../lib/supabase'
+import BackButton from '@/components/BackButton'
 
 const difficultes = [
   { id: 'facile', label: 'Facile', sub: 'Pour débuter', color: '#6bcb77', bg: '#1a2e1f' },
@@ -137,15 +138,18 @@ export default function Configuration() {
     <main className="min-h-screen bg-[#0f0e17]" style={{ padding: '32px 24px 80px' }}>
 
       <nav className="flex justify-between items-center mb-12">
-        <Link href="/" className="font-fredoka text-2xl">
-          <span className="text-[#ff6b6b]">C</span>
-          <span className="text-[#ff9f43]">o</span>
-          <span className="text-[#ffd93d]">o</span>
-          <span className="text-[#6bcb77]">l</span>
-          <span className="text-[#4ecdc4]">o</span>
-          <span className="text-[#a78bfa]">s</span>
-          <span className="text-[#c9c4e0]"> Quiz</span>
-        </Link>
+        <div className="flex items-center gap-3">
+          <BackButton />
+          <Link href="/" className="font-fredoka text-2xl">
+            <span className="text-[#ff6b6b]">C</span>
+            <span className="text-[#ff9f43]">o</span>
+            <span className="text-[#ffd93d]">o</span>
+            <span className="text-[#6bcb77]">l</span>
+            <span className="text-[#4ecdc4]">o</span>
+            <span className="text-[#a78bfa]">s</span>
+            <span className="text-[#c9c4e0]"> Quiz</span>
+          </Link>
+        </div>
         {!isInvite && (
           <Link href="/profil" className="w-10 h-10 rounded-full bg-[#2a1f3d] border-2 border-[#a78bfa] flex items-center justify-center cursor-pointer">
             <div className="w-5 h-5 rounded-full bg-[#a78bfa]"></div>

@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '../../../../lib/supabase'
 import { getMultiplayerIdentity, subscribeRoomRealtime, roomPathForStatus } from '../../../../lib/multiplayer'
+import BackButton from '@/components/BackButton'
+import Avatar from '@/components/Avatar'
 
 type Game = {
   id: string
@@ -22,7 +24,7 @@ type AnswerRow = {
   user_answer: string | null
   timed_out: boolean
   self_eval: Eval
-  player: { user_id: string, pseudo: string, is_guest: boolean, joined_at: string } | null
+  player: { user_id: string, pseudo: string, is_guest: boolean, avatar_url: string | null, joined_at: string } | null
   question: { question_text: string, answer_text: string, category: { name: string } | null } | null
 }
 
@@ -34,7 +36,7 @@ const evalConfig: Record<'oui' | 'en_partie' | 'non', { label: string, color: st
 
 const ANSWERS_SELECT = `
   id, player_id, question_index, user_answer, timed_out, self_eval,
-  player:multiplayer_players(user_id, pseudo, is_guest, joined_at),
+  player:multiplayer_players(user_id, pseudo, is_guest, avatar_url, joined_at),
   question:questions(question_text, answer_text, category:categories(name))
 `
 
@@ -105,6 +107,8 @@ export default function CorrectionMultijoueur() {
           .from('multiplayer_games')
           .select('id, code, status, host_id')
           .eq('code', code)
+          .order('created_at', { ascending: false })
+          .limit(1)
           .maybeSingle()
 
         if (gameError || !gameData) {
@@ -227,9 +231,12 @@ export default function CorrectionMultijoueur() {
       <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
 
         <div className="flex justify-between items-center">
-          <span className="font-fredoka text-[#9b96b8] text-base">
-            Correction <span className="text-[#eeeaf8]">{done}</span> / {total}
-          </span>
+          <div className="flex items-center gap-3">
+            <BackButton />
+            <span className="font-fredoka text-[#9b96b8] text-base">
+              Correction <span className="text-[#eeeaf8]">{done}</span> / {total}
+            </span>
+          </div>
           <span className="bg-[#1e1c2e] border border-[#3a3650] rounded-full px-4 py-2 font-fredoka text-sm text-[#a78bfa]">
             {isHost ? 'Tu corriges cette partie' : "Correction en direct par l'hôte"}
           </span>
@@ -250,9 +257,7 @@ export default function CorrectionMultijoueur() {
                 <span className="font-fredoka text-[#9b96b8] text-sm">{current.question?.category?.name}</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-full bg-[#2a1f3d] border-2 border-[#a78bfa] flex items-center justify-center">
-                  <div className="w-3 h-3 rounded-full bg-[#a78bfa]"></div>
-                </div>
+                <Avatar url={current.player?.avatar_url ?? null} size={28} border="accent" />
                 <span className="font-fredoka text-[#eeeaf8] text-base">{current.player?.pseudo}</span>
                 {current.player?.is_guest && (
                   <span className="bg-[#2a2830] text-[#9b96b8] rounded-full px-3 py-1 text-xs font-fredoka">Invité</span>

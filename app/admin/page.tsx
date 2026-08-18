@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '../../lib/supabase'
+import Avatar from '@/components/Avatar'
+import BackButton from '@/components/BackButton'
 
 const diffColors: Record<string, string> = {
   facile: '#6bcb77',
@@ -420,9 +422,12 @@ export default function Admin() {
 
       {/* Sidebar */}
       <div style={{ width: '220px', background: '#0a0910', borderRight: '1px solid #1e1c2e', display: 'flex', flexDirection: 'column', padding: '24px 0', flexShrink: 0 }}>
-        <div className="font-fredoka text-lg" style={{ padding: '0 20px 24px', borderBottom: '1px solid #1e1c2e', marginBottom: '16px' }}>
-          <span className="text-[#ff6b6b]">C</span><span className="text-[#ff9f43]">o</span><span className="text-[#ffd93d]">o</span><span className="text-[#6bcb77]">l</span><span className="text-[#4ecdc4]">o</span><span className="text-[#a78bfa]">s</span>
-          <span className="text-[#6b6880] text-sm"> admin</span>
+        <div className="flex items-center gap-3" style={{ padding: '0 20px 24px', borderBottom: '1px solid #1e1c2e', marginBottom: '16px' }}>
+          <BackButton />
+          <div className="font-fredoka text-lg">
+            <span className="text-[#ff6b6b]">C</span><span className="text-[#ff9f43]">o</span><span className="text-[#ffd93d]">o</span><span className="text-[#6bcb77]">l</span><span className="text-[#4ecdc4]">o</span><span className="text-[#a78bfa]">s</span>
+            <span className="text-[#6b6880] text-sm"> admin</span>
+          </div>
         </div>
 
         <p className="text-[#4a4760] text-xs font-bold uppercase tracking-widest" style={{ padding: '0 20px', marginBottom: '8px' }}>Contenu</p>
@@ -672,9 +677,7 @@ export default function Admin() {
                     <div className="flex items-center gap-4">
                       <div className="font-fredoka text-sm w-6 flex-shrink-0" style={{ color: i === 0 ? '#ffd93d' : i === 1 ? '#9b96b8' : i === 2 ? '#ff9f43' : '#4a4760' }}>{i + 1}</div>
                       <div className="flex items-center gap-3 flex-1">
-                        <div className="rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center" style={{ width: '32px', height: '32px', border: '2px solid #2a2830', background: '#2a1f3d' }}>
-                          {u.avatar_url ? <img src={u.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : <div className="w-4 h-4 rounded-full bg-[#a78bfa]"></div>}
-                        </div>
+                        <Avatar url={u.avatar_url} size={32} border="subtle" />
                         <div>
                           <div className="flex items-center gap-2">
                             <p className="font-fredoka text-[#eeeaf8] text-sm">{u.pseudo}</p>

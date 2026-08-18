@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '../../lib/supabase'
+import BackButton from '@/components/BackButton'
 
 export default function Connexion() {
   const [email, setEmail] = useState('')
@@ -74,15 +75,18 @@ export default function Connexion() {
   return (
     <main className="min-h-screen bg-[#0f0e17] flex flex-col items-center justify-center px-6 py-12">
 
-      <Link href="/" className="font-fredoka text-2xl mb-8">
-        <span className="text-[#ff6b6b]">C</span>
-        <span className="text-[#ff9f43]">o</span>
-        <span className="text-[#ffd93d]">o</span>
-        <span className="text-[#6bcb77]">l</span>
-        <span className="text-[#4ecdc4]">o</span>
-        <span className="text-[#a78bfa]">s</span>
-        <span className="text-[#c9c4e0]"> Quiz</span>
-      </Link>
+      <div className="flex items-center gap-3 mb-8">
+        <BackButton />
+        <Link href="/" className="font-fredoka text-2xl">
+          <span className="text-[#ff6b6b]">C</span>
+          <span className="text-[#ff9f43]">o</span>
+          <span className="text-[#ffd93d]">o</span>
+          <span className="text-[#6bcb77]">l</span>
+          <span className="text-[#4ecdc4]">o</span>
+          <span className="text-[#a78bfa]">s</span>
+          <span className="text-[#c9c4e0]"> Quiz</span>
+        </Link>
+      </div>
 
       <div className="w-full max-w-md bg-[#1a1828] border border-[#2a2830] rounded-2xl" style={{ padding: '20px' }}>
 

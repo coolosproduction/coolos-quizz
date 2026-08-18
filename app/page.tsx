@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '../lib/supabase'
+import BackButton from '@/components/BackButton'
 
 export default function Home() {
   const router = useRouter()
@@ -81,6 +82,7 @@ export default function Home() {
 
       <nav className="fixed top-0 left-0 right-0 flex justify-between items-center bg-[#0f0e17] border-b border-[#1e1c2e] z-10 px-4 md:px-8 py-4">
   <div className="flex items-center gap-3">
+    <BackButton />
     <div className="font-fredoka text-xl md:text-2xl">
       <span className="text-[#ff6b6b]">C</span>
       <span className="text-[#ff9f43]">o</span>

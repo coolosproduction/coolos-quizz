@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '../../../../lib/supabase'
+import Avatar from '@/components/Avatar'
+import BackButton from '@/components/BackButton'
 
 type Question = {
   question: string
@@ -195,13 +197,8 @@ export default function AdminJoueurDetail() {
 
         <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl" style={{ padding: '24px' }}>
           <div className="flex items-center gap-5 flex-wrap">
-            <div className="rounded-full overflow-hidden flex items-center justify-center flex-shrink-0" style={{ width: '64px', height: '64px', border: '3px solid #a78bfa', background: '#2a1f3d' }}>
-              {joueur.avatar_url ? (
-                <img src={joueur.avatar_url} alt="avatar" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-[#a78bfa]"></div>
-              )}
-            </div>
+            <BackButton />
+            <Avatar url={joueur.avatar_url} size={64} border="accent" />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="font-fredoka text-2xl text-[#eeeaf8]">{joueur.pseudo}</h1>

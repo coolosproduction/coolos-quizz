@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '../../../../lib/supabase'
 import { getMultiplayerIdentity, subscribeRoomRealtime } from '../../../../lib/multiplayer'
+import BackButton from '@/components/BackButton'
+import Avatar from '@/components/Avatar'
 
 type Game = {
   id: string
@@ -25,6 +27,7 @@ type Player = {
   user_id: string
   pseudo: string
   is_guest: boolean
+  avatar_url: string | null
   status: 'actif' | 'abandonne'
   joined_at: string
 }
@@ -47,6 +50,7 @@ export default function SalleAttente() {
   const [categoryNames, setCategoryNames] = useState<Record<string, string>>({})
   const [launching, setLaunching] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [shared, setShared] = useState(false)
 
   const gameIdRef = useRef<string | null>(null)
   const supabaseRef = useRef(createClient())
@@ -57,7 +61,7 @@ export default function SalleAttente() {
     const supabase = supabaseRef.current
     const { data } = await supabase
       .from('multiplayer_players')
-      .select('id, user_id, pseudo, is_guest, status, joined_at')
+      .select('id, user_id, pseudo, is_guest, avatar_url, status, joined_at')
       .eq('game_id', gameId)
       .order('joined_at', { ascending: true })
     if (data) setPlayers(data as Player[])
@@ -78,6 +82,8 @@ export default function SalleAttente() {
           .from('multiplayer_games')
           .select('id, code, status, host_id, max_players, config')
           .eq('code', code)
+          .order('created_at', { ascending: false })
+          .limit(1)
           .maybeSingle()
 
         if (gameError || !gameData) {
@@ -112,6 +118,7 @@ export default function SalleAttente() {
               user_id: identity.user.id,
               is_guest: identity.isGuest,
               pseudo: identity.pseudo,
+              avatar_url: identity.avatarUrl,
             })
           if (joinError) {
             setClosed('Cette salle est complète.')
@@ -178,6 +185,28 @@ export default function SalleAttente() {
     navigator.clipboard.writeText(code)
     setCopied(true)
     setTimeout(() => setCopied(false), 1500)
+  }
+
+  // Lien d'invitation direct : ouvrable par n'importe qui, même sans compte
+  // (la page de salle crée automatiquement une session invité au besoin).
+  const handleShare = async () => {
+    const url = `${window.location.origin}/multijoueur/salle/${code}`
+    if (typeof navigator !== 'undefined' && (navigator as any).share) {
+      try {
+        await (navigator as any).share({
+          title: 'Coolos Quiz',
+          text: `Rejoins ma salle multijoueur sur Coolos Quiz (code ${code}) !`,
+          url,
+        })
+        return
+      } catch (e) {
+        // Partage annulé par l'utilisateur ou non supporté au final : on
+        // retombe sur la copie du lien plutôt que de laisser un état bloqué.
+      }
+    }
+    navigator.clipboard.writeText(url)
+    setShared(true)
+    setTimeout(() => setShared(false), 1500)
   }
 
   const handleQuitter = async () => {
@@ -272,10 +301,13 @@ export default function SalleAttente() {
       <div style={{ maxWidth: '700px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
 
         <div className="flex justify-between items-center">
-          <Link href="/" className="font-fredoka text-2xl">
-            <span className="text-[#ff6b6b]">C</span><span className="text-[#ff9f43]">o</span><span className="text-[#ffd93d]">o</span><span className="text-[#6bcb77]">l</span><span className="text-[#4ecdc4]">o</span><span className="text-[#a78bfa]">s</span>
-            <span className="text-[#c9c4e0]"> Quiz</span>
-          </Link>
+          <div className="flex items-center gap-3">
+            <BackButton />
+            <Link href="/" className="font-fredoka text-2xl">
+              <span className="text-[#ff6b6b]">C</span><span className="text-[#ff9f43]">o</span><span className="text-[#ffd93d]">o</span><span className="text-[#6bcb77]">l</span><span className="text-[#4ecdc4]">o</span><span className="text-[#a78bfa]">s</span>
+              <span className="text-[#c9c4e0]"> Quiz</span>
+            </Link>
+          </div>
           <button onClick={handleQuitter} className="text-[#6b6880] text-sm font-semibold hover:text-[#ff6b6b] transition">
             Quitter la salle
           </button>
@@ -285,12 +317,20 @@ export default function SalleAttente() {
         <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-8 flex flex-col items-center gap-4 text-center">
           <p className="font-fredoka text-[#9b96b8] text-sm uppercase tracking-widest">Code de la salle</p>
           <p className="font-fredoka text-5xl text-[#ffd93d] tracking-widest">{code}</p>
-          <button
-            onClick={handleCopyCode}
-            className="border border-[#3a3650] text-[#c9c4e0] rounded-full px-5 py-2 text-sm font-fredoka hover:bg-[#1e1c2e] transition"
-          >
-            {copied ? 'Copié !' : 'Copier le code'}
-          </button>
+          <div className="flex gap-3 flex-wrap justify-center">
+            <button
+              onClick={handleCopyCode}
+              className="border border-[#3a3650] text-[#c9c4e0] rounded-full px-5 py-2 text-sm font-fredoka hover:bg-[#1e1c2e] transition"
+            >
+              {copied ? 'Copié !' : 'Copier le code'}
+            </button>
+            <button
+              onClick={handleShare}
+              className="border border-[#a78bfa] text-[#a78bfa] rounded-full px-5 py-2 text-sm font-fredoka hover:bg-[#2a1f3d] transition"
+            >
+              {shared ? 'Lien copié !' : 'Partager →'}
+            </button>
+          </div>
         </div>
 
         {/* Config */}
@@ -310,9 +350,7 @@ export default function SalleAttente() {
             {activePlayers.map(p => (
               <div key={p.id} className="bg-[#1a1828] border border-[#2a2830] rounded-xl px-5 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-[#2a1f3d] border-2 border-[#a78bfa] flex items-center justify-center">
-                    <div className="w-4 h-4 rounded-full bg-[#a78bfa]"></div>
-                  </div>
+                  <Avatar url={p.avatar_url} size={36} border="accent" />
                   <span className="font-fredoka text-[#eeeaf8] text-base">{p.pseudo}</span>
                   {p.user_id === myUserId && (
                     <span className="text-[#6b6880] text-xs">(toi)</span>
