@@ -280,15 +280,15 @@ export default function Home() {
               <div className="w-10 h-10 rounded-xl bg-[#1f2d1f] flex items-center justify-center mb-4">
                 <div className="w-4 h-4 rounded-full bg-[#6bcb77]"></div>
               </div>
-              <h3 className="font-fredoka text-[#eeeaf8] text-base md:text-lg mb-2">3 niveaux</h3>
-              <p className="text-[#827f97] text-xs md:text-sm leading-relaxed">Facile, moyen ou difficile selon ton humeur.</p>
+              <h3 className="font-fredoka text-[#eeeaf8] text-base md:text-lg mb-2">4 niveaux</h3>
+              <p className="text-[#827f97] text-xs md:text-sm leading-relaxed">Facile, moyen, difficile ou hardcore selon ton humeur.</p>
             </div>
             <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-5 md:p-8">
               <div className="w-10 h-10 rounded-xl bg-[#2d1f1f] flex items-center justify-center mb-4">
                 <div className="w-4 h-4 rounded bg-[#ff6b6b]"></div>
               </div>
-              <h3 className="font-fredoka text-[#eeeaf8] text-base md:text-lg mb-2">Score final</h3>
-              <p className="text-[#827f97] text-xs md:text-sm leading-relaxed">Vois combien tu as vraiment su répondre.</p>
+              <h3 className="font-fredoka text-[#eeeaf8] text-base md:text-lg mb-2">jeu multijoueur</h3>
+              <p className="text-[#827f97] text-xs md:text-sm leading-relaxed">Vois qui de tes amis est le meilleur.</p>
             </div>
             <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-5 md:p-8">
               <div className="w-10 h-10 rounded-xl bg-[#1f2a2d] flex items-center justify-center mb-4">
