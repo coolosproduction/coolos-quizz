@@ -46,7 +46,7 @@ export default function QuizMultijoueur() {
   const answeredRef = useRef(false)
   const submittingRef = useRef(false)
   const currentIndexRef = useRef<number | null>(null)
-  const timeoutCalledRef = useRef(false)
+  const lastTimerCheckRef = useRef(0)
 
   const refreshActiveCount = useCallback(async (gameId: string) => {
     const supabase = supabaseRef.current
@@ -177,6 +177,29 @@ export default function QuizMultijoueur() {
     return () => { cancelled = true }
   }, [code, router, refreshActiveCount])
 
+  // Applique un nouvel état de partie reçu (par Realtime ou par une relecture
+  // manuelle de la DB) — factorisé pour être utilisé par les deux canaux.
+  const applyGameUpdate = useCallback((newGame: Game) => {
+    if (newGame.status !== 'en_cours') {
+      if (newGame.status === 'annulee') {
+        setClosedMsg('Cette salle a été fermée.')
+      } else {
+        const path = roomPathForStatus(newGame.status, code)
+        if (path) router.replace(path)
+      }
+      return
+    }
+    if (currentIndexRef.current !== null && newGame.current_question_index !== currentIndexRef.current) {
+      setAnswered(false)
+      answeredRef.current = false
+      setReponse('')
+      reponseRef.current = ''
+      lastTimerCheckRef.current = 0
+    }
+    currentIndexRef.current = newGame.current_question_index
+    setGame(prev => prev ? { ...prev, ...newGame } : newGame)
+  }, [code, router])
+
   // Realtime : avancement de question, changement de phase, présence
   useEffect(() => {
     if (!game?.id || !myUserId) return
@@ -186,32 +209,13 @@ export default function QuizMultijoueur() {
     const cleanup = subscribeRoomRealtime(supabase, {
       gameId,
       myUserId,
-      onGameChange: (newGame: Game) => {
-        if (newGame.status !== 'en_cours') {
-          if (newGame.status === 'annulee') {
-            setClosedMsg('Cette salle a été fermée.')
-          } else {
-            const path = roomPathForStatus(newGame.status, code)
-            if (path) router.replace(path)
-          }
-          return
-        }
-        if (currentIndexRef.current !== null && newGame.current_question_index !== currentIndexRef.current) {
-          setAnswered(false)
-          answeredRef.current = false
-          setReponse('')
-          reponseRef.current = ''
-          timeoutCalledRef.current = false
-        }
-        currentIndexRef.current = newGame.current_question_index
-        setGame(prev => prev ? { ...prev, ...newGame } : newGame)
-      },
+      onGameChange: applyGameUpdate,
       onPlayersChange: () => refreshActiveCount(gameId),
       onAnswersChange: () => {},
     })
 
     return cleanup
-  }, [game?.id, myUserId, code, router, refreshActiveCount])
+  }, [game?.id, myUserId, code, router, refreshActiveCount, applyGameUpdate])
 
   // Minuteur local, recalculé depuis l'heure serveur (question_started_at) —
   // jamais depuis un décompte purement client, pour rester synchronisé avec
@@ -225,9 +229,28 @@ export default function QuizMultijoueur() {
       const remaining = timerDuration - Math.floor((Date.now() - startedAt) / 1000)
       setTimeLeft(Math.max(0, remaining))
       if (remaining <= 0) {
-        if (!timeoutCalledRef.current) {
-          timeoutCalledRef.current = true
-          supabaseRef.current.rpc('check_question_timer', { p_game_id: game.id })
+        // On réessaie régulièrement plutôt qu'une seule fois : si le premier
+        // appel est manqué (onglet mobile mis en veille, aléa réseau...), la
+        // partie ne doit pas rester bloquée dès qu'un client redevient actif.
+        // On relit aussi directement la ligne de la partie en DB : si un
+        // évènement Realtime d'avancement a été manqué (les deux joueurs
+        // avaient déjà changé de question côté serveur sans que ce client ne
+        // le voie), on se resynchronise nous-mêmes plutôt que de dépendre
+        // uniquement d'un flux d'évènements qui peut être raté.
+        const now = Date.now()
+        if (now - lastTimerCheckRef.current > 3000) {
+          lastTimerCheckRef.current = now
+          const gameId = game.id
+          supabaseRef.current.rpc('check_question_timer', { p_game_id: gameId }).then(() => {
+            supabaseRef.current
+              .from('multiplayer_games')
+              .select('id, code, status, host_id, question_ids, current_question_index, current_question_answered_count, question_started_at, config')
+              .eq('id', gameId)
+              .maybeSingle()
+              .then(({ data }) => {
+                if (data) applyGameUpdate(data as Game)
+              })
+          })
         }
         if (!answeredRef.current && !submittingRef.current) {
           handleRepondre(true)

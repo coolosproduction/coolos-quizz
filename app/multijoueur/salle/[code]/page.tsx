@@ -227,7 +227,13 @@ export default function SalleAttente() {
       setLaunching(false)
       return
     }
-    // La redirection se fait via l'abonnement Realtime (UPDATE de multiplayer_games)
+    // La redirection se fait normalement via l'abonnement Realtime (UPDATE de
+    // multiplayer_games). Filet de sécurité : si cet évènement n'arrive pas
+    // (raté, latence...), on force quand même la redirection après un court
+    // délai plutôt que de laisser l'hôte bloqué sur "Lancement...".
+    setTimeout(() => {
+      router.replace(`/multijoueur/quiz/${code}`)
+    }, 4000)
   }
 
   if (loading) {
