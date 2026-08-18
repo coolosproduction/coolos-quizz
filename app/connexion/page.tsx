@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '../../lib/supabase'
 import BackButton from '@/components/BackButton'
+import Spinner from '@/components/Spinner'
 
 export default function Connexion() {
   const [email, setEmail] = useState('')
@@ -88,7 +89,7 @@ export default function Connexion() {
         </Link>
       </div>
 
-      <div className="w-full max-w-md bg-[#1a1828] border border-[#2a2830] rounded-2xl" style={{ padding: '20px' }}>
+      <div className="w-full max-w-md bg-[#1a1828] border border-[#2a2830] rounded-2xl" style={{ padding: '32px' }}>
 
         <h2 className="font-fredoka text-3xl text-[#eeeaf8] mb-2">Bon retour <span className="text-[#4ecdc4]">par ici !</span></h2>
         <p className="text-[#9b96b8] text-sm mb-8">Connecte-toi pour retrouver tes parties et continuer à jouer.</p>
@@ -106,7 +107,7 @@ export default function Connexion() {
             placeholder="ton@email.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full bg-[#0f0e17] border border-[#3a3650] rounded-xl px-4 py-3 text-[#eeeaf8] text-sm outline-none focus:border-[#4ecdc4] transition"
+            className="w-full bg-[#0f0e17] border border-[#2a2830] rounded-xl px-4 py-3 text-[#eeeaf8] font-fredoka text-sm focus:outline-none focus:border-[#4ecdc4] transition placeholder-[#8480a1]"
           />
         </div>
 
@@ -117,7 +118,7 @@ export default function Connexion() {
             placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full bg-[#0f0e17] border border-[#3a3650] rounded-xl px-4 py-3 text-[#eeeaf8] text-sm outline-none focus:border-[#4ecdc4] transition"
+            className="w-full bg-[#0f0e17] border border-[#2a2830] rounded-xl px-4 py-3 text-[#eeeaf8] font-fredoka text-sm focus:outline-none focus:border-[#4ecdc4] transition placeholder-[#8480a1]"
           />
         </div>
 
@@ -130,8 +131,9 @@ export default function Connexion() {
         <button
           onClick={handleConnexion}
           disabled={loading}
-          className="block w-full bg-[#4ecdc4] text-[#0f0e17] rounded-2xl py-4 font-fredoka text-xl hover:opacity-90 transition text-center mb-6"
+          className="flex items-center justify-center gap-2 w-full bg-[#4ecdc4] text-[#0f0e17] rounded-2xl py-4 font-fredoka text-xl hover:opacity-90 transition disabled:opacity-60 text-center mb-6"
         >
+          {loading && <Spinner size={18} color="#0f0e17" />}
           {loading ? 'Connexion en cours...' : 'Se connecter'}
         </button>
 

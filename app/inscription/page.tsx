@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '../../lib/supabase'
 import BackButton from '@/components/BackButton'
+import Spinner from '@/components/Spinner'
 
 export default function Inscription() {
   const [email, setEmail] = useState('')
@@ -72,7 +73,7 @@ export default function Inscription() {
       </div>
 
       {/* Card */}
-      <div className="w-full max-w-md bg-[#1a1828] border border-[#2a2830] rounded-2xl p-8 md:max-w-4xl" style={{ padding: '5px' }}>
+      <div className="w-full max-w-md bg-[#1a1828] border border-[#2a2830] rounded-2xl" style={{ padding: '32px' }}>
 
         <h2 className="font-fredoka text-3xl text-[#eeeaf8] mb-2">Crée ton compte !</h2>
         <p className="text-[#9b96b8] text-sm mb-8">Rejoins Coolos Quiz et commence à jouer.</p>
@@ -91,7 +92,7 @@ export default function Inscription() {
             placeholder="Ton pseudo..."
             value={pseudo}
             onChange={(e) => setPseudo(e.target.value)}
-            className="w-full bg-[#0f0e17] border border-[#3a3650] rounded-xl px-4 py-3 text-[#eeeaf8] text-sm outline-none focus:border-[#a78bfa] transition"
+            className="w-full bg-[#0f0e17] border border-[#2a2830] rounded-xl px-4 py-3 text-[#eeeaf8] font-fredoka text-sm focus:outline-none focus:border-[#a78bfa] transition placeholder-[#8480a1]"
           />
         </div>
 
@@ -103,7 +104,7 @@ export default function Inscription() {
             placeholder="ton@email.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full bg-[#0f0e17] border border-[#3a3650] rounded-xl px-4 py-3 text-[#eeeaf8] text-sm outline-none focus:border-[#a78bfa] transition"
+            className="w-full bg-[#0f0e17] border border-[#2a2830] rounded-xl px-4 py-3 text-[#eeeaf8] font-fredoka text-sm focus:outline-none focus:border-[#a78bfa] transition placeholder-[#8480a1]"
           />
         </div>
 
@@ -115,21 +116,21 @@ export default function Inscription() {
             placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full bg-[#0f0e17] border border-[#3a3650] rounded-xl px-4 py-3 text-[#eeeaf8] text-sm outline-none focus:border-[#a78bfa] transition"
+            className="w-full bg-[#0f0e17] border border-[#2a2830] rounded-xl px-4 py-3 text-[#eeeaf8] font-fredoka text-sm focus:outline-none focus:border-[#a78bfa] transition placeholder-[#8480a1]"
           />
           {/* Règles */}
           <div className="bg-[#0f0e17] rounded-xl p-3 mt-2">
             <div className="flex items-center gap-2 mb-1">
               <div className={`w-2 h-2 rounded-full ${password.length >= 8 ? 'bg-[#6bcb77]' : 'bg-[#3a3650]'}`}></div>
-              <span className="text-xs text-[#6b6880]">Au moins 8 caractères</span>
+              <span className="text-xs text-[#827f97]">Au moins 8 caractères</span>
             </div>
             <div className="flex items-center gap-2 mb-1">
               <div className={`w-2 h-2 rounded-full ${/[A-Z]/.test(password) ? 'bg-[#6bcb77]' : 'bg-[#3a3650]'}`}></div>
-              <span className="text-xs text-[#6b6880]">Une majuscule</span>
+              <span className="text-xs text-[#827f97]">Une majuscule</span>
             </div>
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${/[0-9]/.test(password) ? 'bg-[#6bcb77]' : 'bg-[#3a3650]'}`}></div>
-              <span className="text-xs text-[#6b6880]">Un chiffre</span>
+              <span className="text-xs text-[#827f97]">Un chiffre</span>
             </div>
           </div>
         </div>
@@ -142,7 +143,7 @@ export default function Inscription() {
             placeholder="••••••••"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
-            className="w-full bg-[#0f0e17] border border-[#3a3650] rounded-xl px-4 py-3 text-[#eeeaf8] text-sm outline-none focus:border-[#a78bfa] transition"
+            className="w-full bg-[#0f0e17] border border-[#2a2830] rounded-xl px-4 py-3 text-[#eeeaf8] font-fredoka text-sm focus:outline-none focus:border-[#a78bfa] transition placeholder-[#8480a1]"
           />
           {confirm && password !== confirm && (
             <p className="text-[#ff6b6b] text-xs mt-2">Les mots de passe ne correspondent pas.</p>
@@ -153,8 +154,9 @@ export default function Inscription() {
         <button
           onClick={handleInscription}
           disabled={loading}
-          className="block w-full bg-[#ff6b6b] text-white rounded-2xl py-4 font-fredoka text-xl hover:opacity-90 transition text-center mb-6"
+          className="flex items-center justify-center gap-2 w-full bg-[#ff6b6b] text-white rounded-2xl py-4 font-fredoka text-xl hover:opacity-90 transition disabled:opacity-60 text-center mb-6"
         >
+          {loading && <Spinner size={18} color="#ffffff" />}
           {loading ? 'Création en cours...' : 'Créer mon compte'}
         </button>
 
@@ -168,7 +170,7 @@ export default function Inscription() {
 
       </div>
 
-      <p className="mt-8 text-[#6b6880] text-xs text-center">
+      <p className="mt-8 text-[#827f97] text-xs text-center">
         En créant un compte, tu acceptes les CGU · Politique de confidentialité
       </p>
 

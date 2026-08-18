@@ -7,6 +7,7 @@ import { createClient } from '../../../../lib/supabase'
 import Avatar from '@/components/Avatar'
 import BackButton from '@/components/BackButton'
 import RoleBadge from '@/components/RoleBadge'
+import Spinner from '@/components/Spinner'
 
 type Question = {
   question: string
@@ -165,8 +166,9 @@ export default function AdminJoueurDetail() {
 
   if (checking || (loading && !notFound)) {
     return (
-      <main className="min-h-screen bg-[#0f0e17] flex items-center justify-center">
-        <p className="font-fredoka text-[#9b96b8] text-xl">Chargement...</p>
+      <main className="min-h-screen bg-[#0f0e17] flex flex-col items-center justify-center gap-3">
+        <Spinner size={28} />
+        <p className="font-fredoka text-[#9b96b8] text-sm">Chargement du profil...</p>
       </main>
     )
   }
@@ -209,8 +211,8 @@ export default function AdminJoueurDetail() {
                   <span className="font-fredoka text-xs rounded-full px-2 py-0.5" style={{ background: badge.bg, color: badge.color }}>{badge.label}</span>
                 )}
               </div>
-              <p className="text-[#6b6880] text-sm">{joueur.email}</p>
-              <p className="text-[#4a4760] text-xs" style={{ marginTop: '4px' }}>
+              <p className="text-[#827f97] text-sm">{joueur.email}</p>
+              <p className="text-[#8480a1] text-xs" style={{ marginTop: '4px' }}>
                 Inscrit le {new Date(joueur.created_at).toLocaleDateString('fr-FR')} · ID {joueur.id}
               </p>
             </div>
@@ -220,19 +222,19 @@ export default function AdminJoueurDetail() {
         <div className="grid grid-cols-3 gap-4">
           <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-5 text-center">
             <div className="font-fredoka text-3xl text-[#ffd93d] mb-1">{totalQuestions}</div>
-            <div className="text-[#6b6880] text-sm">Questions répondues</div>
+            <div className="text-[#827f97] text-sm">Questions répondues</div>
           </div>
           <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-5 text-center">
             <div className="font-fredoka text-3xl text-[#6bcb77] mb-1">{tauxReussite}%</div>
-            <div className="text-[#6b6880] text-sm">Taux de réussite</div>
+            <div className="text-[#827f97] text-sm">Taux de réussite</div>
           </div>
           <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-5 text-center">
             <div className="font-fredoka text-3xl text-[#4ecdc4] mb-1">{parties.length}</div>
-            <div className="text-[#6b6880] text-sm">Parties jouées</div>
+            <div className="text-[#827f97] text-sm">Parties jouées</div>
           </div>
         </div>
 
-        <p className="text-[#6b6880] text-xs" style={{ marginTop: '-8px' }}>
+        <p className="text-[#827f97] text-xs" style={{ marginTop: '-8px' }}>
           Historique détaillé — visible uniquement par les administrateurs, pour vérifier la cohérence des auto-évaluations.
         </p>
 
@@ -245,7 +247,7 @@ export default function AdminJoueurDetail() {
             {parties.map((p, idx) => (
               <div
                 key={p.id}
-                className="bg-[#1a1828] border rounded-2xl"
+                className="bg-[#1a1828] border rounded-2xl hover:bg-[#1e1c2e] transition"
                 style={{ borderColor: ouvert === p.id ? '#a78bfa' : '#2a2830', padding: '10px 15px' }}
               >
                 <div className="cursor-pointer" onClick={() => toggleOuvert(p.id)}>
@@ -257,7 +259,7 @@ export default function AdminJoueurDetail() {
                     <div className="flex items-center gap-3">
                       <div className="text-right">
                         <span className="font-fredoka text-2xl" style={{ color: getScoreColor(p.score, p.scoreMax) }}>{p.score}</span>
-                        <span className="font-fredoka text-sm text-[#6b6880]"> / {p.scoreMax}</span>
+                        <span className="font-fredoka text-sm text-[#827f97]"> / {p.scoreMax}</span>
                       </div>
                       <div style={{ transform: ouvert === p.id ? 'rotate(180deg)' : 'rotate(0deg)', transition: '0.2s' }}>
                         <div className="w-0 h-0 border-l-4 border-r-4 border-t-8 border-l-transparent border-r-transparent border-t-[#9b96b8]"></div>
@@ -273,7 +275,7 @@ export default function AdminJoueurDetail() {
                     <div style={{ width: `${p.nbQuestions > 0 ? (p.enPartie / p.nbQuestions) * 100 : 0}%`, background: '#ffd93d' }}></div>
                     <div style={{ width: `${p.nbQuestions > 0 ? (p.non / p.nbQuestions) * 100 : 0}%`, background: '#ff6b6b', borderRadius: '0 4px 4px 0' }}></div>
                   </div>
-                  <div className="text-[#4a4760] text-xs font-semibold" style={{ marginTop: '3px' }}>{p.date}</div>
+                  <div className="text-[#8480a1] text-xs font-semibold" style={{ marginTop: '3px' }}>{p.date}</div>
                 </div>
 
                 {ouvert === p.id && (

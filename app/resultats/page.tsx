@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Spinner from '@/components/Spinner'
 
 type Resultats = {
   score: number
@@ -17,6 +18,9 @@ export default function Resultats() {
   const router = useRouter()
   const [mode, setMode] = useState<'inscrit' | 'invite'>('inscrit')
   const [resultats, setResultats] = useState<Resultats | null>(null)
+  // Le cercle de score part de 0 et s'anime jusqu'à sa valeur réelle au montage,
+  // plutôt que d'apparaître déjà rempli — purement visuel, ne change pas le score affiché.
+  const [ringReady, setRingReady] = useState(false)
 
  useEffect(() => {
     const data = sessionStorage.getItem('resultats_partie')
@@ -29,10 +33,19 @@ export default function Resultats() {
     setMode(isInvite ? 'invite' : 'inscrit')
   }, [])
 
+  useEffect(() => {
+    if (!resultats) return
+    const raf = requestAnimationFrame(() => setRingReady(true))
+    return () => cancelAnimationFrame(raf)
+  }, [resultats])
+
   if (!resultats) {
     return (
       <main className="min-h-screen bg-[#0f0e17] flex items-center justify-center">
-        <p className="font-fredoka text-[#9b96b8] text-xl">Chargement...</p>
+        <div className="flex items-center gap-3">
+          <Spinner size={20} />
+          <p className="font-fredoka text-[#9b96b8] text-xl">Chargement...</p>
+        </div>
       </main>
     )
   }
@@ -40,7 +53,7 @@ export default function Resultats() {
   const { score, scoreMax, oui, enPartie, non } = resultats
   const pct = Math.round((score / scoreMax) * 100)
   const circumference = 2 * Math.PI * 60
-  const strokeDashoffset = circumference * (1 - pct / 100)
+  const strokeDashoffset = circumference * (1 - (ringReady ? pct : 0) / 100)
   const mention = pct >= 80 ? 'Excellent !' : pct >= 60 ? 'Très bien !' : pct >= 40 ? 'Pas mal !' : 'Continue !'
   const mentionColor = pct >= 80 ? '#6bcb77' : pct >= 60 ? '#ffd93d' : pct >= 40 ? '#ff9f43' : '#ff6b6b'
 
@@ -59,7 +72,7 @@ export default function Resultats() {
   {mode === 'inscrit' && (
     <Link
       href="/profil"
-      className="w-9 h-9 rounded-full bg-[#2a1f3d] border-2 border-[#a78bfa] flex items-center justify-center"
+      className="w-9 h-9 rounded-full bg-[#2a1f3d] border-2 border-[#a78bfa] flex items-center justify-center hover:opacity-80 transition"
     >
       <div className="w-4 h-4 rounded-full bg-[#a78bfa]"></div>
     </Link>
@@ -72,14 +85,14 @@ export default function Resultats() {
           <div className="inline-flex bg-[#1a1828] rounded-xl p-1 gap-1 mb-6">
             <button
               onClick={() => setMode('inscrit')}
-              className="px-5 py-2 rounded-lg font-fredoka text-sm"
+              className="px-5 py-2 rounded-lg font-fredoka text-sm transition hover:text-[#eeeaf8]"
               style={{ background: mode === 'inscrit' ? '#0f0e17' : 'transparent', color: mode === 'inscrit' ? '#eeeaf8' : '#9b96b8' }}
             >
               Inscrit
             </button>
             <button
               onClick={() => setMode('invite')}
-              className="px-5 py-2 rounded-lg font-fredoka text-sm"
+              className="px-5 py-2 rounded-lg font-fredoka text-sm transition hover:text-[#eeeaf8]"
               style={{ background: mode === 'invite' ? '#0f0e17' : 'transparent', color: mode === 'invite' ? '#eeeaf8' : '#9b96b8' }}
             >
               Invité
@@ -100,11 +113,12 @@ export default function Resultats() {
                 strokeDasharray={circumference}
                 strokeDashoffset={strokeDashoffset}
                 strokeLinecap="round"
+                className="coolos-ring-fill"
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="font-fredoka text-4xl text-[#eeeaf8]">{score}</span>
-              <span className="font-fredoka text-sm text-[#6b6880]">/ {scoreMax}</span>
+              <span className="font-fredoka text-sm text-[#827f97]">/ {scoreMax}</span>
             </div>
           </div>
           <p className="font-fredoka text-3xl mt-4" style={{ color: mentionColor }}>{mention}</p>
@@ -171,7 +185,7 @@ export default function Resultats() {
           </Link>
         )}
 
-        <Link href="/configuration" className="block w-full text-center font-fredoka text-[#6b6880] text-base hover:text-[#9b96b8] transition py-2">
+        <Link href="/configuration" className="block w-full text-center font-fredoka text-[#827f97] text-base hover:text-[#9b96b8] transition py-2">
           Changer de config
         </Link>
 

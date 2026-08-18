@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { createClient } from '../../lib/supabase'
 import BackButton from '@/components/BackButton'
+import Skeleton from '@/components/Skeleton'
 
 type Question = {
   question: string
@@ -172,8 +173,22 @@ export default function Historique() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#0f0e17] flex items-center justify-center">
-        <p className="font-fredoka text-[#9b96b8] text-xl">Chargement...</p>
+      <main className="min-h-screen bg-[#0f0e17]" style={{ padding: '32px 24px' }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <Skeleton width={220} height={26} />
+            <Skeleton width={180} height={14} />
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <Skeleton height={90} radius="16px" />
+            <Skeleton height={90} radius="16px" />
+            <Skeleton height={90} radius="16px" />
+          </div>
+          <Skeleton height={48} radius="12px" />
+          <Skeleton height={110} radius="16px" />
+          <Skeleton height={110} radius="16px" />
+          <Skeleton height={110} radius="16px" />
+        </div>
       </main>
     )
   }
@@ -209,40 +224,41 @@ export default function Historique() {
         <div className="grid grid-cols-3 gap-4">
           <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-5 text-center">
             <div className="font-fredoka text-3xl text-[#ffd93d] mb-1">{totalQuestions}</div>
-            <div className="text-[#6b6880] text-sm">Questions répondues</div>
+            <div className="text-[#827f97] text-sm">Questions répondues</div>
           </div>
           <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-5 text-center">
             <div className="font-fredoka text-3xl text-[#6bcb77] mb-1">{tauxReussite}%</div>
-            <div className="text-[#6b6880] text-sm">Taux de réussite</div>
+            <div className="text-[#827f97] text-sm">Taux de réussite</div>
           </div>
           <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-5 text-center">
             <div className="font-fredoka text-3xl text-[#4ecdc4] mb-1">{scoreMoyen}</div>
-            <div className="text-[#6b6880] text-sm">Score moyen</div>
+            <div className="text-[#827f97] text-sm">Score moyen</div>
           </div>
         </div>
 
         <div className="flex bg-[#1a1828] rounded-xl p-1 gap-1">
           <button
             onClick={() => setVue('parties')}
-            className="flex-1 text-center font-fredoka text-sm py-3 rounded-lg"
+            className="flex-1 text-center font-fredoka text-sm py-3 rounded-lg transition hover:opacity-80"
             style={{ background: vue === 'parties' ? '#0f0e17' : 'transparent', color: vue === 'parties' ? '#eeeaf8' : '#9b96b8' }}
           >
             Par partie
           </button>
           <button
             onClick={() => setVue('detaillee')}
-            className="flex-1 text-center font-fredoka text-sm py-3 rounded-lg"
+            className="flex-1 text-center font-fredoka text-sm py-3 rounded-lg transition hover:opacity-90"
             style={{ background: vue === 'detaillee' ? '#0f0e17' : 'transparent', color: vue === 'detaillee' ? '#ffd93d' : '#9b96b8' }}
           >
             ★ Détail filtrable
           </button>
         </div>
 
+        <div key={vue} style={{ animation: 'coolos-fade-in 0.2s ease both' }}>
         {vue === 'parties' && (
         parties.length === 0 ? (
           <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-10 text-center">
             <p className="font-fredoka text-[#9b96b8] text-xl mb-2">Aucune partie pour l'instant</p>
-            <p className="text-[#6b6880] text-sm mb-6">Lance ton premier quiz pour voir ton historique ici !</p>
+            <p className="text-[#827f97] text-sm mb-6">Lance ton premier quiz pour voir ton historique ici !</p>
             <Link href="/configuration" className="bg-[#ffd93d] text-[#0f0e17] rounded-2xl px-8 py-3 font-fredoka text-base hover:opacity-90 transition">
               Jouer maintenant
             </Link>
@@ -264,7 +280,7 @@ export default function Historique() {
                     <div className="flex items-center gap-3">
                       <div className="text-right">
                         <span className="font-fredoka text-2xl" style={{ color: getScoreColor(p.score, p.scoreMax) }}>{p.score}</span>
-                        <span className="font-fredoka text-sm text-[#6b6880]"> / {p.scoreMax}</span>
+                        <span className="font-fredoka text-sm text-[#827f97]"> / {p.scoreMax}</span>
                       </div>
                       <div style={{ transform: ouvert === p.id ? 'rotate(180deg)' : 'rotate(0deg)', transition: '0.2s' }}>
                         <div className="w-0 h-0 border-l-4 border-r-4 border-t-8 border-l-transparent border-r-transparent border-t-[#9b96b8]"></div>
@@ -280,7 +296,7 @@ export default function Historique() {
                     <div style={{ width: `${(p.enPartie / p.nbQuestions) * 100}%`, background: '#ffd93d' }}></div>
                     <div style={{ width: `${(p.non / p.nbQuestions) * 100}%`, background: '#ff6b6b', borderRadius: '0 4px 4px 0' }}></div>
                   </div>
-                  <div className="text-[#4a4760] text-xs font-semibold" style={{ marginTop: '3px' }}>{p.date}</div>
+                  <div className="text-[#8480a1] text-xs font-semibold" style={{ marginTop: '3px' }}>{p.date}</div>
                 </div>
 
                 {ouvert === p.id && (
@@ -338,7 +354,7 @@ export default function Historique() {
                   <button
                     key={f.key}
                     onClick={() => setFiltreEval(f.key)}
-                    className="font-fredoka text-sm rounded-full px-4 py-2 transition"
+                    className="font-fredoka text-sm rounded-full px-4 py-2 transition hover:opacity-80"
                     style={{
                       background: filtreEval === f.key ? '#2a1f3d' : '#1a1828',
                       color: filtreEval === f.key ? '#a78bfa' : '#9b96b8',
@@ -348,7 +364,7 @@ export default function Historique() {
                     {f.label}
                   </button>
                 ))}
-                <span className="font-fredoka text-xs text-[#4a4760] self-center" style={{ marginLeft: 'auto' }}>
+                <span className="font-fredoka text-xs text-[#8480a1] self-center" style={{ marginLeft: 'auto' }}>
                   {reponsesFiltrees.length} réponse{reponsesFiltrees.length > 1 ? 's' : ''}
                 </span>
               </div>
@@ -366,7 +382,7 @@ export default function Historique() {
                         <div className="flex justify-between items-start mb-3 flex-wrap gap-2">
                           <div className="flex items-center gap-2">
                             <span className="bg-[#0f0e17] rounded-full px-3 py-1 font-fredoka text-xs text-[#9b96b8]">{a.categorie}</span>
-                            <span className="text-[#4a4760] text-xs">{a.date}</span>
+                            <span className="text-[#8480a1] text-xs">{a.date}</span>
                           </div>
                           <span className="rounded-full px-3 py-1 font-fredoka text-xs" style={{ background: e.bg, color: e.color, border: `1px solid ${e.color}` }}>
                             {e.label}
@@ -396,6 +412,7 @@ export default function Historique() {
             </div>
           )
         )}
+        </div>
 
       </div>
     </main>

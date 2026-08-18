@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Papa from 'papaparse'
 import { createClient } from '../../../../lib/supabase'
 import BackButton from '@/components/BackButton'
+import Spinner from '@/components/Spinner'
 
 type LigneImport = {
   ligneNum: number
@@ -236,7 +237,7 @@ export default function ImportQuestions() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f0e17] flex">
+    <main className="min-h-screen bg-[#0f0e17] flex">
 
       {/* Sidebar */}
       <div style={{ width: '220px', background: '#0a0910', borderRight: '1px solid #1e1c2e', display: 'flex', flexDirection: 'column', padding: '24px 0', flexShrink: 0 }}>
@@ -247,23 +248,23 @@ export default function ImportQuestions() {
           <span className="text-[#6bcb77]">l</span>
           <span className="text-[#4ecdc4]">o</span>
           <span className="text-[#a78bfa]">s</span>
-          <span className="text-[#6b6880] text-sm"> admin</span>
+          <span className="text-[#827f97] text-sm"> admin</span>
         </div>
 
-        <p className="text-[#4a4760] text-xs font-bold uppercase tracking-widest" style={{ padding: '0 20px', marginBottom: '8px' }}>Contenu</p>
+        <p className="text-[#8480a1] text-xs font-bold uppercase tracking-widest" style={{ padding: '0 20px', marginBottom: '8px' }}>Contenu</p>
 
-        <Link href="/admin" className="flex items-center gap-3 font-fredoka text-sm" style={{ padding: '10px 20px', color: '#eeeaf8', background: '#1a1828', borderRight: '3px solid #ffd93d' }}>
+        <Link href="/admin" className="flex items-center gap-3 font-fredoka text-sm transition hover:opacity-80" style={{ padding: '10px 20px', color: '#eeeaf8', background: '#1a1828', borderRight: '3px solid #ffd93d' }}>
           <div className="w-2 h-2 rounded-full bg-[#ffd93d]"></div>
           Questions
         </Link>
-        <Link href="/admin" className="flex items-center gap-3 font-fredoka text-sm" style={{ padding: '10px 20px', color: '#6b6880', borderRight: '3px solid transparent' }}>
+        <Link href="/admin" className="flex items-center gap-3 font-fredoka text-sm transition hover:opacity-80" style={{ padding: '10px 20px', color: '#827f97', borderRight: '3px solid transparent' }}>
           <div className="w-2 h-2 rounded-full bg-[#4ecdc4]"></div>
           Catégories
         </Link>
 
-        <p className="text-[#4a4760] text-xs font-bold uppercase tracking-widest" style={{ padding: '16px 20px 8px' }}>Communauté</p>
+        <p className="text-[#8480a1] text-xs font-bold uppercase tracking-widest" style={{ padding: '16px 20px 8px' }}>Communauté</p>
 
-        <Link href="/admin" className="flex items-center gap-3 font-fredoka text-sm" style={{ padding: '10px 20px', color: '#6b6880', borderRight: '3px solid transparent' }}>
+        <Link href="/admin" className="flex items-center gap-3 font-fredoka text-sm transition hover:opacity-80" style={{ padding: '10px 20px', color: '#827f97', borderRight: '3px solid transparent' }}>
           <div className="w-2 h-2 rounded-full bg-[#a78bfa]"></div>
           Utilisateurs
         </Link>
@@ -271,7 +272,7 @@ export default function ImportQuestions() {
         <div style={{ flex: 1 }}></div>
         <div style={{ padding: '16px 20px', borderTop: '1px solid #1e1c2e' }}>
           <p className="font-fredoka text-sm text-[#9b96b8]">Admin</p>
-          <p className="text-xs text-[#6b6880]">connecté</p>
+          <p className="text-xs text-[#827f97]">connecté</p>
         </div>
       </div>
 
@@ -283,7 +284,7 @@ export default function ImportQuestions() {
             <BackButton />
             <div>
               <h2 className="font-fredoka text-2xl text-[#eeeaf8]">Import en masse</h2>
-              <p className="text-[#6b6880] text-sm" style={{ marginTop: '4px' }}>
+              <p className="text-[#827f97] text-sm" style={{ marginTop: '4px' }}>
                 Colle ou importe un CSV avec les colonnes : question, réponse, catégorie, sous-catégorie (optionnel), difficulté, statut (optionnel)
               </p>
             </div>
@@ -310,10 +311,10 @@ export default function ImportQuestions() {
                 </label>
                 <label
                   htmlFor="csv-upload"
-                  className="w-full flex flex-col items-center justify-center cursor-pointer transition"
+                  className="w-full flex flex-col items-center justify-center cursor-pointer transition hover:opacity-80"
                   style={{ background: '#1a1828', border: '2px dashed #2a2830', borderRadius: '14px', padding: '32px' }}
                 >
-                  <p className="font-fredoka text-[#6b6880] text-sm">
+                  <p className="font-fredoka text-[#827f97] text-sm">
                     {nomFichier ? `Fichier sélectionné : ${nomFichier}` : 'Cliquer pour choisir un fichier .csv'}
                   </p>
                 </label>
@@ -336,7 +337,7 @@ export default function ImportQuestions() {
                   onChange={e => { setCsvTexte(e.target.value); setNomFichier('') }}
                   placeholder={'question,réponse,catégorie,sous-catégorie,difficulté,statut\nQuelle est la capitale de la France ?,Paris,Géographie,,facile,actif'}
                   rows={10}
-                  className="w-full text-[#eeeaf8] text-sm outline-none resize-none font-mono"
+                  className="w-full text-[#eeeaf8] text-sm outline-none resize-none font-mono transition focus:shadow-[0_0_0_3px_rgba(255,217,61,0.25)]"
                   style={{ background: '#1a1828', border: `1.5px solid ${csvTexte ? '#ffd93d' : '#3a3650'}`, borderRadius: '14px', padding: '14px 16px', lineHeight: '1.5' }}
                 />
               </div>
@@ -358,15 +359,15 @@ export default function ImportQuestions() {
               <div className="grid grid-cols-3 gap-4">
                 <div className="bg-[#1a1828] border border-[#2a2830] rounded-xl p-4 text-center">
                   <div className="font-fredoka text-2xl text-[#eeeaf8]">{lignes.length}</div>
-                  <div className="text-[#6b6880] text-xs" style={{ marginTop: '4px' }}>Lignes analysées</div>
+                  <div className="text-[#827f97] text-xs" style={{ marginTop: '4px' }}>Lignes analysées</div>
                 </div>
                 <div className="bg-[#1a1828] border border-[#2a2830] rounded-xl p-4 text-center">
                   <div className="font-fredoka text-2xl text-[#6bcb77]">{lignesValides.length}</div>
-                  <div className="text-[#6b6880] text-xs" style={{ marginTop: '4px' }}>Valides</div>
+                  <div className="text-[#827f97] text-xs" style={{ marginTop: '4px' }}>Valides</div>
                 </div>
                 <div className="bg-[#1a1828] border border-[#2a2830] rounded-xl p-4 text-center">
                   <div className="font-fredoka text-2xl text-[#ff6b6b]">{lignesEnErreur.length}</div>
-                  <div className="text-[#6b6880] text-xs" style={{ marginTop: '4px' }}>En erreur</div>
+                  <div className="text-[#827f97] text-xs" style={{ marginTop: '4px' }}>En erreur</div>
                 </div>
               </div>
 
@@ -383,7 +384,7 @@ export default function ImportQuestions() {
                     }}
                   >
                     <div className="flex items-start gap-3">
-                      <span className="font-fredoka text-xs text-[#4a4760]" style={{ minWidth: '24px' }}>
+                      <span className="font-fredoka text-xs text-[#8480a1]" style={{ minWidth: '24px' }}>
                         L{l.ligneNum}
                       </span>
                       <div style={{ flex: 1 }}>
@@ -422,9 +423,10 @@ export default function ImportQuestions() {
                   type="button"
                   onClick={lancerImport}
                   disabled={importEnCours || lignesValides.length === 0}
-                  className="flex-1 font-fredoka text-lg hover:opacity-90 transition disabled:opacity-50"
+                  className="flex-1 flex items-center justify-center gap-2 font-fredoka text-lg hover:opacity-90 transition disabled:opacity-50"
                   style={{ background: '#6bcb77', color: '#0f0e17', borderRadius: '14px', padding: '14px' }}
                 >
+                  {importEnCours && <Spinner size={18} color="#0f0e17" />}
                   {importEnCours
                     ? 'Import en cours...'
                     : `Importer ${lignesValides.length} question${lignesValides.length > 1 ? 's' : ''} valide${lignesValides.length > 1 ? 's' : ''}`}
@@ -468,6 +470,6 @@ export default function ImportQuestions() {
 
         </div>
       </div>
-    </div>
+    </main>
   )
 }

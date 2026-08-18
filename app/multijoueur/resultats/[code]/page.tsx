@@ -7,6 +7,8 @@ import { createClient } from '../../../../lib/supabase'
 import { getMultiplayerIdentity, roomPathForStatus, subscribeNewGameOnCode } from '../../../../lib/multiplayer'
 import Avatar from '@/components/Avatar'
 import RoleBadge from '@/components/RoleBadge'
+import { SkeletonList } from '@/components/Skeleton'
+import Spinner from '@/components/Spinner'
 
 type Player = {
   id: string
@@ -141,8 +143,14 @@ export default function ResultatsMultijoueur() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#0f0e17] flex items-center justify-center">
-        <p className="font-fredoka text-[#9b96b8] text-xl">Chargement...</p>
+      <main className="min-h-screen bg-[#0f0e17]" style={{ padding: '100px 24px 80px' }}>
+        <div style={{ maxWidth: '700px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+          <div className="text-center flex flex-col items-center gap-3">
+            <Spinner size={20} />
+            <p className="font-fredoka text-[#9b96b8] text-lg">Calcul du classement final...</p>
+          </div>
+          <SkeletonList count={5} />
+        </div>
       </main>
     )
   }
@@ -151,7 +159,7 @@ export default function ResultatsMultijoueur() {
     return (
       <main className="min-h-screen bg-[#0f0e17] flex flex-col items-center justify-center gap-6 px-6 text-center">
         <p className="font-fredoka text-[#ff6b6b] text-xl">{closedMsg}</p>
-        <Link href="/multijoueur" className="bg-[#ffd93d] text-[#0f0e17] rounded-2xl py-3 px-8 font-fredoka text-lg">
+        <Link href="/multijoueur" className="bg-[#ffd93d] text-[#0f0e17] rounded-2xl py-3 px-8 font-fredoka text-lg hover:opacity-90 transition">
           Retour au multijoueur
         </Link>
       </main>
@@ -176,7 +184,7 @@ export default function ResultatsMultijoueur() {
         )}
       </nav>
 
-      <div style={{ maxWidth: '700px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+      <div className="coolos-card-transition" style={{ maxWidth: '700px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
 
         <div className="text-center">
           <p className="font-fredoka text-[#9b96b8] text-lg mb-2">Partie terminée !</p>
@@ -200,7 +208,7 @@ export default function ResultatsMultijoueur() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-fredoka text-lg text-[#eeeaf8]">{p.pseudo}</span>
-                        {p.user_id === myUserId && <span className="text-[#6b6880] text-xs">(toi)</span>}
+                        {p.user_id === myUserId && <span className="text-[#827f97] text-xs">(toi)</span>}
                         <RoleBadge role={p.role} isPremium={p.is_premium} />
                       </div>
                       <div className="flex items-center gap-2 mt-1">
@@ -222,10 +230,10 @@ export default function ResultatsMultijoueur() {
             {rest.map((p, i) => (
               <div key={p.id} className="bg-[#1a1828] border border-[#2a2830] rounded-xl px-5 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <span className="font-fredoka text-[#6b6880] w-6 text-right">{i + 4}</span>
+                  <span className="font-fredoka text-[#827f97] w-6 text-right">{i + 4}</span>
                   <Avatar url={p.avatar_url} size={28} border="subtle" />
                   <span className="font-fredoka text-[#eeeaf8] text-base">{p.pseudo}</span>
-                  {p.user_id === myUserId && <span className="text-[#6b6880] text-xs">(toi)</span>}
+                  {p.user_id === myUserId && <span className="text-[#827f97] text-xs">(toi)</span>}
                   <RoleBadge role={p.role} isPremium={p.is_premium} />
                   {p.is_guest && <span className="bg-[#2a2830] text-[#9b96b8] rounded-full px-2 py-0.5 text-xs font-fredoka">Invité</span>}
                   {p.status === 'abandonne' && <span className="bg-[#2e1a1a] text-[#ff6b6b] rounded-full px-2 py-0.5 text-xs font-fredoka">A quitté la partie</span>}
@@ -278,7 +286,7 @@ export default function ResultatsMultijoueur() {
           </Link>
         </div>
 
-        <Link href="/" className="block w-full text-center font-fredoka text-[#6b6880] text-base hover:text-[#9b96b8] transition py-2">
+        <Link href="/" className="block w-full text-center font-fredoka text-[#827f97] text-base hover:text-[#9b96b8] transition py-2">
           Retour à l'accueil
         </Link>
 

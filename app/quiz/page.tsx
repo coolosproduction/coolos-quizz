@@ -364,7 +364,7 @@ function QuizContent() {
           className="w-full rounded-2xl py-5 font-fredoka text-xl transition text-center"
           style={{
             background: reponse ? '#a78bfa' : '#2a2830',
-            color: reponse ? '#0f0e17' : '#4a4760',
+            color: reponse ? '#0f0e17' : '#8480a1',
             cursor: reponse ? 'pointer' : 'not-allowed',
           }}
         >

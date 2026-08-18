@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '../../lib/supabase'
 import BackButton from '@/components/BackButton'
+import { SkeletonList } from '@/components/Skeleton'
 
 type SetOverview = {
   set_id: string
@@ -79,8 +80,17 @@ export default function Revision() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#0f0e17] flex items-center justify-center">
-        <p className="font-fredoka text-[#9b96b8] text-xl">Chargement...</p>
+      <main className="min-h-screen bg-[#0f0e17]" style={{ padding: '32px 24px 60px' }}>
+        <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '28px' }}>
+          <div className="flex items-center gap-3">
+            <BackButton />
+            <div>
+              <h1 className="font-fredoka text-3xl text-[#eeeaf8] mb-1">★ Mes révisions</h1>
+              <p className="text-[#9b96b8] text-sm">Fiches privées de révision — classique ou flashcard</p>
+            </div>
+          </div>
+          <SkeletonList count={3} avatar={false} />
+        </div>
       </main>
     )
   }
@@ -136,7 +146,7 @@ export default function Revision() {
             {sets.length === 0 ? (
               <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-10 text-center">
                 <p className="font-fredoka text-[#9b96b8] text-xl mb-2">Aucun set pour l'instant</p>
-                <p className="text-[#6b6880] text-sm">Crée ton premier set ci-dessus pour commencer à réviser.</p>
+                <p className="text-[#827f97] text-sm">Crée ton premier set ci-dessus pour commencer à réviser.</p>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -148,8 +158,8 @@ export default function Revision() {
                           {s.name}
                         </Link>
                         <div className="flex gap-3 flex-wrap mt-1">
-                          <span className="text-[#6b6880] text-xs">{s.cards_count} carte{s.cards_count !== 1 ? 's' : ''}</span>
-                          <span className="text-[#6b6880] text-xs">{s.sessions_count} session{s.sessions_count !== 1 ? 's' : ''}</span>
+                          <span className="text-[#827f97] text-xs">{s.cards_count} carte{s.cards_count !== 1 ? 's' : ''}</span>
+                          <span className="text-[#827f97] text-xs">{s.sessions_count} session{s.sessions_count !== 1 ? 's' : ''}</span>
                           {s.sessions_count > 0 && (
                             <span className="text-xs font-fredoka" style={{ color: performanceColor(s.success_rate) }}>
                               {s.success_rate}% de réussite
@@ -160,36 +170,36 @@ export default function Revision() {
                       {confirmDeleteId === s.set_id ? (
                         <div className="flex items-center gap-2">
                           <span className="text-[#9b96b8] text-xs">Supprimer ?</span>
-                          <button onClick={() => handleSupprimerSet(s.set_id)} className="font-fredoka text-xs rounded-full px-3 py-1.5" style={{ background: '#ff6b6b', color: '#0f0e17' }}>
+                          <button onClick={() => handleSupprimerSet(s.set_id)} className="font-fredoka text-xs rounded-full px-3 py-1.5 hover:opacity-80 transition" style={{ background: '#ff6b6b', color: '#0f0e17' }}>
                             Confirmer
                           </button>
-                          <button onClick={() => setConfirmDeleteId(null)} className="font-fredoka text-xs rounded-full px-3 py-1.5" style={{ background: 'transparent', color: '#9b96b8', border: '1px solid #3a3650' }}>
+                          <button onClick={() => setConfirmDeleteId(null)} className="font-fredoka text-xs rounded-full px-3 py-1.5 hover:bg-[#1e1c2e] transition" style={{ background: 'transparent', color: '#9b96b8', border: '1px solid #3a3650' }}>
                             Annuler
                           </button>
                         </div>
                       ) : (
-                        <button onClick={() => setConfirmDeleteId(s.set_id)} className="font-fredoka text-xs text-[#6b6880] hover:text-[#ff6b6b] transition flex-shrink-0">
+                        <button onClick={() => setConfirmDeleteId(s.set_id)} className="font-fredoka text-xs text-[#827f97] hover:text-[#ff6b6b] transition flex-shrink-0">
                           Supprimer
                         </button>
                       )}
                     </div>
 
                     <div className="flex gap-3 flex-wrap">
-                      <Link href={`/revision/${s.set_id}`} className="font-fredoka text-xs rounded-full px-4 py-2" style={{ background: '#1e1c2e', color: '#9b96b8', border: '1px solid #3a3650' }}>
+                      <Link href={`/revision/${s.set_id}`} className="font-fredoka text-xs rounded-full px-4 py-2 hover:bg-[#231f38] transition" style={{ background: '#1e1c2e', color: '#9b96b8', border: '1px solid #3a3650' }}>
                         Gérer les cartes
                       </Link>
                       {s.cards_count > 0 && (
                         expandedId === s.set_id ? (
                           <div className="flex gap-2">
-                            <Link href={`/revision/etudier/${s.set_id}?mode=classique`} className="font-fredoka text-xs rounded-full px-4 py-2" style={{ background: '#2a1f3d', color: '#a78bfa', border: '1px solid #a78bfa' }}>
+                            <Link href={`/revision/etudier/${s.set_id}?mode=classique`} className="font-fredoka text-xs rounded-full px-4 py-2 hover:opacity-80 transition" style={{ background: '#2a1f3d', color: '#a78bfa', border: '1px solid #a78bfa' }}>
                               Classique →
                             </Link>
-                            <Link href={`/revision/etudier/${s.set_id}?mode=flashcard`} className="font-fredoka text-xs rounded-full px-4 py-2" style={{ background: '#1a2a2d', color: '#4ecdc4', border: '1px solid #4ecdc4' }}>
+                            <Link href={`/revision/etudier/${s.set_id}?mode=flashcard`} className="font-fredoka text-xs rounded-full px-4 py-2 hover:opacity-80 transition" style={{ background: '#1a2a2d', color: '#4ecdc4', border: '1px solid #4ecdc4' }}>
                               Flashcard →
                             </Link>
                           </div>
                         ) : (
-                          <button onClick={() => setExpandedId(s.set_id)} className="font-fredoka text-xs rounded-full px-4 py-2" style={{ background: '#1f1e10', color: '#ffd93d', border: '1px solid #ffd93d' }}>
+                          <button onClick={() => setExpandedId(s.set_id)} className="font-fredoka text-xs rounded-full px-4 py-2 hover:opacity-80 transition" style={{ background: '#1f1e10', color: '#ffd93d', border: '1px solid #ffd93d' }}>
                             Étudier
                           </button>
                         )

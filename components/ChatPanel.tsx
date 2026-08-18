@@ -172,12 +172,12 @@ export default function ChatPanel({ gameId, gameStatus, myPlayerId, myUserId, is
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-[#2a2830]">
             <span className="font-fredoka text-[#eeeaf8] text-base">Chat de la salle</span>
-            <button onClick={() => setOpen(false)} className="text-[#6b6880] hover:text-[#eeeaf8] transition" aria-label="Fermer le chat">✕</button>
+            <button onClick={() => setOpen(false)} className="text-[#827f97] hover:text-[#eeeaf8] transition" aria-label="Fermer le chat">✕</button>
           </div>
 
           <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-3" style={{ minHeight: '160px' }}>
             {messages.length === 0 && (
-              <p className="text-[#6b6880] text-sm text-center mt-6">Aucun message pour l&apos;instant.</p>
+              <p className="text-[#827f97] text-sm text-center mt-6">Aucun message pour l&apos;instant.</p>
             )}
             {messages.map(m => {
               const sender = playersById[m.player_id]
@@ -188,7 +188,7 @@ export default function ChatPanel({ gameId, gameStatus, myPlayerId, myUserId, is
                   <div className="flex items-center gap-2 flex-wrap">
                     {!isMe && <Avatar url={sender?.avatar_url ?? null} size={20} border="subtle" />}
                     <span className="text-[#9b96b8] text-xs font-fredoka">{isMe ? 'Toi' : (sender?.pseudo || 'Joueur')}</span>
-                    {sender?.is_guest && <span className="text-[#6b6880] text-[10px]">(invité)</span>}
+                    {sender?.is_guest && <span className="text-[#827f97] text-[10px]">(invité)</span>}
                     <RoleBadge role={sender?.role} isPremium={sender?.is_premium} />
                     {canModerate && (
                       <span className="flex items-center gap-1">
@@ -244,7 +244,7 @@ export default function ChatPanel({ gameId, gameStatus, myPlayerId, myUserId, is
               <button
                 onClick={handleSend}
                 disabled={!canWrite || sending || !text.trim()}
-                className="bg-[#ffd93d] text-[#0f0e17] rounded-full w-9 h-9 flex items-center justify-center font-fredoka disabled:opacity-40 flex-shrink-0"
+                className="bg-[#ffd93d] text-[#0f0e17] rounded-full w-9 h-9 flex items-center justify-center font-fredoka transition hover:opacity-90 disabled:opacity-40 disabled:hover:opacity-40 flex-shrink-0"
                 aria-label="Envoyer"
               >
                 →

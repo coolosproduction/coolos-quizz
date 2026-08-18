@@ -28,7 +28,7 @@ export default function LineChartScore({ points }: { points: ScorePoint[] }) {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
 
   if (points.length === 0) {
-    return <p className="text-[#6b6880] text-sm">Pas encore de parties enregistrées.</p>
+    return <p className="text-[#827f97] text-sm">Pas encore de parties enregistrées.</p>
   }
 
   const n = points.length
@@ -51,7 +51,7 @@ export default function LineChartScore({ points }: { points: ScorePoint[] }) {
               y1={yFor(level)} y2={yFor(level)}
               stroke="#1e1c2e" strokeWidth={1}
             />
-            <text x={PAD_LEFT - 8} y={yFor(level) + 3} textAnchor="end" fontSize="10" fill="#4a4760">
+            <text x={PAD_LEFT - 8} y={yFor(level) + 3} textAnchor="end" fontSize="10" fill="#8480a1">
               {level}
             </text>
           </g>
@@ -78,7 +78,7 @@ export default function LineChartScore({ points }: { points: ScorePoint[] }) {
         ))}
 
         {labelIdxs.map(i => (
-          <text key={i} x={xFor(i)} y={HEIGHT - 8} textAnchor="middle" fontSize="10" fill="#6b6880">
+          <text key={i} x={xFor(i)} y={HEIGHT - 8} textAnchor="middle" fontSize="10" fill="#827f97">
             {points[i].date}
           </text>
         ))}
@@ -99,11 +99,11 @@ export default function LineChartScore({ points }: { points: ScorePoint[] }) {
       )}
 
       <div className="flex items-center gap-4 justify-end" style={{ marginTop: '4px' }}>
-        <span className="flex items-center gap-1.5 text-[#6b6880] text-xs">
+        <span className="flex items-center gap-1.5 text-[#827f97] text-xs">
           <span className="rounded-full inline-block" style={{ width: '8px', height: '8px', background: LINE_COLOR }}></span>
           Solo
         </span>
-        <span className="flex items-center gap-1.5 text-[#6b6880] text-xs">
+        <span className="flex items-center gap-1.5 text-[#827f97] text-xs">
           <span className="rounded-full inline-block" style={{ width: '8px', height: '8px', background: '#4ecdc4' }}></span>
           Multijoueur
         </span>

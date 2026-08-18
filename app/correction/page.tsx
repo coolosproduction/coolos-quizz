@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '../../lib/supabase'
 import BackButton from '@/components/BackButton'
+import Spinner from '@/components/Spinner'
 
 type ReponsePartie = {
   questionId: string
@@ -173,7 +174,10 @@ export default function Correction() {
   if (loading || !question) {
     return (
       <main className="min-h-screen bg-[#0f0e17] flex items-center justify-center">
-        <p className="font-fredoka text-[#9b96b8] text-xl">Chargement...</p>
+        <div className="flex items-center gap-3">
+          <Spinner size={20} />
+          <p className="font-fredoka text-[#9b96b8] text-xl">Chargement...</p>
+        </div>
       </main>
     )
   }
@@ -181,7 +185,10 @@ export default function Correction() {
   if (saving) {
     return (
       <main className="min-h-screen bg-[#0f0e17] flex items-center justify-center">
-        <p className="font-fredoka text-[#9b96b8] text-xl">Sauvegarde en cours...</p>
+        <div className="flex items-center gap-3">
+          <Spinner size={20} />
+          <p className="font-fredoka text-[#9b96b8] text-xl">Sauvegarde en cours...</p>
+        </div>
       </main>
     )
   }
@@ -215,7 +222,7 @@ export default function Correction() {
             </button>
             <button
               onClick={() => { setSignalModal(false); setSignalTexte('') }}
-              className="w-full text-[#6b6880] text-sm font-semibold hover:text-[#9b96b8] transition"
+              className="w-full text-[#827f97] text-sm font-semibold hover:text-[#9b96b8] transition"
             >
               Annuler
             </button>
@@ -244,82 +251,84 @@ export default function Correction() {
           ></div>
         </div>
 
-        <div className="flex items-center justify-between">
-          <div className="inline-flex items-center gap-2 bg-[#1e1c2e] border border-[#2a2830] rounded-full px-4 py-2">
-            <div className="w-2 h-2 rounded-full bg-[#ff6b6b]"></div>
-            <span className="font-fredoka text-[#9b96b8] text-sm">{question.category}</span>
+        <div key={index} className="coolos-card-transition" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+          <div className="flex items-center justify-between">
+            <div className="inline-flex items-center gap-2 bg-[#1e1c2e] border border-[#2a2830] rounded-full px-4 py-2">
+              <div className="w-2 h-2 rounded-full bg-[#ff6b6b]"></div>
+              <span className="font-fredoka text-[#9b96b8] text-sm">{question.category}</span>
+            </div>
+
+            {/* Bouton signaler */}
+            {signalEnvoye ? (
+              <span className="font-fredoka text-[#6bcb77] text-xs">✓ Signalement envoyé</span>
+            ) : (
+              <button
+                onClick={() => setSignalModal(true)}
+                className="inline-flex items-center gap-1 text-[#3a3650] hover:text-[#ff6b6b] transition font-fredoka text-xs"
+              >
+                <span>⚑</span>
+                <span>Signaler cette question</span>
+              </button>
+            )}
           </div>
 
-          {/* Bouton signaler */}
-          {signalEnvoye ? (
-            <span className="font-fredoka text-[#6bcb77] text-xs">✓ Signalement envoyé</span>
+          <h2 className="font-fredoka text-3xl text-[#eeeaf8] leading-tight">
+            {question.question}
+          </h2>
+
+          <div className="bg-[#1a2e1f] border border-[#1f3a28] rounded-2xl px-5 py-4">
+            <p className="font-fredoka text-[#6bcb77] text-sm mb-2">La bonne réponse</p>
+            <p className="text-[#eeeaf8] text-base font-semibold">{question.reponseOfficielle}</p>
+          </div>
+
+          {question.timedOut && !question.reponseUtilisateur ? (
+            <div className="inline-flex items-center gap-2 bg-[#2e1a1a] border border-[#ff6b6b] rounded-full px-4 py-2" style={{ width: 'fit-content' }}>
+              <div className="w-2 h-2 rounded-full bg-[#ff6b6b]"></div>
+              <span className="font-fredoka text-[#ff6b6b] text-sm">Temps écoulé — pas de réponse</span>
+            </div>
           ) : (
-            <button
-              onClick={() => setSignalModal(true)}
-              className="inline-flex items-center gap-1 text-[#3a3650] hover:text-[#ff6b6b] transition font-fredoka text-xs"
-            >
-              <span>⚑</span>
-              <span>Signaler cette question</span>
-            </button>
+            <div className="bg-[#1e1c2e] border border-[#2a2830] rounded-2xl px-5 py-4">
+              <div className="flex items-center gap-2 mb-2">
+                <p className="font-fredoka text-[#9b96b8] text-sm">Ta réponse</p>
+                {question.timedOut && (
+                  <span className="font-fredoka text-xs rounded-full px-2 py-0.5" style={{ background: '#2e1a1a', color: '#ff6b6b' }}>
+                    Temps écoulé
+                  </span>
+                )}
+              </div>
+              <p className="text-[#c9c4e0] text-base font-semibold">{question.reponseUtilisateur}</p>
+            </div>
           )}
-        </div>
 
-        <h2 className="font-fredoka text-3xl text-[#eeeaf8] leading-tight">
-          {question.question}
-        </h2>
-
-        <div className="bg-[#1a2e1f] border border-[#1f3a28] rounded-2xl px-5 py-4">
-          <p className="font-fredoka text-[#6bcb77] text-sm mb-2">La bonne réponse</p>
-          <p className="text-[#eeeaf8] text-base font-semibold">{question.reponseOfficielle}</p>
-        </div>
-
-        {question.timedOut && !question.reponseUtilisateur ? (
-  <div className="inline-flex items-center gap-2 bg-[#2e1a1a] border border-[#ff6b6b] rounded-full px-4 py-2" style={{ width: 'fit-content' }}>
-    <div className="w-2 h-2 rounded-full bg-[#ff6b6b]"></div>
-    <span className="font-fredoka text-[#ff6b6b] text-sm">Temps écoulé — pas de réponse</span>
-  </div>
-) : (
-  <div className="bg-[#1e1c2e] border border-[#2a2830] rounded-2xl px-5 py-4">
-    <div className="flex items-center gap-2 mb-2">
-      <p className="font-fredoka text-[#9b96b8] text-sm">Ta réponse</p>
-      {question.timedOut && (
-        <span className="font-fredoka text-xs rounded-full px-2 py-0.5" style={{ background: '#2e1a1a', color: '#ff6b6b' }}>
-          Temps écoulé
-        </span>
-      )}
-    </div>
-    <p className="text-[#c9c4e0] text-base font-semibold">{question.reponseUtilisateur}</p>
-  </div>
-)}
-
-        <div>
-          <p className="font-fredoka text-[#c9c4e0] text-lg mb-4">Tu as eu bon ?</p>
-          <div className="flex gap-4">
-            {(Object.entries(evalConfig) as [Eval, typeof evalConfig[keyof typeof evalConfig]][]).map(([key, val]) => (
-              <button
-                key={key}
-                onClick={() => setEval(key)}
-                className="flex-1 rounded-xl py-4 font-fredoka text-base"
-                style={{
-                  background: evalActuelle === key ? val.bg : '#1a1828',
-                  border: `2px solid ${evalActuelle === key ? val.color : '#2a2830'}`,
-                  color: evalActuelle === key ? val.color : '#9b96b8',
-                }}
-              >
-                {val.label}
-                <div className="text-xs font-sans mt-1 opacity-70">{val.points}</div>
-              </button>
-            ))}
+          <div>
+            <p className="font-fredoka text-[#c9c4e0] text-lg mb-4">Tu as eu bon ?</p>
+            <div className="flex gap-4">
+              {(Object.entries(evalConfig) as [Eval, typeof evalConfig[keyof typeof evalConfig]][]).map(([key, val]) => (
+                <button
+                  key={key}
+                  onClick={() => setEval(key)}
+                  className="flex-1 rounded-xl py-4 font-fredoka text-base transition hover:opacity-90"
+                  style={{
+                    background: evalActuelle === key ? val.bg : '#1a1828',
+                    border: `2px solid ${evalActuelle === key ? val.color : '#2a2830'}`,
+                    color: evalActuelle === key ? val.color : '#9b96b8',
+                  }}
+                >
+                  {val.label}
+                  <div className="text-xs font-sans mt-1 opacity-70">{val.points}</div>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
         <button
           onClick={handleNext}
           disabled={saving}
-          className="w-full rounded-2xl py-5 font-fredoka text-xl transition text-center"
+          className="w-full rounded-2xl py-5 font-fredoka text-xl transition text-center hover:opacity-90"
           style={{
             background: evalActuelle ? (evalActuelle === 'oui' ? '#6bcb77' : evalActuelle === 'en_partie' ? '#ffd93d' : '#ff6b6b') : '#2a2830',
-            color: evalActuelle ? '#0f0e17' : '#4a4760',
+            color: evalActuelle ? '#0f0e17' : '#8480a1',
             cursor: evalActuelle ? 'pointer' : 'not-allowed',
           }}
         >

@@ -185,7 +185,7 @@ export default function NouvelleQuestion() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f0e17] flex" onKeyDown={handleKeyDown}>
+    <main className="min-h-screen bg-[#0f0e17] flex" onKeyDown={handleKeyDown}>
 
       {/* Sidebar */}
       <div style={{ width: '220px', background: '#0a0910', borderRight: '1px solid #1e1c2e', display: 'flex', flexDirection: 'column', padding: '24px 0', flexShrink: 0 }}>
@@ -196,23 +196,23 @@ export default function NouvelleQuestion() {
           <span className="text-[#6bcb77]">l</span>
           <span className="text-[#4ecdc4]">o</span>
           <span className="text-[#a78bfa]">s</span>
-          <span className="text-[#6b6880] text-sm"> admin</span>
+          <span className="text-[#827f97] text-sm"> admin</span>
         </div>
 
-        <p className="text-[#4a4760] text-xs font-bold uppercase tracking-widest" style={{ padding: '0 20px', marginBottom: '8px' }}>Contenu</p>
+        <p className="text-[#8480a1] text-xs font-bold uppercase tracking-widest" style={{ padding: '0 20px', marginBottom: '8px' }}>Contenu</p>
 
-        <Link href="/admin" className="flex items-center gap-3 font-fredoka text-sm" style={{ padding: '10px 20px', color: '#eeeaf8', background: '#1a1828', borderRight: '3px solid #ffd93d' }}>
+        <Link href="/admin" className="flex items-center gap-3 font-fredoka text-sm transition hover:opacity-80" style={{ padding: '10px 20px', color: '#eeeaf8', background: '#1a1828', borderRight: '3px solid #ffd93d' }}>
           <div className="w-2 h-2 rounded-full bg-[#ffd93d]"></div>
           Questions
         </Link>
-        <Link href="/admin" className="flex items-center gap-3 font-fredoka text-sm" style={{ padding: '10px 20px', color: '#6b6880', borderRight: '3px solid transparent' }}>
+        <Link href="/admin" className="flex items-center gap-3 font-fredoka text-sm transition hover:opacity-80" style={{ padding: '10px 20px', color: '#827f97', borderRight: '3px solid transparent' }}>
           <div className="w-2 h-2 rounded-full bg-[#4ecdc4]"></div>
           Catégories
         </Link>
 
-        <p className="text-[#4a4760] text-xs font-bold uppercase tracking-widest" style={{ padding: '16px 20px 8px' }}>Communauté</p>
+        <p className="text-[#8480a1] text-xs font-bold uppercase tracking-widest" style={{ padding: '16px 20px 8px' }}>Communauté</p>
 
-        <Link href="/admin" className="flex items-center gap-3 font-fredoka text-sm" style={{ padding: '10px 20px', color: '#6b6880', borderRight: '3px solid transparent' }}>
+        <Link href="/admin" className="flex items-center gap-3 font-fredoka text-sm transition hover:opacity-80" style={{ padding: '10px 20px', color: '#827f97', borderRight: '3px solid transparent' }}>
           <div className="w-2 h-2 rounded-full bg-[#a78bfa]"></div>
           Utilisateurs
         </Link>
@@ -220,7 +220,7 @@ export default function NouvelleQuestion() {
         <div style={{ flex: 1 }}></div>
         <div style={{ padding: '16px 20px', borderTop: '1px solid #1e1c2e' }}>
           <p className="font-fredoka text-sm text-[#9b96b8]">Admin</p>
-          <p className="text-xs text-[#6b6880]">connecté</p>
+          <p className="text-xs text-[#827f97]">connecté</p>
         </div>
       </div>
 
@@ -232,7 +232,7 @@ export default function NouvelleQuestion() {
             <BackButton />
             <div>
               <h2 className="font-fredoka text-2xl text-[#eeeaf8]">Ajouter une question</h2>
-              <p className="text-[#6b6880] text-sm" style={{ marginTop: '4px' }}>
+              <p className="text-[#827f97] text-sm" style={{ marginTop: '4px' }}>
                 Ctrl+Enter (ou Enter hors zone de texte) pour valider et enchaîner directement sur la suivante
               </p>
             </div>
@@ -265,7 +265,7 @@ export default function NouvelleQuestion() {
               onChange={e => setQuestion(e.target.value)}
               placeholder="Écris ta question ici..."
               rows={3}
-              className="w-full text-[#eeeaf8] text-sm outline-none resize-none"
+              className="w-full text-[#eeeaf8] text-sm outline-none resize-none transition focus:shadow-[0_0_0_3px_rgba(255,217,61,0.25)]"
               style={{ background: '#1a1828', border: `1.5px solid ${question ? '#ffd93d' : '#3a3650'}`, borderRadius: '14px', padding: '14px 16px', lineHeight: '1.5' }}
             />
           </div>
@@ -278,7 +278,7 @@ export default function NouvelleQuestion() {
               onChange={e => setAnswer(e.target.value)}
               placeholder="La réponse attendue..."
               rows={2}
-              className="w-full text-[#eeeaf8] text-sm outline-none resize-none"
+              className="w-full text-[#eeeaf8] text-sm outline-none resize-none transition focus:shadow-[0_0_0_3px_rgba(255,217,61,0.25)]"
               style={{ background: '#1a1828', border: `1.5px solid ${answer ? '#ffd93d' : '#3a3650'}`, borderRadius: '14px', padding: '14px 16px', lineHeight: '1.5' }}
             />
           </div>
@@ -290,7 +290,7 @@ export default function NouvelleQuestion() {
               <select
                 value={categoryId}
                 onChange={e => handleCategoryChange(e.target.value)}
-                className="w-full text-[#eeeaf8] text-sm outline-none cursor-pointer"
+                className="w-full text-[#eeeaf8] text-sm outline-none cursor-pointer transition focus:shadow-[0_0_0_3px_rgba(255,217,61,0.25)]"
                 style={{ background: '#1a1828', border: `1.5px solid ${categoryId ? '#ffd93d' : '#3a3650'}`, borderRadius: '14px', padding: '14px 16px' }}
               >
                 <option value="">Choisir une catégorie</option>
@@ -307,7 +307,7 @@ export default function NouvelleQuestion() {
                     key={d.id}
                     type="button"
                     onClick={() => setDifficulty(d.id)}
-                    className="font-fredoka text-sm rounded-xl py-3"
+                    className="font-fredoka text-sm rounded-xl py-3 transition hover:opacity-90"
                     style={{
                       background: difficulty === d.id ? d.bg : '#1a1828',
                       border: `1.5px solid ${difficulty === d.id ? d.color : '#3a3650'}`,
@@ -325,13 +325,13 @@ export default function NouvelleQuestion() {
           {categoryId && subcategoriesFiltrees.length > 0 && (
             <div>
               <label className="block font-fredoka text-[#9b96b8] text-sm" style={{ marginBottom: '8px' }}>
-                Sous-catégorie <span className="text-[#4a4760]">(optionnel)</span>
+                Sous-catégorie <span className="text-[#8480a1]">(optionnel)</span>
               </label>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={() => setSubcategoryId('')}
-                  className="font-fredoka text-sm rounded-xl px-4 py-2"
+                  className="font-fredoka text-sm rounded-xl px-4 py-2 transition hover:opacity-90"
                   style={{
                     background: subcategoryId === '' ? '#1a2a2d' : '#1a1828',
                     border: `1.5px solid ${subcategoryId === '' ? '#4ecdc4' : '#3a3650'}`,
@@ -345,7 +345,7 @@ export default function NouvelleQuestion() {
                     key={s.id}
                     type="button"
                     onClick={() => setSubcategoryId(s.id)}
-                    className="font-fredoka text-sm rounded-xl px-4 py-2"
+                    className="font-fredoka text-sm rounded-xl px-4 py-2 transition hover:opacity-90"
                     style={{
                       background: subcategoryId === s.id ? '#1a2a2d' : '#1a1828',
                       border: `1.5px solid ${subcategoryId === s.id ? '#4ecdc4' : '#3a3650'}`,
@@ -378,7 +378,7 @@ export default function NouvelleQuestion() {
                     <button
                       type="button"
                       onClick={() => supprimerImage(i)}
-                      className="absolute flex items-center justify-center font-fredoka text-xs"
+                      className="absolute flex items-center justify-center font-fredoka text-xs transition hover:opacity-80"
                       style={{ top: '-6px', right: '-6px', width: '20px', height: '20px', background: '#ff6b6b', color: '#fff', borderRadius: '50%' }}
                     >
                       ×
@@ -391,14 +391,14 @@ export default function NouvelleQuestion() {
             {previews.length < 5 && (
               <label
                 htmlFor="image-upload"
-                className="w-full flex flex-col items-center justify-center cursor-pointer transition"
+                className="w-full flex flex-col items-center justify-center cursor-pointer transition hover:opacity-80"
                 style={{ background: '#1a1828', border: '2px dashed #2a2830', borderRadius: '14px', padding: '32px' }}
               >
                 <div className="w-10 h-8 rounded-lg border-2 border-[#3a3650] flex items-center justify-center mb-3">
-                  <div className="w-4 h-4 rounded-full border-2 border-[#4a4760]"></div>
+                  <div className="w-4 h-4 rounded-full border-2 border-[#8480a1]"></div>
                 </div>
-                <p className="font-fredoka text-[#6b6880] text-sm">Cliquer pour ajouter une image</p>
-                <p className="text-[#4a4760] text-xs" style={{ marginTop: '4px' }}>JPG ou PNG · {5 - previews.length} emplacement(s) restant(s)</p>
+                <p className="font-fredoka text-[#827f97] text-sm">Cliquer pour ajouter une image</p>
+                <p className="text-[#8480a1] text-xs" style={{ marginTop: '4px' }}>JPG ou PNG · {5 - previews.length} emplacement(s) restant(s)</p>
               </label>
             )}
 
@@ -416,11 +416,11 @@ export default function NouvelleQuestion() {
           <div className="flex items-center justify-between" style={{ background: '#1a1828', border: '1px solid #2a2830', borderRadius: '14px', padding: '16px 20px' }}>
             <div>
               <p className="font-fredoka text-[#c9c4e0] text-sm">Question active</p>
-              <p className="text-[#6b6880] text-xs" style={{ marginTop: '2px' }}>Visible dans les quiz dès maintenant</p>
+              <p className="text-[#827f97] text-xs" style={{ marginTop: '2px' }}>Visible dans les quiz dès maintenant</p>
             </div>
             <div
               onClick={() => setActive(!active)}
-              className="rounded-full cursor-pointer relative"
+              className="rounded-full cursor-pointer relative hover:opacity-90 transition"
               style={{ width: '44px', height: '24px', background: active ? '#6bcb77' : '#2a2830' }}
             >
               <div
@@ -448,6 +448,6 @@ export default function NouvelleQuestion() {
 
         </div>
       </div>
-    </div>
+    </main>
   )
 }

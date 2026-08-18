@@ -18,7 +18,7 @@ export default function BarList({ items, emptyLabel }: { items: BarItem[], empty
   const [hoverId, setHoverId] = useState<string | null>(null)
 
   if (items.length === 0) {
-    return <p className="text-[#6b6880] text-sm">{emptyLabel || 'Pas encore de données.'}</p>
+    return <p className="text-[#827f97] text-sm">{emptyLabel || 'Pas encore de données.'}</p>
   }
 
   return (

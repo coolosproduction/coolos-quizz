@@ -43,7 +43,7 @@ const rankColor = (rank: number) => {
   if (rank === 1) return '#ffd93d'
   if (rank === 2) return '#9b96b8'
   if (rank === 3) return '#ff9f43'
-  return '#4a4760'
+  return '#8480a1'
 }
 
 const formatScore = (n: number) => (Number.isInteger(n) ? n.toString() : n.toFixed(1))
@@ -204,7 +204,7 @@ export default function Classement() {
         {!checkingAuth && (
           connecte ? (
             <div className="flex items-center gap-3">
-              <Link href="/amis" className="font-fredoka text-sm text-[#6b6880] hover:text-[#c9c4e0] transition hidden sm:block">
+              <Link href="/amis" className="font-fredoka text-sm text-[#827f97] hover:text-[#c9c4e0] transition hidden sm:block">
                 Amis
               </Link>
               <Link href="/configuration" className="bg-[#ffd93d] text-[#0f0e17] rounded-full px-4 py-2 font-fredoka text-sm hover:opacity-90 transition">
@@ -234,8 +234,8 @@ export default function Classement() {
           <div ref={rechercheBoxRef} style={{ position: 'relative' }}>
             <div className="flex items-center gap-2 bg-[#1a1828] border border-[#2a2830] rounded-full focus-within:border-[#a78bfa] transition" style={{ padding: '10px 18px' }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="flex-shrink-0">
-                <circle cx="11" cy="11" r="7" stroke="#6b6880" strokeWidth="2" />
-                <path d="M21 21l-4.35-4.35" stroke="#6b6880" strokeWidth="2" strokeLinecap="round" />
+                <circle cx="11" cy="11" r="7" stroke="#827f97" strokeWidth="2" />
+                <path d="M21 21l-4.35-4.35" stroke="#827f97" strokeWidth="2" strokeLinecap="round" />
               </svg>
               <input
                 type="text"
@@ -248,7 +248,7 @@ export default function Classement() {
               {recherche && (
                 <button
                   onClick={() => { setRecherche(''); setResultats([]) }}
-                  className="text-[#6b6880] hover:text-[#c9c4e0] text-lg leading-none flex-shrink-0"
+                  className="text-[#827f97] hover:text-[#c9c4e0] text-lg leading-none flex-shrink-0"
                   aria-label="Effacer la recherche"
                 >
                   ×
@@ -262,9 +262,9 @@ export default function Classement() {
                 style={{ top: 'calc(100% + 8px)', zIndex: 20, maxHeight: '320px', overflowY: 'auto' }}
               >
                 {rechercheLoading ? (
-                  <p className="text-[#6b6880] text-sm text-center" style={{ padding: '16px' }}>Recherche...</p>
+                  <p className="text-[#827f97] text-sm text-center" style={{ padding: '16px' }}>Recherche...</p>
                 ) : resultats.length === 0 ? (
-                  <p className="text-[#6b6880] text-sm text-center" style={{ padding: '16px' }}>Aucun joueur trouvé.</p>
+                  <p className="text-[#827f97] text-sm text-center" style={{ padding: '16px' }}>Aucun joueur trouvé.</p>
                 ) : (
                   resultats.map(r => (
                     <Link
@@ -350,7 +350,7 @@ export default function Classement() {
           ) : top.length === 0 ? (
             <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-10 text-center">
               <p className="font-fredoka text-[#9b96b8] text-xl mb-2">Personne n'a encore joué {categorieSelec ? 'dans cette catégorie' : ''}</p>
-              <p className="text-[#6b6880] text-sm">Sois le premier à apparaître dans ce classement !</p>
+              <p className="text-[#827f97] text-sm">Sois le premier à apparaître dans ce classement !</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -358,16 +358,16 @@ export default function Classement() {
                 <div className="w-7 flex-shrink-0"></div>
                 <div style={{ width: '32px' }} className="flex-shrink-0"></div>
                 <div className="flex-1 min-w-0"></div>
-                <p className="text-[#4a4760] text-xs uppercase tracking-wide w-14 text-center flex-shrink-0">Score</p>
-                <p className="hidden sm:block text-[#4a4760] text-xs uppercase tracking-wide w-16 text-center flex-shrink-0">Questions</p>
-                <p className="hidden sm:block text-[#4a4760] text-xs uppercase tracking-wide w-16 text-center flex-shrink-0">Bonnes rép.</p>
-                <p className="text-[#4a4760] text-xs uppercase tracking-wide w-14 text-center flex-shrink-0">Réussite</p>
+                <p className="text-[#8480a1] text-xs uppercase tracking-wide w-14 text-center flex-shrink-0">Score</p>
+                <p className="hidden sm:block text-[#8480a1] text-xs uppercase tracking-wide w-16 text-center flex-shrink-0">Questions</p>
+                <p className="hidden sm:block text-[#8480a1] text-xs uppercase tracking-wide w-16 text-center flex-shrink-0">Bonnes rép.</p>
+                <p className="text-[#8480a1] text-xs uppercase tracking-wide w-14 text-center flex-shrink-0">Réussite</p>
               </div>
               {top.map(row => (
                 <LigneClassement key={row.user_id} row={row} highlight={row.user_id === userId} />
               ))}
               {connecte && maPosition && !suisJeDansLeTop && (
-                <p className="text-[#4a4760] text-xs text-center" style={{ marginTop: '8px' }}>
+                <p className="text-[#8480a1] text-xs text-center" style={{ marginTop: '8px' }}>
                   Tu n'es pas dans le top 100 — ta position est affichée ci-dessus.
                 </p>
               )}

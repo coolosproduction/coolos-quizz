@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '../../../lib/supabase'
 import BackButton from '@/components/BackButton'
+import Spinner from '@/components/Spinner'
 
 export default function ModifierProfil() {
   const router = useRouter()
@@ -99,15 +100,12 @@ export default function ModifierProfil() {
 
       <div style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
-        <div className="flex items-center gap-3">
-          <Link href="/profil" className="text-[#9b96b8] hover:text-[#eeeaf8] transition">←</Link>
-          <h1 className="font-fredoka text-3xl text-[#eeeaf8]">Modifier le profil</h1>
-        </div>
+        <h1 className="font-fredoka text-3xl text-[#eeeaf8]">Modifier le profil</h1>
 
         {/* Photo de profil */}
         <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-6 flex flex-col items-center gap-4">
           <div
-            className="w-24 h-24 rounded-full flex items-center justify-center overflow-hidden cursor-pointer"
+            className="w-24 h-24 rounded-full flex items-center justify-center overflow-hidden cursor-pointer transition hover:opacity-80"
             style={{ border: '3px solid #a78bfa', background: '#2a1f3d' }}
             onClick={() => fileInputRef.current?.click()}
           >
@@ -130,7 +128,7 @@ export default function ModifierProfil() {
             className="hidden"
             onChange={handleFileChange}
           />
-          <p className="text-[#6b6880] text-xs">JPG, PNG — max 2 Mo</p>
+          <p className="text-[#827f97] text-xs">JPG, PNG — max 2 Mo</p>
         </div>
 
         {/* Pseudo */}
@@ -151,8 +149,9 @@ export default function ModifierProfil() {
         <button
           onClick={handleSave}
           disabled={uploading}
-          className="w-full bg-[#a78bfa] text-[#0f0e17] rounded-2xl py-4 font-fredoka text-lg hover:opacity-90 transition"
+          className="w-full bg-[#a78bfa] text-[#0f0e17] rounded-2xl py-4 font-fredoka text-lg hover:opacity-90 transition disabled:opacity-70 flex items-center justify-center gap-2"
         >
+          {uploading && <Spinner size={16} color="#0f0e17" />}
           {uploading ? 'Enregistrement...' : 'Enregistrer'}
         </button>
 

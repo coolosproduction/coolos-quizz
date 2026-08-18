@@ -7,6 +7,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '../../../../lib/supabase'
 import { getMultiplayerIdentity, subscribeRoomRealtime, roomPathForStatus, fetchRoomPlayers } from '../../../../lib/multiplayer'
 import ChatPanel from '@/components/ChatPanel'
+import Spinner from '@/components/Spinner'
 
 type Game = {
   id: string
@@ -330,7 +331,8 @@ export default function QuizMultijoueur() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#0f0e17] flex items-center justify-center">
+      <main className="min-h-screen bg-[#0f0e17] flex items-center justify-center gap-3">
+        <Spinner size={20} />
         <p className="font-fredoka text-[#9b96b8] text-xl">Chargement...</p>
       </main>
     )
@@ -340,7 +342,7 @@ export default function QuizMultijoueur() {
     return (
       <main className="min-h-screen bg-[#0f0e17] flex flex-col items-center justify-center gap-6 px-6 text-center">
         <p className="font-fredoka text-[#ff6b6b] text-xl">{closedMsg}</p>
-        <Link href="/multijoueur" className="bg-[#ffd93d] text-[#0f0e17] rounded-2xl py-3 px-8 font-fredoka text-lg">
+        <Link href="/multijoueur" className="bg-[#ffd93d] text-[#0f0e17] rounded-2xl py-3 px-8 font-fredoka text-lg hover:opacity-90 transition">
           Retour au multijoueur
         </Link>
       </main>
@@ -362,7 +364,8 @@ export default function QuizMultijoueur() {
 
   if (!question) {
     return (
-      <main className="min-h-screen bg-[#0f0e17] flex items-center justify-center">
+      <main className="min-h-screen bg-[#0f0e17] flex items-center justify-center gap-3">
+        <Spinner size={20} />
         <p className="font-fredoka text-[#9b96b8] text-xl">Chargement de la question...</p>
       </main>
     )
@@ -371,7 +374,7 @@ export default function QuizMultijoueur() {
   return (
     <main className="min-h-screen bg-[#0f0e17]" style={{ padding: '32px 24px' }}>
 
-      <div className="flex justify-between items-center" style={{ maxWidth: '900px', margin: '0 auto 32px' }}>
+      <div className="flex justify-between items-center coolos-card-transition" style={{ maxWidth: '900px', margin: '0 auto 32px' }}>
         <span className="font-fredoka text-[#9b96b8] text-base">
           Question <span className="text-[#eeeaf8]">{index + 1}</span> / {total}
         </span>
@@ -404,72 +407,78 @@ export default function QuizMultijoueur() {
           ></div>
         </div>
 
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="inline-flex items-center gap-2 bg-[#1e1c2e] border border-[#2a2830] rounded-full px-4 py-2">
-            <div className="w-2 h-2 rounded-full bg-[#ff6b6b]"></div>
-            <span className="font-fredoka text-[#9b96b8] text-sm">{question.category_name}</span>
-          </div>
-          <span className="bg-[#1e1c2e] border border-[#3a3650] rounded-full px-4 py-2 font-fredoka text-sm text-[#4ecdc4]">
-            {answeredCount}/{activePlayersCount} ont répondu
-          </span>
-        </div>
-
-        <h2 className="font-fredoka text-3xl text-[#eeeaf8] leading-tight">
-          {question.question_text}
-        </h2>
-
-        {question.images.length > 0 && (
-          <div className="flex gap-3 flex-wrap">
-            {question.images.map((img, i) => (
-              <Image
-                key={i}
-                src={img.url}
-                alt={`image ${i + 1}`}
-                width={320}
-                height={240}
-                className="rounded-2xl object-cover"
-                style={{ maxHeight: '240px', maxWidth: '100%', width: 'auto', height: 'auto', border: '2px solid #2a2830' }}
-              />
-            ))}
-          </div>
-        )}
-
-        {answered ? (
-          <div className="bg-[#1e1c2e] border border-[#2a2830] rounded-2xl py-8 text-center flex flex-col gap-2">
-            <p className="font-fredoka text-[#6bcb77] text-lg">Réponse envoyée !</p>
-            <p className="text-[#9b96b8] text-sm">En attente des autres joueurs ou de la fin du temps imparti...</p>
-          </div>
-        ) : (
-          <>
-            <div>
-              <label className="block font-fredoka text-[#9b96b8] text-base mb-3">Ta réponse</label>
-              <textarea
-                value={reponse}
-                onChange={(e) => {
-                  setReponse(e.target.value)
-                  reponseRef.current = e.target.value
-                }}
-                placeholder="Écris ta réponse ici..."
-                rows={4}
-                className="w-full bg-[#1a1828] border border-[#3a3650] rounded-2xl px-5 py-4 text-[#eeeaf8] text-base outline-none resize-none"
-                style={{ borderColor: reponse ? '#a78bfa' : '#3a3650' }}
-              />
+        <div key={index} className="coolos-card-transition" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="inline-flex items-center gap-2 bg-[#1e1c2e] border border-[#2a2830] rounded-full px-4 py-2">
+              <div className="w-2 h-2 rounded-full bg-[#ff6b6b]"></div>
+              <span className="font-fredoka text-[#9b96b8] text-sm">{question.category_name}</span>
             </div>
+            <span className="bg-[#1e1c2e] border border-[#3a3650] rounded-full px-4 py-2 font-fredoka text-sm text-[#4ecdc4]">
+              {answeredCount}/{activePlayersCount} ont répondu
+            </span>
+          </div>
 
-            <button
-              onClick={() => handleRepondre(false)}
-              className="w-full rounded-2xl py-5 font-fredoka text-xl transition text-center"
-              style={{
-                background: reponse ? '#a78bfa' : '#2a2830',
-                color: reponse ? '#0f0e17' : '#4a4760',
-                cursor: reponse ? 'pointer' : 'not-allowed',
-              }}
-            >
-              Valider ma réponse →
-            </button>
-          </>
-        )}
+          <h2 className="font-fredoka text-3xl text-[#eeeaf8] leading-tight">
+            {question.question_text}
+          </h2>
 
+          {question.images.length > 0 && (
+            <div className="flex gap-3 flex-wrap">
+              {question.images.map((img, i) => (
+                <Image
+                  key={i}
+                  src={img.url}
+                  alt={`image ${i + 1}`}
+                  width={320}
+                  height={240}
+                  className="rounded-2xl object-cover"
+                  style={{ maxHeight: '240px', maxWidth: '100%', width: 'auto', height: 'auto', border: '2px solid #2a2830' }}
+                />
+              ))}
+            </div>
+          )}
+
+          {answered ? (
+            <div className="bg-[#1e1c2e] border border-[#2a2830] rounded-2xl py-8 text-center flex flex-col items-center gap-2">
+              <p className="font-fredoka text-[#6bcb77] text-lg">Réponse envoyée !</p>
+              <p className="text-[#9b96b8] text-sm flex items-center gap-2">
+                <Spinner size={14} />
+                En attente des autres joueurs ou de la fin du temps imparti...
+              </p>
+            </div>
+          ) : (
+            <>
+              <div>
+                <label className="block font-fredoka text-[#9b96b8] text-base mb-3">Ta réponse</label>
+                <textarea
+                  value={reponse}
+                  onChange={(e) => {
+                    setReponse(e.target.value)
+                    reponseRef.current = e.target.value
+                  }}
+                  placeholder="Écris ta réponse ici..."
+                  rows={4}
+                  className="w-full bg-[#1a1828] border border-[#3a3650] rounded-2xl px-5 py-4 text-[#eeeaf8] text-base outline-none resize-none transition"
+                  style={{ borderColor: reponse ? '#a78bfa' : '#3a3650' }}
+                />
+              </div>
+
+              <button
+                onClick={() => handleRepondre(false)}
+                disabled={!reponse.trim()}
+                className="w-full rounded-2xl py-5 font-fredoka text-xl transition text-center enabled:hover:opacity-90"
+                style={{
+                  background: reponse ? '#a78bfa' : '#2a2830',
+                  color: reponse ? '#0f0e17' : '#8480a1',
+                  cursor: reponse ? 'pointer' : 'not-allowed',
+                }}
+              >
+                Valider ma réponse →
+              </button>
+            </>
+          )}
+
+        </div>
       </div>
 
       {myPlayerId && myUserId && (

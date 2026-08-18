@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '../../lib/supabase'
 import BackButton from '@/components/BackButton'
+import Spinner from '@/components/Spinner'
 
 export default function Contact() {
   const router = useRouter()
@@ -201,14 +202,15 @@ export default function Contact() {
             <button
               onClick={handleSubmit}
               disabled={envoi}
-              className="w-full bg-[#a78bfa] text-[#0f0e17] rounded-2xl py-4 font-fredoka text-lg hover:opacity-90 transition disabled:opacity-50"
+              className="flex items-center justify-center gap-2 w-full bg-[#a78bfa] text-[#0f0e17] rounded-2xl py-4 font-fredoka text-lg hover:opacity-90 transition disabled:opacity-50"
             >
+              {envoi && <Spinner size={18} color="#0f0e17" />}
               {envoi ? 'Envoi en cours...' : 'Envoyer le message →'}
             </button>
 
             <button
               onClick={() => router.back()}
-              className="w-full text-[#6b6880] text-sm font-semibold hover:text-[#9b96b8] transition"
+              className="w-full text-[#827f97] text-sm font-semibold hover:text-[#9b96b8] transition"
             >
               ← Retour
             </button>

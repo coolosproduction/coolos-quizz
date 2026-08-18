@@ -72,7 +72,7 @@ export default function Home() {
             </button>
             <button
               onClick={() => setShowPopup(false)}
-              className="w-full text-[#6b6880] text-sm font-semibold hover:text-[#9b96b8] transition"
+              className="w-full text-[#827f97] text-sm font-semibold hover:text-[#9b96b8] transition"
             >
               Annuler
             </button>
@@ -104,31 +104,31 @@ export default function Home() {
       <div className="flex items-center gap-3">
         <Link
           href="/multijoueur"
-          className="font-fredoka text-sm text-[#6b6880] hover:text-[#c9c4e0] transition"
+          className="font-fredoka text-sm text-[#827f97] hover:text-[#c9c4e0] transition"
         >
           Multijoueur
         </Link>
         <Link
           href="/classement"
-          className="font-fredoka text-sm text-[#6b6880] hover:text-[#c9c4e0] transition"
+          className="font-fredoka text-sm text-[#827f97] hover:text-[#c9c4e0] transition"
         >
           Classement
         </Link>
         <Link
           href="/amis"
-          className="font-fredoka text-sm text-[#6b6880] hover:text-[#c9c4e0] transition hidden sm:block"
+          className="font-fredoka text-sm text-[#827f97] hover:text-[#c9c4e0] transition hidden sm:block"
         >
           Amis
         </Link>
         <Link
           href="/revision"
-          className="font-fredoka text-sm text-[#6b6880] hover:text-[#c9c4e0] transition hidden sm:block"
+          className="font-fredoka text-sm text-[#827f97] hover:text-[#c9c4e0] transition hidden sm:block"
         >
           ★ Révision
         </Link>
         <Link
           href="/contact"
-          className="font-fredoka text-sm text-[#6b6880] hover:text-[#c9c4e0] transition"
+          className="font-fredoka text-sm text-[#827f97] hover:text-[#c9c4e0] transition"
         >
           Contact
         </Link>
@@ -149,19 +149,19 @@ export default function Home() {
       <div className="flex items-center gap-3">
         <Link
           href="/multijoueur"
-          className="font-fredoka text-sm text-[#6b6880] hover:text-[#c9c4e0] transition"
+          className="font-fredoka text-sm text-[#827f97] hover:text-[#c9c4e0] transition"
         >
           Multijoueur
         </Link>
         <Link
           href="/classement"
-          className="font-fredoka text-sm text-[#6b6880] hover:text-[#c9c4e0] transition"
+          className="font-fredoka text-sm text-[#827f97] hover:text-[#c9c4e0] transition"
         >
           Classement
         </Link>
         <Link
           href="/contact"
-          className="font-fredoka text-sm text-[#6b6880] hover:text-[#c9c4e0] transition"
+          className="font-fredoka text-sm text-[#827f97] hover:text-[#c9c4e0] transition"
         >
           Contact
         </Link>
@@ -245,7 +245,7 @@ export default function Home() {
 
         {/* Features */}
         <div className="w-full max-w-3xl">
-          <p className="text-center text-[#6b6880] font-bold uppercase tracking-widest text-xs md:text-sm mb-8">
+          <p className="text-center text-[#827f97] font-bold uppercase tracking-widest text-xs md:text-sm mb-8">
             Pourquoi Coolos ?
           </p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -254,28 +254,28 @@ export default function Home() {
                 <div className="w-4 h-4 rounded bg-[#a78bfa]"></div>
               </div>
               <h3 className="font-fredoka text-[#eeeaf8] text-base md:text-lg mb-2">Choisis ton thème</h3>
-              <p className="text-[#6b6880] text-xs md:text-sm leading-relaxed">Histoire, science, sport, culture pop…</p>
+              <p className="text-[#827f97] text-xs md:text-sm leading-relaxed">Histoire, science, sport, culture pop…</p>
             </div>
             <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-5 md:p-8">
               <div className="w-10 h-10 rounded-xl bg-[#1f2d1f] flex items-center justify-center mb-4">
                 <div className="w-4 h-4 rounded-full bg-[#6bcb77]"></div>
               </div>
               <h3 className="font-fredoka text-[#eeeaf8] text-base md:text-lg mb-2">3 niveaux</h3>
-              <p className="text-[#6b6880] text-xs md:text-sm leading-relaxed">Facile, moyen ou difficile selon ton humeur.</p>
+              <p className="text-[#827f97] text-xs md:text-sm leading-relaxed">Facile, moyen ou difficile selon ton humeur.</p>
             </div>
             <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-5 md:p-8">
               <div className="w-10 h-10 rounded-xl bg-[#2d1f1f] flex items-center justify-center mb-4">
                 <div className="w-4 h-4 rounded bg-[#ff6b6b]"></div>
               </div>
               <h3 className="font-fredoka text-[#eeeaf8] text-base md:text-lg mb-2">Score final</h3>
-              <p className="text-[#6b6880] text-xs md:text-sm leading-relaxed">Vois combien tu as vraiment su répondre.</p>
+              <p className="text-[#827f97] text-xs md:text-sm leading-relaxed">Vois combien tu as vraiment su répondre.</p>
             </div>
             <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-5 md:p-8">
               <div className="w-10 h-10 rounded-xl bg-[#1f2a2d] flex items-center justify-center mb-4">
                 <div className="w-4 h-4 rounded bg-[#4ecdc4]"></div>
               </div>
               <h3 className="font-fredoka text-[#eeeaf8] text-base md:text-lg mb-2">Historique</h3>
-              <p className="text-[#6b6880] text-xs md:text-sm leading-relaxed">Retrouve toutes tes parties passées.</p>
+              <p className="text-[#827f97] text-xs md:text-sm leading-relaxed">Retrouve toutes tes parties passées.</p>
             </div>
           </div>
         </div>
@@ -285,7 +285,7 @@ export default function Home() {
 
         {/* Thèmes */}
         <div className="w-full max-w-2xl">
-          <p className="text-center text-[#6b6880] font-bold uppercase tracking-widest text-xs mb-6">
+          <p className="text-center text-[#827f97] font-bold uppercase tracking-widest text-xs mb-6">
             Quelques thèmes disponibles
           </p>
           <div className="flex flex-wrap gap-3 justify-center">
@@ -299,7 +299,7 @@ export default function Home() {
         </div>
 
         {!connecte && (
-          <p className="text-[#6b6880] text-center text-xs md:text-sm" style={{ marginTop: '65px' }}>
+          <p className="text-[#827f97] text-center text-xs md:text-sm" style={{ marginTop: '65px' }}>
             En créant un compte, tu acceptes les CGU · Politique de confidentialité
           </p>
         )}

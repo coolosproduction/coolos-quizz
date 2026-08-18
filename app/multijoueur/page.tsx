@@ -276,7 +276,7 @@ export default function Multijoueur() {
               className="w-full bg-[#1a1828] border border-[#3a3650] rounded-xl px-4 py-3 text-[#eeeaf8] font-fredoka outline-none focus:border-[#a78bfa] transition"
               style={{ maxWidth: '400px' }}
             />
-            <p className="text-[#6b6880] text-xs mt-2">
+            <p className="text-[#827f97] text-xs mt-2">
               Tu joues sans compte : ta partie ne sera pas sauvegardée dans un historique.{' '}
               <Link href="/connexion" className="text-[#a78bfa]">Se connecter</Link>
             </p>
@@ -299,7 +299,7 @@ export default function Multijoueur() {
                   <button
                     key={t.id}
                     onClick={() => toggleTheme(t.id)}
-                    className="font-fredoka text-sm rounded-xl px-4 py-3"
+                    className="font-fredoka text-sm rounded-xl px-4 py-3 transition hover:opacity-80"
                     style={{
                       background: themesSelec.includes(t.id) ? t.bg : '#1a1828',
                       border: `2px solid ${themesSelec.includes(t.id) ? t.color : '#2a2830'}`,
@@ -311,7 +311,7 @@ export default function Multijoueur() {
                 ))}
               </div>
               {themesSelec.length === 0 && (
-                <p className="text-[#6b6880] text-sm mt-2">Aucune sélection = tous les thèmes inclus</p>
+                <p className="text-[#827f97] text-sm mt-2">Aucune sélection = tous les thèmes inclus</p>
               )}
             </div>
 
@@ -323,7 +323,7 @@ export default function Multijoueur() {
                   <button
                     key={d.id}
                     onClick={() => toggleDiff(d.id)}
-                    className="rounded-xl py-4 px-6 font-fredoka text-base"
+                    className="rounded-xl py-4 px-6 font-fredoka text-base transition hover:opacity-80"
                     style={{
                       background: diffSelec.includes(d.id) ? d.bg : '#1a1828',
                       border: `2px solid ${diffSelec.includes(d.id) ? d.color : '#2a2830'}`,
@@ -335,7 +335,7 @@ export default function Multijoueur() {
                 ))}
               </div>
               {diffSelec.length === 0 && (
-                <p className="text-[#6b6880] text-sm mt-2">Aucune sélection = toutes les difficultés incluses</p>
+                <p className="text-[#827f97] text-sm mt-2">Aucune sélection = toutes les difficultés incluses</p>
               )}
             </div>
 
@@ -347,7 +347,7 @@ export default function Multijoueur() {
                   <button
                     key={n}
                     onClick={() => setNb(n)}
-                    className="flex-1 rounded-xl py-4 font-fredoka text-lg"
+                    className="flex-1 rounded-xl py-4 font-fredoka text-lg transition hover:opacity-80"
                     style={{
                       background: nb === n ? '#1a2a2d' : '#1a1828',
                       border: `2px solid ${nb === n ? '#4ecdc4' : '#2a2830'}`,
@@ -368,7 +368,7 @@ export default function Multijoueur() {
                   <button
                     key={t}
                     onClick={() => setTimer(t)}
-                    className="flex-1 rounded-xl py-4 font-fredoka text-base"
+                    className="flex-1 rounded-xl py-4 font-fredoka text-base transition hover:opacity-80"
                     style={{
                       background: timer === t ? '#2a1e10' : '#1a1828',
                       border: `2px solid ${timer === t ? '#ff9f43' : '#2a2830'}`,

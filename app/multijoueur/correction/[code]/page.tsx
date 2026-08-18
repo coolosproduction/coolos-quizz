@@ -9,6 +9,7 @@ import BackButton from '@/components/BackButton'
 import Avatar from '@/components/Avatar'
 import ChatPanel from '@/components/ChatPanel'
 import RoleBadge from '@/components/RoleBadge'
+import Spinner from '@/components/Spinner'
 
 type Game = {
   id: string
@@ -245,7 +246,8 @@ export default function CorrectionMultijoueur() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#0f0e17] flex items-center justify-center">
+      <main className="min-h-screen bg-[#0f0e17] flex items-center justify-center gap-3">
+        <Spinner size={20} />
         <p className="font-fredoka text-[#9b96b8] text-xl">Chargement...</p>
       </main>
     )
@@ -255,7 +257,7 @@ export default function CorrectionMultijoueur() {
     return (
       <main className="min-h-screen bg-[#0f0e17] flex flex-col items-center justify-center gap-6 px-6 text-center">
         <p className="font-fredoka text-[#ff6b6b] text-xl">{closedMsg}</p>
-        <Link href="/multijoueur" className="bg-[#ffd93d] text-[#0f0e17] rounded-2xl py-3 px-8 font-fredoka text-lg">
+        <Link href="/multijoueur" className="bg-[#ffd93d] text-[#0f0e17] rounded-2xl py-3 px-8 font-fredoka text-lg hover:opacity-90 transition">
           Retour au multijoueur
         </Link>
       </main>
@@ -293,7 +295,7 @@ export default function CorrectionMultijoueur() {
         </div>
 
         {current ? (
-          <div className="flex flex-col gap-6">
+          <div key={current.id} className="coolos-card-transition flex flex-col gap-6">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div className="inline-flex items-center gap-2 bg-[#1e1c2e] border border-[#2a2830] rounded-full px-4 py-2">
                 <div className="w-2 h-2 rounded-full bg-[#ff6b6b]"></div>
@@ -346,7 +348,7 @@ export default function CorrectionMultijoueur() {
                       key={key}
                       onClick={() => handleEvaluer(current, key)}
                       disabled={evaluating}
-                      className="flex-1 rounded-xl py-4 font-fredoka text-base disabled:opacity-50"
+                      className="flex-1 rounded-xl py-4 font-fredoka text-base transition hover:opacity-80 disabled:opacity-50"
                       style={{ background: val.bg, border: `2px solid ${val.color}`, color: val.color }}
                     >
                       {val.label}
@@ -355,31 +357,35 @@ export default function CorrectionMultijoueur() {
                 </div>
               </div>
             ) : (
-              <div className="bg-[#1e1c2e] border border-[#2a2830] rounded-2xl py-5 text-center">
+              <div className="bg-[#1e1c2e] border border-[#2a2830] rounded-2xl py-5 flex items-center justify-center gap-3">
+                <Spinner size={16} />
                 <p className="font-fredoka text-[#9b96b8] text-base">L&apos;hôte évalue cette réponse...</p>
               </div>
             )}
           </div>
         ) : (
-          <div className="bg-[#1e1c2e] border border-[#2a2830] rounded-2xl py-8 text-center">
+          <div className="coolos-card-transition bg-[#1e1c2e] border border-[#2a2830] rounded-2xl py-8 text-center flex flex-col items-center gap-2">
             <p className="font-fredoka text-[#6bcb77] text-lg">Correction terminée !</p>
-            <p className="text-[#9b96b8] text-sm mt-2">Calcul des résultats...</p>
+            <p className="text-[#9b96b8] text-sm flex items-center gap-2">
+              <Spinner size={14} />
+              Calcul des résultats...
+            </p>
           </div>
         )}
 
         {/* Historique de la correction */}
         {evaluated.length > 0 && (
           <div className="flex flex-col gap-2">
-            <p className="font-fredoka text-[#6b6880] text-sm uppercase tracking-widest">Déjà corrigé</p>
+            <p className="font-fredoka text-[#827f97] text-sm uppercase tracking-widest">Déjà corrigé</p>
             <div className="flex flex-col gap-2" style={{ maxHeight: '360px', overflowY: 'auto' }}>
               {[...evaluated].reverse().map(a => {
                 const cfg = a.self_eval ? evalConfig[a.self_eval] : null
                 return (
                   <div key={a.id} className="bg-[#1a1828] border border-[#2a2830] rounded-xl px-4 py-3 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      <span className="text-[#6b6880] text-xs font-fredoka flex-shrink-0">Q{a.question_index + 1}</span>
+                      <span className="text-[#827f97] text-xs font-fredoka flex-shrink-0">Q{a.question_index + 1}</span>
                       <span className="text-[#9b96b8] text-sm font-fredoka flex-shrink-0">{a.player?.pseudo}</span>
-                      <span className="text-[#4a4760] text-xs truncate">{a.question?.question_text}</span>
+                      <span className="text-[#8480a1] text-xs truncate">{a.question?.question_text}</span>
                     </div>
                     {cfg && (
                       <span className="rounded-full px-3 py-1 text-xs font-fredoka flex-shrink-0" style={{ background: cfg.bg, color: cfg.color }}>

@@ -2,11 +2,37 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
+import { createClient } from '../../lib/supabase'
 import BackButton from '@/components/BackButton'
+import Spinner from '@/components/Spinner'
 
 export default function MotDePasseOublie() {
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleEnvoyer = async () => {
+    if (!email.trim() || loading) return
+    setLoading(true)
+    setError('')
+    const supabase = createClient()
+    // On ne redemande jamais un délai précis à Supabase : redirectTo pointe
+    // vers la page qui gère la suite du lien reçu par email.
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/nouveau-mot-de-passe`,
+    })
+    setLoading(false)
+    // Par sécurité, Supabase ne distingue pas "email inconnu" d'un envoi
+    // réussi — on affiche donc la confirmation même si le compte n'existe
+    // pas, pour ne pas révéler quels emails sont enregistrés. On affiche
+    // une erreur uniquement pour un vrai souci (email invalide, quota...).
+    if (resetError) {
+      setError("Impossible d'envoyer l'email pour le moment. Réessaie dans quelques instants.")
+      return
+    }
+    setSent(true)
+  }
 
   return (
     <main className="min-h-screen bg-[#0f0e17] flex flex-col items-center justify-center px-6 py-12">
@@ -26,7 +52,7 @@ export default function MotDePasseOublie() {
       </div>
 
       {/* Card */}
-      <div className="w-full max-w-md bg-[#1a1828] border border-[#2a2830] rounded-2xl" style={{ padding: '65px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div className="w-full max-w-md bg-[#1a1828] border border-[#2a2830] rounded-2xl" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
 
         {!sent ? (
           <>
@@ -44,6 +70,12 @@ export default function MotDePasseOublie() {
               Pas de panique ! Entre ton email et on t'envoie un lien pour le réinitialiser.
             </p>
 
+            {error && (
+              <div className="bg-[#2e1a1a] border border-[#ff6b6b] rounded-xl px-4 py-3 mb-6">
+                <p className="text-[#ff6b6b] text-sm">{error}</p>
+              </div>
+            )}
+
             <div className="mb-6">
               <label className="block font-fredoka text-[#9b96b8] text-sm mb-2">Adresse email</label>
               <input
@@ -51,16 +83,19 @@ export default function MotDePasseOublie() {
                 placeholder="ton@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-[#0f0e17] border border-[#3a3650] rounded-xl px-4 py-3 text-[#eeeaf8] text-sm outline-none focus:border-[#a78bfa] transition"
+                onKeyDown={(e) => e.key === 'Enter' && handleEnvoyer()}
+                className="w-full bg-[#0f0e17] border border-[#2a2830] rounded-xl px-4 py-3 text-[#eeeaf8] font-fredoka text-sm focus:outline-none focus:border-[#a78bfa] transition placeholder-[#8480a1]"
               />
-              <p className="text-[#6b6880] text-xs mt-2">Tu recevras un lien valable 1 heure.</p>
+              <p className="text-[#827f97] text-xs mt-2">Tu recevras un lien valable 1 heure.</p>
             </div>
 
             <button
-              onClick={() => setSent(true)}
-              className="block w-full bg-[#a78bfa] text-[#0f0e17] rounded-2xl py-4 font-fredoka text-xl hover:opacity-90 transition text-center mb-4"
+              onClick={handleEnvoyer}
+              disabled={loading || !email.trim()}
+              className="flex items-center justify-center gap-2 w-full bg-[#a78bfa] text-[#0f0e17] rounded-2xl py-4 font-fredoka text-xl enabled:hover:opacity-90 transition text-center mb-4 disabled:opacity-60"
             >
-              Envoyer le lien
+              {loading && <Spinner size={18} color="#0f0e17" />}
+              {loading ? 'Envoi...' : 'Envoyer le lien'}
             </button>
 
             <Link

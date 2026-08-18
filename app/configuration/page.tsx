@@ -196,7 +196,7 @@ export default function Configuration() {
           </Link>
         </div>
         {!isInvite && (
-          <Link href="/profil" className="w-10 h-10 rounded-full bg-[#2a1f3d] border-2 border-[#a78bfa] flex items-center justify-center cursor-pointer">
+          <Link href="/profil" className="w-10 h-10 rounded-full bg-[#2a1f3d] border-2 border-[#a78bfa] flex items-center justify-center cursor-pointer hover:opacity-80 transition">
             <div className="w-5 h-5 rounded-full bg-[#a78bfa]"></div>
           </Link>
         )}
@@ -212,7 +212,7 @@ export default function Configuration() {
         <div>
           <p className="font-fredoka text-[#c9c4e0] text-xl mb-4">Choisis tes thèmes</p>
           <div
-            className="w-full bg-[#1a1828] border-2 rounded-xl px-4 py-4 flex justify-between items-center cursor-pointer"
+            className="w-full bg-[#1a1828] border-2 rounded-xl px-4 py-4 flex justify-between items-center cursor-pointer transition hover:bg-[#1e1c2e]"
             style={{ borderColor: dropdownOpen ? '#ffd93d' : '#3a3650', borderRadius: dropdownOpen ? '12px 12px 0 0' : '12px' }}
             onClick={() => setDropdownOpen(!dropdownOpen)}
           >
@@ -235,11 +235,11 @@ export default function Configuration() {
                   placeholder="Rechercher un thème..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full bg-[#0f0e17] border border-[#2a2830] rounded-xl px-3 py-2 text-[#eeeaf8] text-sm outline-none"
+                  className="w-full bg-[#0f0e17] border border-[#2a2830] rounded-xl px-3 py-2 text-[#eeeaf8] text-sm outline-none focus:border-[#a78bfa] transition"
                 />
               </div>
               <div
-                className="flex items-center gap-3 px-4 py-3 cursor-pointer border-b border-[#2a2830] hover:bg-[#1f1e2a]"
+                className="flex items-center gap-3 px-4 py-3 cursor-pointer border-b border-[#2a2830] hover:bg-[#1f1e2a] transition"
                 onClick={toggleAll}
               >
                 <div className={`w-4 h-4 rounded flex items-center justify-center border ${themesSelec.length === themes.length ? 'bg-[#ffd93d] border-[#ffd93d]' : themesSelec.length > 0 ? 'bg-[#2a2830] border-[#ffd93d]' : 'border-[#3a3650] bg-[#0f0e17]'}`}>
@@ -252,13 +252,13 @@ export default function Configuration() {
                 {themesFiltres.map(t => (
                   <div
                     key={t.id}
-                    className="flex items-center gap-3 px-4 py-3 cursor-pointer border-b border-[#1e1c2e] hover:bg-[#1f1e2a]"
+                    className="flex items-center gap-3 px-4 py-3 cursor-pointer border-b border-[#1e1c2e] hover:bg-[#1f1e2a] transition"
                     onClick={() => toggleTheme(t.id)}
                   >
                     <div className="w-2 h-2 rounded-full" style={{ background: t.color }}></div>
                     <span className="text-[#eeeaf8] text-sm font-semibold flex-1">{t.name}</span>
                     {subcategories.filter(s => s.category_id === t.id).length > 0 && (
-                      <span className="text-[#4a4760] text-xs font-fredoka">
+                      <span className="text-[#8480a1] text-xs font-fredoka">
                         {subcategories.filter(s => s.category_id === t.id).length} sous-cat.
                       </span>
                     )}
@@ -278,7 +278,7 @@ export default function Configuration() {
                 return (
                   <span
                     key={id}
-                    className="rounded-full px-3 py-1 font-fredoka text-xs flex items-center gap-2 cursor-pointer"
+                    className="rounded-full px-3 py-1 font-fredoka text-xs flex items-center gap-2 cursor-pointer transition hover:opacity-80"
                     style={{ background: t.bg, border: `1.5px solid ${t.color}`, color: t.color }}
                     onClick={() => toggleTheme(id)}
                   >
@@ -295,7 +295,7 @@ export default function Configuration() {
           <div>
             <p className="font-fredoka text-[#c9c4e0] text-xl mb-2">
               Sous-catégories
-              <span className="text-[#6b6880] text-sm font-sans ml-2">
+              <span className="text-[#827f97] text-sm font-sans ml-2">
                 (optionnel — aucune sélection = toutes incluses)
               </span>
             </p>
@@ -304,7 +304,7 @@ export default function Configuration() {
                 <button
                   key={s.id}
                   onClick={() => toggleSubcat(s.id)}
-                  className="font-fredoka text-sm rounded-xl px-4 py-3"
+                  className="font-fredoka text-sm rounded-xl px-4 py-3 transition hover:opacity-90"
                   style={{
                     background: subcatsSelec.includes(s.id) ? '#1a2a2d' : '#1a1828',
                     border: `2px solid ${subcatsSelec.includes(s.id) ? '#4ecdc4' : '#2a2830'}`,
@@ -316,7 +316,7 @@ export default function Configuration() {
               ))}
             </div>
             {subcatsSelec.length === 0 && (
-              <p className="text-[#6b6880] text-sm mt-2">Aucune sélection = toutes les sous-catégories incluses</p>
+              <p className="text-[#827f97] text-sm mt-2">Aucune sélection = toutes les sous-catégories incluses</p>
             )}
           </div>
         )}
@@ -329,7 +329,7 @@ export default function Configuration() {
               <button
                 key={d.id}
                 onClick={() => toggleDiff(d.id)}
-                className="flex-1 rounded-xl py-4 font-fredoka text-base relative"
+                className="flex-1 rounded-xl py-4 font-fredoka text-base relative transition hover:opacity-90"
                 style={{
                   background: diffSelec.includes(d.id) ? d.bg : '#1a1828',
                   border: `2px solid ${diffSelec.includes(d.id) ? d.color : '#2a2830'}`,
@@ -343,7 +343,7 @@ export default function Configuration() {
             ))}
           </div>
           {diffSelec.length === 0 && (
-            <p className="text-[#6b6880] text-sm mt-2">Aucune sélection = toutes les difficultés incluses</p>
+            <p className="text-[#827f97] text-sm mt-2">Aucune sélection = toutes les difficultés incluses</p>
           )}
         </div>
 
@@ -358,11 +358,11 @@ export default function Configuration() {
                 <button
                   key={m.id}
                   onClick={() => choisirMode(m.id)}
-                  className="flex-1 rounded-xl py-4 font-fredoka text-base"
+                  className={`flex-1 rounded-xl py-4 font-fredoka text-base transition ${locked ? '' : 'hover:opacity-90'}`}
                   style={{
                     background: active ? '#2a1f3d' : '#1a1828',
                     border: `2px solid ${active ? '#a78bfa' : '#2a2830'}`,
-                    color: locked ? '#4a4760' : active ? '#a78bfa' : '#9b96b8',
+                    color: locked ? '#8480a1' : active ? '#a78bfa' : '#9b96b8',
                     cursor: locked ? 'not-allowed' : 'pointer',
                     opacity: locked ? 0.6 : 1,
                     minWidth: '160px',
@@ -388,7 +388,7 @@ export default function Configuration() {
                   <button
                     key={f.key}
                     onClick={() => toggleEvalFiltre(f.key)}
-                    className="font-fredoka text-sm rounded-xl px-4 py-3"
+                    className="font-fredoka text-sm rounded-xl px-4 py-3 transition hover:opacity-90"
                     style={{
                       background: evalFiltreSelec.includes(f.key) ? f.bg : '#1a1828',
                       border: `2px solid ${evalFiltreSelec.includes(f.key) ? f.color : '#2a2830'}`,
@@ -414,7 +414,7 @@ export default function Configuration() {
               <button
                 key={n}
                 onClick={() => setNb(n)}
-                className="flex-1 rounded-xl py-4 font-fredoka text-lg"
+                className="flex-1 rounded-xl py-4 font-fredoka text-lg transition hover:opacity-90"
                 style={{
                   background: nb === n ? '#1a2a2d' : '#1a1828',
                   border: `2px solid ${nb === n ? '#4ecdc4' : '#2a2830'}`,
@@ -435,7 +435,7 @@ export default function Configuration() {
               <button
                 key={t}
                 onClick={() => setTimer(t)}
-                className="flex-1 rounded-xl py-4 font-fredoka text-base"
+                className="flex-1 rounded-xl py-4 font-fredoka text-base transition hover:opacity-90"
                 style={{
                   background: timer === t ? '#2a1e10' : '#1a1828',
                   border: `2px solid ${timer === t ? '#ff9f43' : '#2a2830'}`,
@@ -470,10 +470,10 @@ export default function Configuration() {
         <button
           onClick={handleLancer}
           disabled={lancerDesactive}
-          className="block w-full rounded-2xl py-5 font-fredoka text-2xl transition text-center"
+          className={`block w-full rounded-2xl py-5 font-fredoka text-2xl transition text-center ${lancerDesactive ? '' : 'hover:opacity-90'}`}
           style={{
             background: lancerDesactive ? '#2a2830' : '#ffd93d',
-            color: lancerDesactive ? '#4a4760' : '#0f0e17',
+            color: lancerDesactive ? '#8480a1' : '#0f0e17',
             cursor: lancerDesactive ? 'not-allowed' : 'pointer',
             opacity: lancerDesactive ? 0.7 : 1,
           }}

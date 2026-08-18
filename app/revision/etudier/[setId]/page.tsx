@@ -5,6 +5,8 @@ import { Suspense, useEffect, useRef, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '../../../../lib/supabase'
 import BackButton from '@/components/BackButton'
+import Skeleton from '@/components/Skeleton'
+import Spinner from '@/components/Spinner'
 
 type Card = { id: string, recto: string, verso: string }
 type Mode = 'classique' | 'flashcard'
@@ -188,8 +190,20 @@ function EtudierContent() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#0f0e17] flex items-center justify-center">
-        <p className="font-fredoka text-[#9b96b8] text-xl">Chargement...</p>
+      <main className="min-h-screen bg-[#0f0e17]" style={{ padding: '32px 24px' }}>
+        <div style={{ maxWidth: '700px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '28px' }}>
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <BackButton />
+              <Skeleton width={140} height={18} />
+            </div>
+            <Skeleton width={90} height={30} radius="9999px" />
+          </div>
+          <Skeleton height={6} radius="9999px" />
+          <Skeleton height={38} width="85%" />
+          <Skeleton height={120} radius="16px" />
+          <Skeleton height={64} radius="16px" />
+        </div>
       </main>
     )
   }
@@ -208,7 +222,10 @@ function EtudierContent() {
   if (phase === 'saving') {
     return (
       <main className="min-h-screen bg-[#0f0e17] flex items-center justify-center">
-        <p className="font-fredoka text-[#9b96b8] text-xl">Sauvegarde en cours...</p>
+        <div className="flex items-center gap-3">
+          <Spinner size={20} />
+          <p className="font-fredoka text-[#9b96b8] text-xl">Sauvegarde en cours...</p>
+        </div>
       </main>
     )
   }
@@ -226,22 +243,22 @@ function EtudierContent() {
           <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-8 text-center">
             <p className="font-fredoka text-[#9b96b8] text-sm uppercase tracking-widest mb-3">Session terminée</p>
             <h2 className="font-fredoka text-3xl text-[#eeeaf8] mb-2">{setName}</h2>
-            <p className="font-fredoka text-5xl text-[#ffd93d] mb-2">{finalScore} <span className="text-2xl text-[#6b6880]">/ {cards.length}</span></p>
-            <p className="text-[#6b6880] text-sm">{mode === 'classique' ? 'Mode classique' : 'Mode flashcard'}</p>
+            <p className="font-fredoka text-5xl text-[#ffd93d] mb-2">{finalScore} <span className="text-2xl text-[#827f97]">/ {cards.length}</span></p>
+            <p className="text-[#827f97] text-sm">{mode === 'classique' ? 'Mode classique' : 'Mode flashcard'}</p>
           </div>
 
           <div className="flex gap-3">
             <div className="flex-1 bg-[#1a2e1f] border border-[#1f3a28] rounded-xl p-4 text-center">
               <p className="font-fredoka text-2xl text-[#6bcb77]">{ouiCount}</p>
-              <p className="text-[#6b6880] text-xs">Bonnes</p>
+              <p className="text-[#827f97] text-xs">Bonnes</p>
             </div>
             <div className="flex-1 bg-[#1f1e10] border border-[#3a3210] rounded-xl p-4 text-center">
               <p className="font-fredoka text-2xl text-[#ffd93d]">{enPartieCount}</p>
-              <p className="text-[#6b6880] text-xs">En partie</p>
+              <p className="text-[#827f97] text-xs">En partie</p>
             </div>
             <div className="flex-1 bg-[#2e1a1a] border border-[#3a2020] rounded-xl p-4 text-center">
               <p className="font-fredoka text-2xl text-[#ff6b6b]">{nonCount}</p>
-              <p className="text-[#6b6880] text-xs">Mauvaises</p>
+              <p className="text-[#827f97] text-xs">Mauvaises</p>
             </div>
           </div>
 
@@ -289,7 +306,7 @@ function EtudierContent() {
 
         {/* Mode classique — phase étude : question, réponse libre */}
         {mode === 'classique' && phase === 'etude' && (
-          <>
+          <div key={`classique-etude-${currentCard.id}`} className="coolos-card-transition" style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
             <h2 className="font-fredoka text-3xl text-[#eeeaf8] leading-tight">{prompt}</h2>
             <div>
               <label className="block font-fredoka text-[#9b96b8] text-base mb-3">Ta réponse</label>
@@ -298,28 +315,28 @@ function EtudierContent() {
                 onChange={e => setReponse(e.target.value)}
                 placeholder="Écris ta réponse ici..."
                 rows={4}
-                className="w-full bg-[#1a1828] border border-[#3a3650] rounded-2xl px-5 py-4 text-[#eeeaf8] text-base outline-none resize-none"
+                className="w-full bg-[#1a1828] border border-[#3a3650] rounded-2xl px-5 py-4 text-[#eeeaf8] text-base outline-none resize-none transition"
                 style={{ borderColor: reponse ? '#a78bfa' : '#3a3650' }}
               />
             </div>
             <button
               onClick={handleClassiqueSuivant}
-              className="w-full rounded-2xl py-5 font-fredoka text-xl transition text-center"
+              className="w-full rounded-2xl py-5 font-fredoka text-xl transition text-center hover:opacity-90"
               style={{
                 background: reponse ? '#a78bfa' : '#2a2830',
-                color: reponse ? '#0f0e17' : '#4a4760',
+                color: reponse ? '#0f0e17' : '#8480a1',
                 cursor: reponse ? 'pointer' : 'not-allowed',
               }}
               disabled={!reponse}
             >
               Carte suivante →
             </button>
-          </>
+          </div>
         )}
 
         {/* Mode classique — phase correction : réponse officielle + auto-éval */}
         {mode === 'classique' && phase === 'correction' && (
-          <>
+          <div key={`classique-correction-${currentCard.id}`} className="coolos-card-transition" style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
             <h2 className="font-fredoka text-3xl text-[#eeeaf8] leading-tight">{getPromptAnswer(currentCard).prompt}</h2>
             <div className="bg-[#1a2e1f] border border-[#1f3a28] rounded-2xl px-5 py-4">
               <p className="font-fredoka text-[#6bcb77] text-sm mb-2">La bonne réponse</p>
@@ -343,7 +360,7 @@ function EtudierContent() {
                   <button
                     key={key}
                     onClick={() => setEvalActuelle(key)}
-                    className="flex-1 rounded-xl py-4 font-fredoka text-base"
+                    className="flex-1 rounded-xl py-4 font-fredoka text-base transition hover:opacity-90"
                     style={{
                       background: evalActuelle === key ? val.bg : '#1a1828',
                       border: `2px solid ${evalActuelle === key ? val.color : '#2a2830'}`,
@@ -359,21 +376,21 @@ function EtudierContent() {
             <button
               onClick={handleClassiqueContinuer}
               disabled={!evalActuelle}
-              className="w-full rounded-2xl py-5 font-fredoka text-xl transition text-center"
+              className="w-full rounded-2xl py-5 font-fredoka text-xl transition text-center hover:opacity-90"
               style={{
                 background: evalActuelle ? (evalActuelle === 'oui' ? '#6bcb77' : evalActuelle === 'en_partie' ? '#ffd93d' : '#ff6b6b') : '#2a2830',
-                color: evalActuelle ? '#0f0e17' : '#4a4760',
+                color: evalActuelle ? '#0f0e17' : '#8480a1',
                 cursor: evalActuelle ? 'pointer' : 'not-allowed',
               }}
             >
               {index + 1 >= cards.length ? 'Voir mon résumé →' : 'Continuer →'}
             </button>
-          </>
+          </div>
         )}
 
         {/* Mode flashcard — phase étude : recto/verso aléatoire, révéler ou passer */}
         {mode === 'flashcard' && phase === 'etude' && (
-          <>
+          <div key={`flashcard-etude-${currentCard.id}-${revealed}`} className="coolos-card-transition" style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
             <h2 className="font-fredoka text-3xl text-[#eeeaf8] leading-tight">{prompt}</h2>
             {!revealed ? (
               <>
@@ -384,13 +401,13 @@ function EtudierContent() {
                     onChange={e => setReponse(e.target.value)}
                     placeholder="(optionnel — juste pour t'aider à réfléchir avant de révéler)"
                     rows={3}
-                    className="w-full bg-[#1a1828] border border-[#3a3650] rounded-2xl px-5 py-4 text-[#eeeaf8] text-base outline-none resize-none"
+                    className="w-full bg-[#1a1828] border border-[#3a3650] rounded-2xl px-5 py-4 text-[#eeeaf8] text-base outline-none resize-none transition"
                   />
                 </div>
                 <div className="flex gap-3">
                   <button
                     onClick={handleFlashcardVoirReponse}
-                    className="flex-1 rounded-2xl py-5 font-fredoka text-xl transition text-center"
+                    className="flex-1 rounded-2xl py-5 font-fredoka text-xl transition text-center hover:opacity-90"
                     style={{ background: '#a78bfa', color: '#0f0e17' }}
                   >
                     Voir la réponse →
@@ -422,7 +439,7 @@ function EtudierContent() {
                       <button
                         key={key}
                         onClick={() => handleFlashcardEval(key)}
-                        className="flex-1 rounded-xl py-4 font-fredoka text-base"
+                        className="flex-1 rounded-xl py-4 font-fredoka text-base transition hover:opacity-90"
                         style={{ background: val.bg, border: `2px solid ${val.color}`, color: val.color }}
                       >
                         {val.label}
@@ -433,12 +450,12 @@ function EtudierContent() {
                 </div>
               </>
             )}
-          </>
+          </div>
         )}
 
         {/* Mode flashcard — résumé final : cartes passées, évaluation obligatoire */}
         {mode === 'flashcard' && phase === 'resume' && (
-          <>
+          <div key={`flashcard-resume-${currentCard.id}`} className="coolos-card-transition" style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
             <div className="bg-[#1e1c2e] border border-[#a78bfa] rounded-xl px-4 py-3 text-center">
               <p className="font-fredoka text-[#a78bfa] text-sm">Résumé final — évalue les cartes que tu as passées</p>
             </div>
@@ -454,7 +471,7 @@ function EtudierContent() {
                   <button
                     key={key}
                     onClick={() => handleFlashcardEval(key)}
-                    className="flex-1 rounded-xl py-4 font-fredoka text-base"
+                    className="flex-1 rounded-xl py-4 font-fredoka text-base transition hover:opacity-90"
                     style={{ background: val.bg, border: `2px solid ${val.color}`, color: val.color }}
                   >
                     {val.label}
@@ -463,7 +480,7 @@ function EtudierContent() {
                 ))}
               </div>
             </div>
-          </>
+          </div>
         )}
 
       </div>
@@ -475,7 +492,7 @@ export default function EtudierSet() {
   return (
     <Suspense fallback={
       <main className="min-h-screen bg-[#0f0e17] flex items-center justify-center">
-        <p className="font-fredoka text-[#9b96b8] text-xl">Chargement...</p>
+        <Spinner size={28} label="Chargement" />
       </main>
     }>
       <EtudierContent />

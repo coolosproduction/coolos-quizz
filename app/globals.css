@@ -14,3 +14,98 @@ body {
 .font-fredoka {
   font-family: 'Fredoka One', cursive;
 }
+
+/* ---------------------------------------------------------------------- */
+/* Base d'interaction commune (ajoutée lors de la passe cohérence/fluidité) */
+/* ---------------------------------------------------------------------- */
+
+/* Focus clavier visible et cohérent partout, même sur les éléments qui
+   masquent l'outline par défaut (focus:outline-none). Le !important est
+   volontaire : cette règle est un filet de sécurité d'accessibilité, elle
+   doit gagner sur les utilitaires Tailwind sans qu'on ait à toucher chaque
+   composant individuellement. N'apparaît qu'à la navigation clavier
+   (:focus-visible), jamais au clic souris. */
+:focus-visible {
+  outline: 2px solid #ffd93d !important;
+  outline-offset: 2px !important;
+  border-radius: 6px;
+}
+
+/* Fondu d'entrée doux appliqué à chaque page/écran (chaque <main> monté :
+   changement de route, mais aussi bascule chargement -> contenu ou
+   changement de phase dans une même page, puisque ce sont React qui
+   remonte un nouvel élément). Discret et rapide pour ne pas ralentir
+   l'usage, désactivé pour les personnes qui préfèrent moins de mouvement. */
+@media (prefers-reduced-motion: no-preference) {
+  main {
+    animation: coolos-fade-in 0.28s ease both;
+  }
+}
+
+@keyframes coolos-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Squelette de chargement générique : remplace les listes/cartes qui
+   apparaissent vides puis sautent brutalement au chargement des données.
+   Usage : <div class="coolos-skeleton" style="width:.. ; height:.. "></div> */
+.coolos-skeleton {
+  border-radius: 12px;
+  background: linear-gradient(90deg, #1a1828 25%, #211f33 37%, #1a1828 63%);
+  background-size: 400% 100%;
+  animation: coolos-shimmer 1.4s ease infinite;
+}
+
+@keyframes coolos-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coolos-skeleton {
+    animation: none;
+    background: #1e1c2e;
+  }
+}
+
+/* Petit spinner rond pour les actions ponctuelles (bouton en cours d'envoi,
+   attente de données temps réel courte) — même teinte d'accent que le
+   focus, pour rester dans la même famille visuelle. */
+.coolos-spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid rgba(255, 217, 61, 0.25);
+  border-top-color: #ffd93d;
+  border-radius: 50%;
+  animation: coolos-spin 0.7s linear infinite;
+}
+
+@keyframes coolos-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Transition douce entre deux cartes/questions d'une même séquence (étude de
+   flashcards, correction question par question) : on donne à ce bloc une
+   `key` qui change à chaque carte, ce qui le fait remonter et rejouer ce
+   fondu discret, plutôt que de sauter brutalement à l'état suivant. */
+@media (prefers-reduced-motion: no-preference) {
+  .coolos-card-transition {
+    animation: coolos-fade-in 0.22s ease both;
+  }
+}
+
+/* Anneau de score (page résultats) : se remplit en douceur jusqu'à sa valeur
+   réelle au montage plutôt que d'apparaître déjà plein. */
+@media (prefers-reduced-motion: no-preference) {
+  .coolos-ring-fill {
+    transition: stroke-dashoffset 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}

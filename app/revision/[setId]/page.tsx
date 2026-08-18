@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '../../../lib/supabase'
 import BackButton from '@/components/BackButton'
+import Skeleton, { SkeletonList } from '@/components/Skeleton'
 
 type Card = { id: string, recto: string, verso: string }
 type WorstCard = { card_id: string, recto: string, verso: string, non_count: number, attempts_count: number }
@@ -132,8 +133,19 @@ export default function GererSet() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#0f0e17] flex items-center justify-center">
-        <p className="font-fredoka text-[#9b96b8] text-xl">Chargement...</p>
+      <main className="min-h-screen bg-[#0f0e17]" style={{ padding: '32px 24px 60px' }}>
+        <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '28px' }}>
+          <div className="flex items-center gap-3">
+            <BackButton />
+            <Skeleton width="220px" height={32} />
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <Skeleton height={72} radius="16px" />
+            <Skeleton height={72} radius="16px" />
+            <Skeleton height={72} radius="16px" />
+          </div>
+          <SkeletonList count={3} avatar={false} />
+        </div>
       </main>
     )
   }
@@ -167,17 +179,17 @@ export default function GererSet() {
                   autoFocus
                   className="bg-[#0f0e17] border border-[#a78bfa] rounded-xl px-3 py-2 text-[#eeeaf8] font-fredoka text-xl outline-none"
                 />
-                <button onClick={handleRenommer} className="font-fredoka text-xs rounded-full px-3 py-1.5" style={{ background: '#a78bfa', color: '#0f0e17' }}>
+                <button onClick={handleRenommer} className="font-fredoka text-xs rounded-full px-3 py-1.5 hover:opacity-80 transition" style={{ background: '#a78bfa', color: '#0f0e17' }}>
                   Sauver
                 </button>
-                <button onClick={() => { setRenaming(false); setNameInput(setName) }} className="font-fredoka text-xs text-[#6b6880]">
+                <button onClick={() => { setRenaming(false); setNameInput(setName) }} className="font-fredoka text-xs text-[#827f97] hover:text-[#c9c4e0] transition">
                   Annuler
                 </button>
               </div>
             ) : (
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="font-fredoka text-3xl text-[#eeeaf8]">{setName}</h1>
-                <button onClick={() => setRenaming(true)} className="font-fredoka text-xs text-[#6b6880] hover:text-[#a78bfa] transition">
+                <button onClick={() => setRenaming(true)} className="font-fredoka text-xs text-[#827f97] hover:text-[#a78bfa] transition">
                   Renommer
                 </button>
               </div>
@@ -190,17 +202,17 @@ export default function GererSet() {
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-4 text-center">
               <div className="font-fredoka text-2xl text-[#ffd93d]">{overview.cards_count}</div>
-              <div className="text-[#6b6880] text-xs">Cartes</div>
+              <div className="text-[#827f97] text-xs">Cartes</div>
             </div>
             <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-4 text-center">
               <div className="font-fredoka text-2xl text-[#4ecdc4]">{overview.sessions_count}</div>
-              <div className="text-[#6b6880] text-xs">Sessions</div>
+              <div className="text-[#827f97] text-xs">Sessions</div>
             </div>
             <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-4 text-center">
-              <div className="font-fredoka text-2xl" style={{ color: overview.sessions_count > 0 ? performanceColor(overview.success_rate) : '#6b6880' }}>
+              <div className="font-fredoka text-2xl" style={{ color: overview.sessions_count > 0 ? performanceColor(overview.success_rate) : '#827f97' }}>
                 {overview.sessions_count > 0 ? `${overview.success_rate}%` : '—'}
               </div>
-              <div className="text-[#6b6880] text-xs">Réussite</div>
+              <div className="text-[#827f97] text-xs">Réussite</div>
             </div>
           </div>
         )}
@@ -230,7 +242,7 @@ export default function GererSet() {
             </Link>
           </div>
         ) : (
-          <p className="text-[#6b6880] text-sm text-center">Ajoute au moins une carte ci-dessous pour pouvoir étudier ce set.</p>
+          <p className="text-[#827f97] text-sm text-center">Ajoute au moins une carte ci-dessous pour pouvoir étudier ce set.</p>
         )}
 
         {/* Ajouter une carte */}
@@ -268,7 +280,7 @@ export default function GererSet() {
         {/* Liste des cartes */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {cards.length === 0 ? (
-            <p className="text-[#6b6880] text-sm text-center">Aucune carte pour l'instant.</p>
+            <p className="text-[#827f97] text-sm text-center">Aucune carte pour l'instant.</p>
           ) : cards.map(c => (
             <div key={c.id} className="bg-[#1a1828] border border-[#2a2830] rounded-xl" style={{ padding: '14px 18px' }}>
               {editingId === c.id ? (
@@ -288,10 +300,10 @@ export default function GererSet() {
                     className="w-full bg-[#0f0e17] border border-[#a78bfa] rounded-xl px-4 py-3 text-[#eeeaf8] text-sm outline-none resize-none"
                   />
                   <div className="flex gap-2">
-                    <button onClick={() => handleSauvegarderEdition(c.id)} className="font-fredoka text-xs rounded-full px-4 py-2" style={{ background: '#a78bfa', color: '#0f0e17' }}>
+                    <button onClick={() => handleSauvegarderEdition(c.id)} className="font-fredoka text-xs rounded-full px-4 py-2 hover:opacity-80 transition" style={{ background: '#a78bfa', color: '#0f0e17' }}>
                       Sauvegarder
                     </button>
-                    <button onClick={() => setEditingId(null)} className="font-fredoka text-xs text-[#6b6880]">
+                    <button onClick={() => setEditingId(null)} className="font-fredoka text-xs text-[#827f97] hover:text-[#c9c4e0] transition">
                       Annuler
                     </button>
                   </div>
@@ -299,24 +311,24 @@ export default function GererSet() {
               ) : (
                 <div className="flex justify-between items-start gap-3 flex-wrap">
                   <div className="flex-1 min-w-0" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <p className="text-[#eeeaf8] text-sm"><span className="text-[#6b6880]">Recto : </span>{c.recto}</p>
-                    <p className="text-[#c9c4e0] text-sm"><span className="text-[#6b6880]">Verso : </span>{c.verso}</p>
+                    <p className="text-[#eeeaf8] text-sm"><span className="text-[#827f97]">Recto : </span>{c.recto}</p>
+                    <p className="text-[#c9c4e0] text-sm"><span className="text-[#827f97]">Verso : </span>{c.verso}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <button onClick={() => commencerEdition(c)} className="font-fredoka text-xs text-[#6b6880] hover:text-[#a78bfa] transition">
+                    <button onClick={() => commencerEdition(c)} className="font-fredoka text-xs text-[#827f97] hover:text-[#a78bfa] transition">
                       Modifier
                     </button>
                     {confirmDeleteCard === c.id ? (
                       <>
-                        <button onClick={() => handleSupprimerCarte(c.id)} className="font-fredoka text-xs rounded-full px-3 py-1.5" style={{ background: '#ff6b6b', color: '#0f0e17' }}>
+                        <button onClick={() => handleSupprimerCarte(c.id)} className="font-fredoka text-xs rounded-full px-3 py-1.5 hover:opacity-80 transition" style={{ background: '#ff6b6b', color: '#0f0e17' }}>
                           Confirmer
                         </button>
-                        <button onClick={() => setConfirmDeleteCard(null)} className="font-fredoka text-xs text-[#6b6880]">
+                        <button onClick={() => setConfirmDeleteCard(null)} className="font-fredoka text-xs text-[#827f97] hover:text-[#c9c4e0] transition">
                           Annuler
                         </button>
                       </>
                     ) : (
-                      <button onClick={() => setConfirmDeleteCard(c.id)} className="font-fredoka text-xs text-[#6b6880] hover:text-[#ff6b6b] transition">
+                      <button onClick={() => setConfirmDeleteCard(c.id)} className="font-fredoka text-xs text-[#827f97] hover:text-[#ff6b6b] transition">
                         Supprimer
                       </button>
                     )}
@@ -332,15 +344,15 @@ export default function GererSet() {
           {confirmDeleteSet ? (
             <div className="flex items-center gap-3 justify-center">
               <span className="text-[#9b96b8] text-sm">Supprimer définitivement ce set et toutes ses cartes ?</span>
-              <button onClick={handleSupprimerSet} className="font-fredoka text-sm rounded-full px-4 py-2" style={{ background: '#ff6b6b', color: '#0f0e17' }}>
+              <button onClick={handleSupprimerSet} className="font-fredoka text-sm rounded-full px-4 py-2 hover:opacity-80 transition" style={{ background: '#ff6b6b', color: '#0f0e17' }}>
                 Confirmer
               </button>
-              <button onClick={() => setConfirmDeleteSet(false)} className="font-fredoka text-sm text-[#6b6880]">
+              <button onClick={() => setConfirmDeleteSet(false)} className="font-fredoka text-sm text-[#827f97] hover:text-[#c9c4e0] transition">
                 Annuler
               </button>
             </div>
           ) : (
-            <button onClick={() => setConfirmDeleteSet(true)} className="w-full text-[#6b6880] text-sm font-semibold hover:text-[#ff6b6b] transition text-center">
+            <button onClick={() => setConfirmDeleteSet(true)} className="w-full text-[#827f97] text-sm font-semibold hover:text-[#ff6b6b] transition text-center">
               Supprimer ce set
             </button>
           )}

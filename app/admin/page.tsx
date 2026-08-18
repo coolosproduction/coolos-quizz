@@ -544,7 +544,7 @@ export default function Admin() {
                   <input type="number" min="1" value={suspensionDuree} onChange={e => setSuspensionDuree(e.target.value)} className="w-20 bg-[#0f0e17] border border-[#2a2830] rounded-xl px-3 py-2 text-[#eeeaf8] font-fredoka text-center focus:outline-none focus:border-[#ff9f43]" />
                   <div className="flex gap-1 flex-1">
                     {(['heures', 'jours', 'semaines'] as const).map(u => (
-                      <button key={u} onClick={() => setSuspensionUnite(u)} className="flex-1 font-fredoka text-xs rounded-lg py-2" style={{ background: suspensionUnite === u ? '#2d1f10' : '#0f0e17', border: `1px solid ${suspensionUnite === u ? '#ff9f43' : '#2a2830'}`, color: suspensionUnite === u ? '#ff9f43' : '#6b6880' }}>{u}</button>
+                      <button key={u} onClick={() => setSuspensionUnite(u)} className="flex-1 font-fredoka text-xs rounded-lg py-2" style={{ background: suspensionUnite === u ? '#2d1f10' : '#0f0e17', border: `1px solid ${suspensionUnite === u ? '#ff9f43' : '#2a2830'}`, color: suspensionUnite === u ? '#ff9f43' : '#827f97' }}>{u}</button>
                     ))}
                   </div>
                 </div>
@@ -554,7 +554,7 @@ export default function Admin() {
             <button onClick={appliquerSanction} className="w-full font-fredoka text-lg rounded-2xl py-4 hover:opacity-90 transition" style={{ background: sanctionType === 'bannissement' ? '#ff6b6b' : '#ff9f43', color: '#0f0e17' }}>
               {sanctionType === 'bannissement' ? 'Bannir définitivement' : 'Appliquer la suspension'}
             </button>
-            <button onClick={() => setModalSanction({ open: false, userId: '', pseudo: '' })} className="w-full text-[#6b6880] text-sm font-semibold hover:text-[#9b96b8] transition">Annuler</button>
+            <button onClick={() => setModalSanction({ open: false, userId: '', pseudo: '' })} className="w-full text-[#827f97] text-sm font-semibold hover:text-[#9b96b8] transition">Annuler</button>
           </div>
         </div>
       )}
@@ -581,7 +581,7 @@ export default function Admin() {
                 <button onClick={envoyerMessage} disabled={msgEnvoi || !msgTitre.trim() || !msgContenu.trim()} className="w-full font-fredoka text-lg rounded-2xl py-4 hover:opacity-90 transition disabled:opacity-50" style={{ background: '#a78bfa', color: '#0f0e17' }}>
                   {msgEnvoi ? 'Envoi...' : 'Envoyer →'}
                 </button>
-                <button onClick={() => { setModalMessage({ open: false, userId: '', pseudo: '' }); setMsgTitre(''); setMsgContenu('') }} className="w-full text-[#6b6880] text-sm font-semibold hover:text-[#9b96b8] transition">Annuler</button>
+                <button onClick={() => { setModalMessage({ open: false, userId: '', pseudo: '' }); setMsgTitre(''); setMsgContenu('') }} className="w-full text-[#827f97] text-sm font-semibold hover:text-[#9b96b8] transition">Annuler</button>
               </>
             )}
           </div>
@@ -594,30 +594,30 @@ export default function Admin() {
           <BackButton />
           <div className="font-fredoka text-lg">
             <span className="text-[#ff6b6b]">C</span><span className="text-[#ff9f43]">o</span><span className="text-[#ffd93d]">o</span><span className="text-[#6bcb77]">l</span><span className="text-[#4ecdc4]">o</span><span className="text-[#a78bfa]">s</span>
-            <span className="text-[#6b6880] text-sm"> admin</span>
+            <span className="text-[#827f97] text-sm"> admin</span>
           </div>
         </div>
 
-        <p className="text-[#4a4760] text-xs font-bold uppercase tracking-widest" style={{ padding: '0 20px', marginBottom: '8px' }}>Contenu</p>
+        <p className="text-[#8480a1] text-xs font-bold uppercase tracking-widest" style={{ padding: '0 20px', marginBottom: '8px' }}>Contenu</p>
 
         {[
           { id: 'questions', label: 'Questions', color: '#ffd93d' },
           { id: 'categories', label: 'Catégories', color: '#4ecdc4' },
         ].map(item => (
-          <button key={item.id} onClick={() => setPanel(item.id as any)} className="flex items-center gap-3 font-fredoka text-sm text-left" style={{ padding: '10px 20px', background: panel === item.id ? '#1a1828' : 'transparent', color: panel === item.id ? '#eeeaf8' : '#6b6880', borderRight: panel === item.id ? `3px solid ${item.color}` : '3px solid transparent' }}>
+          <button key={item.id} onClick={() => setPanel(item.id as any)} className="flex items-center gap-3 font-fredoka text-sm text-left transition hover:opacity-80" style={{ padding: '10px 20px', background: panel === item.id ? '#1a1828' : 'transparent', color: panel === item.id ? '#eeeaf8' : '#827f97', borderRight: panel === item.id ? `3px solid ${item.color}` : '3px solid transparent' }}>
             <div className="w-2 h-2 rounded-full" style={{ background: item.color }}></div>
             {item.label}
           </button>
         ))}
 
-        <p className="text-[#4a4760] text-xs font-bold uppercase tracking-widest" style={{ padding: '16px 20px 8px' }}>Communauté</p>
+        <p className="text-[#8480a1] text-xs font-bold uppercase tracking-widest" style={{ padding: '16px 20px 8px' }}>Communauté</p>
 
-        <button onClick={() => setPanel('users')} className="flex items-center gap-3 font-fredoka text-sm text-left" style={{ padding: '10px 20px', background: panel === 'users' ? '#1a1828' : 'transparent', color: panel === 'users' ? '#eeeaf8' : '#6b6880', borderRight: panel === 'users' ? '3px solid #a78bfa' : '3px solid transparent' }}>
+        <button onClick={() => setPanel('users')} className="flex items-center gap-3 font-fredoka text-sm text-left transition hover:opacity-80" style={{ padding: '10px 20px', background: panel === 'users' ? '#1a1828' : 'transparent', color: panel === 'users' ? '#eeeaf8' : '#827f97', borderRight: panel === 'users' ? '3px solid #a78bfa' : '3px solid transparent' }}>
           <div className="w-2 h-2 rounded-full bg-[#a78bfa]"></div>
           Utilisateurs
         </button>
 
-        <button onClick={() => setPanel('messages')} className="flex items-center gap-3 font-fredoka text-sm text-left" style={{ padding: '10px 20px', background: panel === 'messages' ? '#1a1828' : 'transparent', color: panel === 'messages' ? '#eeeaf8' : '#6b6880', borderRight: panel === 'messages' ? '3px solid #ff9f43' : '3px solid transparent' }}>
+        <button onClick={() => setPanel('messages')} className="flex items-center gap-3 font-fredoka text-sm text-left transition hover:opacity-80" style={{ padding: '10px 20px', background: panel === 'messages' ? '#1a1828' : 'transparent', color: panel === 'messages' ? '#eeeaf8' : '#827f97', borderRight: panel === 'messages' ? '3px solid #ff9f43' : '3px solid transparent' }}>
           <div className="w-2 h-2 rounded-full bg-[#ff9f43]"></div>
           <span style={{ flex: 1 }}>Messages</span>
           {nonLus > 0 && (
@@ -627,8 +627,8 @@ export default function Admin() {
 
         {isOwner && (
           <>
-            <p className="text-[#4a4760] text-xs font-bold uppercase tracking-widest" style={{ padding: '16px 20px 8px' }}>Propriétaire</p>
-            <button onClick={() => setPanel('roles')} className="flex items-center gap-3 font-fredoka text-sm text-left" style={{ padding: '10px 20px', background: panel === 'roles' ? '#1a1828' : 'transparent', color: panel === 'roles' ? '#eeeaf8' : '#6b6880', borderRight: panel === 'roles' ? '3px solid #ffd93d' : '3px solid transparent' }}>
+            <p className="text-[#8480a1] text-xs font-bold uppercase tracking-widest" style={{ padding: '16px 20px 8px' }}>Propriétaire</p>
+            <button onClick={() => setPanel('roles')} className="flex items-center gap-3 font-fredoka text-sm text-left transition hover:opacity-80" style={{ padding: '10px 20px', background: panel === 'roles' ? '#1a1828' : 'transparent', color: panel === 'roles' ? '#eeeaf8' : '#827f97', borderRight: panel === 'roles' ? '3px solid #ffd93d' : '3px solid transparent' }}>
               <div className="w-2 h-2 rounded-full bg-[#ffd93d]"></div>
               Rôles
             </button>
@@ -638,7 +638,7 @@ export default function Admin() {
         <div style={{ flex: 1 }}></div>
         <div style={{ padding: '16px 20px', borderTop: '1px solid #1e1c2e' }}>
           <p className="font-fredoka text-sm text-[#9b96b8]">{isOwner ? 'Propriétaire' : 'Admin'}</p>
-          <p className="text-xs text-[#6b6880]">connecté</p>
+          <p className="text-xs text-[#827f97]">connecté</p>
         </div>
       </div>
 
@@ -651,7 +651,7 @@ export default function Admin() {
             <div className="flex justify-between items-start" style={{ marginBottom: '24px' }}>
   <div>
     <h2 className="font-fredoka text-2xl text-[#eeeaf8]">Questions</h2>
-    <p className="text-[#6b6880] text-sm" style={{ marginTop: '4px' }}>Gérer toutes les questions du quiz</p>
+    <p className="text-[#827f97] text-sm" style={{ marginTop: '4px' }}>Gérer toutes les questions du quiz</p>
   </div>
   <div className="flex gap-2">
     <Link href="/admin/questions/import" className="font-fredoka text-sm hover:opacity-80 transition" style={{ border: '1.5px solid #4ecdc4', color: '#4ecdc4', borderRadius: '12px', padding: '10px 20px' }}>Importer CSV</Link>
@@ -661,32 +661,32 @@ export default function Admin() {
             <div className="grid grid-cols-3 gap-4" style={{ marginBottom: '24px' }}>
               <div className="bg-[#1a1828] border border-[#2a2830] rounded-xl p-4 text-center">
                 <div className="font-fredoka text-2xl text-[#ffd93d]">{questionsTotalCount.toLocaleString()}</div>
-                <div className="text-[#6b6880] text-xs" style={{ marginTop: '4px' }}>Questions totales</div>
+                <div className="text-[#827f97] text-xs" style={{ marginTop: '4px' }}>Questions totales</div>
               </div>
               <div className="bg-[#1a1828] border border-[#2a2830] rounded-xl p-4 text-center">
                 <div className="font-fredoka text-2xl text-[#6bcb77]">{questionsActiveCount.toLocaleString()}</div>
-                <div className="text-[#6b6880] text-xs" style={{ marginTop: '4px' }}>Actives</div>
+                <div className="text-[#827f97] text-xs" style={{ marginTop: '4px' }}>Actives</div>
               </div>
               <div className="bg-[#1a1828] border border-[#2a2830] rounded-xl p-4 text-center">
                 <div className="font-fredoka text-2xl text-[#ff6b6b]">{(questionsTotalCount - questionsActiveCount).toLocaleString()}</div>
-                <div className="text-[#6b6880] text-xs" style={{ marginTop: '4px' }}>Inactives</div>
+                <div className="text-[#827f97] text-xs" style={{ marginTop: '4px' }}>Inactives</div>
               </div>
             </div>
 
             <input type="text" placeholder="Rechercher une question..." value={search} onChange={e => setSearch(e.target.value)} className="w-full text-[#eeeaf8] text-sm outline-none" style={{ background: '#1a1828', border: `1.5px solid ${search ? '#ffd93d' : '#2a2830'}`, borderRadius: '12px', padding: '12px 16px', marginBottom: '16px' }} />
 
             <div className="grid grid-cols-4 gap-4" style={{ padding: '0 12px', marginBottom: '8px' }}>
-              <p className="text-[#4a4760] text-xs font-bold uppercase tracking-wider col-span-2">Question</p>
-              <p className="text-[#4a4760] text-xs font-bold uppercase tracking-wider">Catégorie / Diff.</p>
-              <p className="text-[#4a4760] text-xs font-bold uppercase tracking-wider text-right">Actions</p>
+              <p className="text-[#8480a1] text-xs font-bold uppercase tracking-wider col-span-2">Question</p>
+              <p className="text-[#8480a1] text-xs font-bold uppercase tracking-wider">Catégorie / Diff.</p>
+              <p className="text-[#8480a1] text-xs font-bold uppercase tracking-wider text-right">Actions</p>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minHeight: '120px' }}>
               {questionsLoading && questions.length === 0 && (
-                <p className="text-[#6b6880] text-sm text-center" style={{ padding: '24px 0' }}>Chargement...</p>
+                <p className="text-[#827f97] text-sm text-center" style={{ padding: '24px 0' }}>Chargement...</p>
               )}
               {!questionsLoading && questions.length === 0 && (
-                <p className="text-[#6b6880] text-sm text-center" style={{ padding: '24px 0' }}>Aucune question trouvée.</p>
+                <p className="text-[#827f97] text-sm text-center" style={{ padding: '24px 0' }}>Aucune question trouvée.</p>
               )}
               {questions.map(q => (
                 <div key={q.id} className="grid grid-cols-4 gap-4 items-center" style={{ background: '#1a1828', border: '1px solid #2a2830', borderRadius: '12px', padding: '12px 16px', opacity: questionsLoading ? 0.5 : 1 }}>
@@ -714,7 +714,7 @@ export default function Admin() {
 
             {/* Pagination */}
             <div className="flex items-center justify-between" style={{ marginTop: '20px' }}>
-              <p className="text-[#6b6880] text-xs">
+              <p className="text-[#827f97] text-xs">
                 {questionsFilteredCount.toLocaleString()} résultat{questionsFilteredCount > 1 ? 's' : ''}
                 {debouncedSearch ? ' (recherche)' : ''} — page {questionsPage} sur {questionsTotalPages}
               </p>
@@ -742,7 +742,7 @@ export default function Admin() {
             <div className="flex justify-between items-start" style={{ marginBottom: '24px' }}>
               <div>
                 <h2 className="font-fredoka text-2xl text-[#eeeaf8]">Catégories</h2>
-                <p className="text-[#6b6880] text-sm" style={{ marginTop: '4px' }}>Gérer les thèmes et sous-catégories</p>
+                <p className="text-[#827f97] text-sm" style={{ marginTop: '4px' }}>Gérer les thèmes et sous-catégories</p>
               </div>
               <Link href="/admin/categorie/nouvelle" className="font-fredoka text-sm hover:opacity-90 transition" style={{ background: '#ffd93d', color: '#0f0e17', borderRadius: '12px', padding: '10px 20px' }}>+ Ajouter</Link>
             </div>
@@ -750,15 +750,15 @@ export default function Admin() {
             <div className="grid grid-cols-3 gap-4" style={{ marginBottom: '24px' }}>
               <div className="bg-[#1a1828] border border-[#2a2830] rounded-xl p-4 text-center">
                 <div className="font-fredoka text-2xl text-[#4ecdc4]">{categories.length}</div>
-                <div className="text-[#6b6880] text-xs" style={{ marginTop: '4px' }}>Catégories</div>
+                <div className="text-[#827f97] text-xs" style={{ marginTop: '4px' }}>Catégories</div>
               </div>
               <div className="bg-[#1a1828] border border-[#2a2830] rounded-xl p-4 text-center">
                 <div className="font-fredoka text-2xl text-[#6bcb77]">{categories.filter(c => c.active).length}</div>
-                <div className="text-[#6b6880] text-xs" style={{ marginTop: '4px' }}>Actives</div>
+                <div className="text-[#827f97] text-xs" style={{ marginTop: '4px' }}>Actives</div>
               </div>
               <div className="bg-[#1a1828] border border-[#2a2830] rounded-xl p-4 text-center">
                 <div className="font-fredoka text-2xl text-[#a78bfa]">{subcategories.length}</div>
-                <div className="text-[#6b6880] text-xs" style={{ marginTop: '4px' }}>Sous-catégories</div>
+                <div className="text-[#827f97] text-xs" style={{ marginTop: '4px' }}>Sous-catégories</div>
               </div>
             </div>
 
@@ -779,7 +779,7 @@ export default function Admin() {
                       </button>
                       <div className="w-2 h-2 rounded-full bg-[#4ecdc4]"></div>
                       <span className="font-fredoka text-[#eeeaf8] text-sm" style={{ flex: 1 }}>{c.name}</span>
-                      <span className="text-[#6b6880] text-xs">{c.count} questions</span>
+                      <span className="text-[#827f97] text-xs">{c.count} questions</span>
                       {subs.length > 0 && (
                         <span className="font-fredoka text-xs rounded-full px-2 py-0.5" style={{ background: '#1a2a2d', color: '#4ecdc4' }}>
                           {subs.length} sous-cat.
@@ -800,7 +800,7 @@ export default function Admin() {
                     {isExpanded && (
                       <div style={{ background: '#141320', border: '1px solid #4ecdc4', borderTop: 'none', borderRadius: '0 0 12px 12px', padding: '8px 16px 12px' }}>
                         {subs.length === 0 && (
-                          <p className="text-[#4a4760] text-xs font-fredoka py-2">Aucune sous-catégorie pour l'instant</p>
+                          <p className="text-[#8480a1] text-xs font-fredoka py-2">Aucune sous-catégorie pour l'instant</p>
                         )}
                         {subs.map(s => (
                           <div key={s.id} className="flex items-center gap-3 py-2" style={{ borderBottom: '1px solid #1e1c2e' }}>
@@ -830,7 +830,7 @@ export default function Admin() {
                             <button onClick={() => addSubcategory(c.id)} className="font-fredoka text-sm rounded-xl px-4 py-2 hover:opacity-90 transition" style={{ background: '#4ecdc4', color: '#0f0e17' }}>
                               Ajouter
                             </button>
-                            <button onClick={() => { setAddingSubFor(null); setNewSubName('') }} className="font-fredoka text-sm text-[#6b6880] hover:text-[#9b96b8] transition">
+                            <button onClick={() => { setAddingSubFor(null); setNewSubName('') }} className="font-fredoka text-sm text-[#827f97] hover:text-[#9b96b8] transition">
                               Annuler
                             </button>
                           </div>
@@ -857,21 +857,21 @@ export default function Admin() {
           <div>
             <div style={{ marginBottom: '24px' }}>
               <h2 className="font-fredoka text-2xl text-[#eeeaf8]">Utilisateurs</h2>
-              <p className="text-[#6b6880] text-sm" style={{ marginTop: '4px' }}>Classés par questions répondues</p>
+              <p className="text-[#827f97] text-sm" style={{ marginTop: '4px' }}>Classés par questions répondues</p>
             </div>
 
             <div className="grid grid-cols-3 gap-4" style={{ marginBottom: '24px' }}>
               <div className="bg-[#1a1828] border border-[#2a2830] rounded-xl p-4 text-center">
                 <div className="font-fredoka text-2xl text-[#a78bfa]">{users.length}</div>
-                <div className="text-[#6b6880] text-xs" style={{ marginTop: '4px' }}>Inscrits</div>
+                <div className="text-[#827f97] text-xs" style={{ marginTop: '4px' }}>Inscrits</div>
               </div>
               <div className="bg-[#1a1828] border border-[#2a2830] rounded-xl p-4 text-center">
                 <div className="font-fredoka text-2xl text-[#6bcb77]">{users.filter(u => u.questions > 0).length}</div>
-                <div className="text-[#6b6880] text-xs" style={{ marginTop: '4px' }}>Ont joué</div>
+                <div className="text-[#827f97] text-xs" style={{ marginTop: '4px' }}>Ont joué</div>
               </div>
               <div className="bg-[#1a1828] border border-[#2a2830] rounded-xl p-4 text-center">
                 <div className="font-fredoka text-2xl text-[#ffd93d]">{totalQuestions.toLocaleString()}</div>
-                <div className="text-[#6b6880] text-xs" style={{ marginTop: '4px' }}>Questions répondues</div>
+                <div className="text-[#827f97] text-xs" style={{ marginTop: '4px' }}>Questions répondues</div>
               </div>
             </div>
 
@@ -881,7 +881,7 @@ export default function Admin() {
                 return (
                   <div key={u.id} style={{ background: badge ? (u.statut === 'banni' ? '#1a0f0f' : '#1a1510') : (i === 0 ? '#1f1e10' : '#1a1828'), border: `1px solid ${badge ? badge.color : (i === 0 ? '#ffd93d' : '#2a2830')}`, borderRadius: '12px', padding: '12px 16px' }}>
                     <div className="flex items-center gap-4">
-                      <div className="font-fredoka text-sm w-6 flex-shrink-0" style={{ color: i === 0 ? '#ffd93d' : i === 1 ? '#9b96b8' : i === 2 ? '#ff9f43' : '#4a4760' }}>{i + 1}</div>
+                      <div className="font-fredoka text-sm w-6 flex-shrink-0" style={{ color: i === 0 ? '#ffd93d' : i === 1 ? '#9b96b8' : i === 2 ? '#ff9f43' : '#8480a1' }}>{i + 1}</div>
                       <div className="flex items-center gap-3 flex-1">
                         <Avatar url={u.avatar_url} size={32} border="subtle" />
                         <div>
@@ -890,7 +890,7 @@ export default function Admin() {
                             <RoleBadge role={u.role} isPremium={u.is_premium} />
                             {badge && <span className="font-fredoka text-xs rounded-full px-2 py-0.5" style={{ background: badge.bg, color: badge.color }}>{badge.label}</span>}
                           </div>
-                          <p className="text-[#4a4760] text-xs">{u.email}</p>
+                          <p className="text-[#8480a1] text-xs">{u.email}</p>
                         </div>
                       </div>
                       <div className="font-fredoka text-sm w-16 text-center" style={{ color: '#ffd93d' }}>{u.questions.toLocaleString()}</div>
@@ -917,7 +917,7 @@ export default function Admin() {
           <div>
             <div style={{ marginBottom: '24px' }}>
               <h2 className="font-fredoka text-2xl text-[#eeeaf8]">Rôles</h2>
-              <p className="text-[#6b6880] text-sm" style={{ marginTop: '4px' }}>Attribue ou retire le rôle admin — réservé au propriétaire</p>
+              <p className="text-[#827f97] text-sm" style={{ marginTop: '4px' }}>Attribue ou retire le rôle admin — réservé au propriétaire</p>
             </div>
 
             <input
@@ -934,11 +934,11 @@ export default function Admin() {
             )}
 
             {roleSearch.trim().length === 0 ? (
-              <p className="text-[#6b6880] text-sm">Cherche un pseudo pour lui attribuer ou retirer le rôle admin.</p>
+              <p className="text-[#827f97] text-sm">Cherche un pseudo pour lui attribuer ou retirer le rôle admin.</p>
             ) : roleSearchLoading ? (
-              <p className="text-[#6b6880] text-sm">Recherche...</p>
+              <p className="text-[#827f97] text-sm">Recherche...</p>
             ) : roleResults.length === 0 ? (
-              <p className="text-[#6b6880] text-sm">Aucun joueur trouvé.</p>
+              <p className="text-[#827f97] text-sm">Aucun joueur trouvé.</p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {roleResults.map(r => (
@@ -947,12 +947,12 @@ export default function Admin() {
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       <p className="font-fredoka text-[#eeeaf8] text-sm truncate">{r.pseudo}</p>
                       <RoleBadge role={r.role} isPremium={r.is_premium} />
-                      {r.user_id === myUserId && <span className="text-[#6b6880] text-xs flex-shrink-0">(toi)</span>}
+                      {r.user_id === myUserId && <span className="text-[#827f97] text-xs flex-shrink-0">(toi)</span>}
                     </div>
                     {r.role === 'owner' ? (
-                      <span className="text-[#4a4760] text-xs flex-shrink-0">Rôle non modifiable ici</span>
+                      <span className="text-[#8480a1] text-xs flex-shrink-0">Rôle non modifiable ici</span>
                     ) : r.user_id === myUserId ? (
-                      <span className="text-[#4a4760] text-xs flex-shrink-0">Tu ne peux pas modifier ton propre rôle</span>
+                      <span className="text-[#8480a1] text-xs flex-shrink-0">Tu ne peux pas modifier ton propre rôle</span>
                     ) : (
                       <button
                         onClick={() => toggleAdminRole(r)}
@@ -977,27 +977,27 @@ export default function Admin() {
           <div>
             <div style={{ marginBottom: '24px' }}>
               <h2 className="font-fredoka text-2xl text-[#eeeaf8]">Messages & Signalements</h2>
-              <p className="text-[#6b6880] text-sm" style={{ marginTop: '4px' }}>Messages des utilisateurs et signalements de questions</p>
+              <p className="text-[#827f97] text-sm" style={{ marginTop: '4px' }}>Messages des utilisateurs et signalements de questions</p>
             </div>
 
             <div className="grid grid-cols-3 gap-4" style={{ marginBottom: '24px' }}>
               <div className="bg-[#1a1828] border border-[#2a2830] rounded-xl p-4 text-center">
                 <div className="font-fredoka text-2xl text-[#ff9f43]">{messages.length}</div>
-                <div className="text-[#6b6880] text-xs" style={{ marginTop: '4px' }}>Total</div>
+                <div className="text-[#827f97] text-xs" style={{ marginTop: '4px' }}>Total</div>
               </div>
               <div className="bg-[#1a1828] border border-[#2a2830] rounded-xl p-4 text-center">
                 <div className="font-fredoka text-2xl text-[#ff6b6b]">{nonLus}</div>
-                <div className="text-[#6b6880] text-xs" style={{ marginTop: '4px' }}>Non lus</div>
+                <div className="text-[#827f97] text-xs" style={{ marginTop: '4px' }}>Non lus</div>
               </div>
               <div className="bg-[#1a1828] border border-[#2a2830] rounded-xl p-4 text-center">
                 <div className="font-fredoka text-2xl text-[#6bcb77]">{messages.filter(m => m.lu).length}</div>
-                <div className="text-[#6b6880] text-xs" style={{ marginTop: '4px' }}>Traités</div>
+                <div className="text-[#827f97] text-xs" style={{ marginTop: '4px' }}>Traités</div>
               </div>
             </div>
 
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center" style={{ padding: '60px 0' }}>
-                <p className="font-fredoka text-[#4a4760] text-xl">Aucun message pour l'instant</p>
+                <p className="font-fredoka text-[#8480a1] text-xl">Aucun message pour l'instant</p>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -1011,10 +1011,10 @@ export default function Admin() {
                         <span className="font-fredoka text-sm text-[#eeeaf8]">{m.pseudo}</span>
                         {!m.lu && <span className="font-fredoka text-xs rounded-full px-2 py-0.5" style={{ background: '#ff6b6b', color: '#fff' }}>Nouveau</span>}
                       </div>
-                      <span className="text-[#4a4760] text-xs">{new Date(m.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                      <span className="text-[#8480a1] text-xs">{new Date(m.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                     {m.sujet && m.type === 'message' && <p className="font-fredoka text-[#c9c4e0] text-sm" style={{ marginBottom: '6px' }}>Sujet : {m.sujet}</p>}
-                    {m.question_id && <p className="text-[#6b6880] text-xs" style={{ marginBottom: '6px' }}>Question ID : <span className="text-[#9b96b8]">{m.question_id}</span></p>}
+                    {m.question_id && <p className="text-[#827f97] text-xs" style={{ marginBottom: '6px' }}>Question ID : <span className="text-[#9b96b8]">{m.question_id}</span></p>}
                     <p className="text-[#9b96b8] text-sm" style={{ marginBottom: '12px', lineHeight: '1.5' }}>{m.contenu}</p>
                     <div className="flex items-center gap-3">
                       {!m.lu && <button onClick={() => marquerLu(m.id)} className="font-fredoka text-xs hover:opacity-80 transition rounded-lg px-3 py-1.5" style={{ background: '#1a2e1f', color: '#6bcb77', border: '1px solid #1f3a28' }}>✓ Marquer comme lu</button>}

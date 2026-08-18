@@ -41,7 +41,7 @@ export default function StatRing({ value, label, sublabel, color, size = 120, st
           <span className="font-fredoka text-xl" style={{ color }}>{label}</span>
         </div>
       </div>
-      {sublabel && <p className="text-[#6b6880] text-xs text-center">{sublabel}</p>}
+      {sublabel && <p className="text-[#827f97] text-xs text-center">{sublabel}</p>}
     </div>
   )
 }

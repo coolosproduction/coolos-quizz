@@ -10,6 +10,7 @@ import RoleBadge from '@/components/RoleBadge'
 import LineChartScore, { ScorePoint } from '@/components/charts/LineChartScore'
 import BarList from '@/components/charts/BarList'
 import StatRing from '@/components/charts/StatRing'
+import Skeleton, { SkeletonRow } from '@/components/Skeleton'
 
 type Stats = {
   pseudo: string
@@ -300,8 +301,24 @@ export default function Profil() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#0f0e17] flex items-center justify-center">
-        <p className="font-fredoka text-[#9b96b8] text-xl">Chargement...</p>
+      <main className="min-h-screen bg-[#0f0e17]" style={{ padding: '32px 24px' }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+          <div className="flex items-center gap-5">
+            <Skeleton width={80} height={80} radius="9999px" />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <Skeleton width={160} height={22} />
+              <Skeleton width={120} height={13} />
+            </div>
+          </div>
+          <Skeleton height={48} radius="12px" />
+          <div className="grid grid-cols-3 gap-4">
+            <Skeleton height={90} radius="16px" />
+            <Skeleton height={90} radius="16px" />
+            <Skeleton height={90} radius="16px" />
+          </div>
+          <SkeletonRow avatar={false} />
+          <SkeletonRow avatar={false} />
+        </div>
       </main>
     )
   }
@@ -338,7 +355,7 @@ export default function Profil() {
               <h2 className="font-fredoka text-3xl text-[#eeeaf8]">{stats.pseudo}</h2>
               <RoleBadge role={stats.role} isPremium={stats.isPremium} size="sm" />
             </div>
-            <p className="text-[#6b6880] text-sm">Membre depuis {stats.depuis}</p>
+            <p className="text-[#827f97] text-sm">Membre depuis {stats.depuis}</p>
             <div className="flex gap-2 mt-2">
               <Link href="/profil/modifier" className="border border-[#3a3650] text-[#9b96b8] rounded-full px-4 py-1 font-fredoka text-sm hover:bg-[#1e1c2e] transition">
                 Modifier le profil
@@ -354,21 +371,21 @@ export default function Profil() {
         <div className="flex bg-[#1a1828] rounded-xl p-1 gap-1">
           <button
             onClick={() => setOnglet('stats')}
-            className="flex-1 text-center font-fredoka text-sm py-3 rounded-lg"
+            className="flex-1 text-center font-fredoka text-sm py-3 rounded-lg transition hover:opacity-80"
             style={{ background: onglet === 'stats' ? '#0f0e17' : 'transparent', color: onglet === 'stats' ? '#eeeaf8' : '#9b96b8' }}
           >
             Statistiques
           </button>
           <button
             onClick={() => setOnglet('categories')}
-            className="flex-1 text-center font-fredoka text-sm py-3 rounded-lg"
+            className="flex-1 text-center font-fredoka text-sm py-3 rounded-lg transition hover:opacity-80"
             style={{ background: onglet === 'categories' ? '#0f0e17' : 'transparent', color: onglet === 'categories' ? '#eeeaf8' : '#9b96b8' }}
           >
             Par catégorie
           </button>
           <button
             onClick={() => setOnglet('messages')}
-            className="flex-1 text-center font-fredoka text-sm py-3 rounded-lg relative"
+            className="flex-1 text-center font-fredoka text-sm py-3 rounded-lg relative transition hover:opacity-80"
             style={{ background: onglet === 'messages' ? '#0f0e17' : 'transparent', color: onglet === 'messages' ? '#eeeaf8' : '#9b96b8' }}
           >
             Messages
@@ -383,7 +400,7 @@ export default function Profil() {
           </button>
           <button
             onClick={ouvrirOngletPremium}
-            className="flex-1 text-center font-fredoka text-sm py-3 rounded-lg"
+            className="flex-1 text-center font-fredoka text-sm py-3 rounded-lg transition hover:opacity-90"
             style={{ background: onglet === 'premium' ? '#0f0e17' : 'transparent', color: onglet === 'premium' ? '#ffd93d' : '#9b96b8' }}
           >
             ★ Stats avancées
@@ -392,19 +409,19 @@ export default function Profil() {
 
         {/* Panel stats globales */}
         {onglet === 'stats' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', animation: 'coolos-fade-in 0.2s ease both' }}>
             <div className="grid grid-cols-3 gap-4">
               <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-5 text-center">
                 <div className="font-fredoka text-3xl text-[#ffd93d] mb-1">{stats.totalQuestions}</div>
-                <div className="text-[#6b6880] text-sm">Questions</div>
+                <div className="text-[#827f97] text-sm">Questions</div>
               </div>
               <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-5 text-center">
                 <div className="font-fredoka text-3xl text-[#6bcb77] mb-1">{stats.tauxReussite}%</div>
-                <div className="text-[#6b6880] text-sm">Réussite</div>
+                <div className="text-[#827f97] text-sm">Réussite</div>
               </div>
               <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-5 text-center">
                 <div className="font-fredoka text-3xl text-[#4ecdc4] mb-1">{stats.totalParties}</div>
-                <div className="text-[#6b6880] text-sm">Parties</div>
+                <div className="text-[#827f97] text-sm">Parties</div>
               </div>
             </div>
 
@@ -462,11 +479,11 @@ export default function Profil() {
 
         {/* Panel par catégorie */}
         {onglet === 'categories' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', animation: 'coolos-fade-in 0.2s ease both' }}>
             {statsCategories.length === 0 ? (
               <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-10 text-center">
                 <p className="font-fredoka text-[#9b96b8] text-xl mb-2">Aucune donnée</p>
-                <p className="text-[#6b6880] text-sm">Joue quelques parties pour voir tes stats par catégorie.</p>
+                <p className="text-[#827f97] text-sm">Joue quelques parties pour voir tes stats par catégorie.</p>
               </div>
             ) : (
               statsCategories.map((cat) => (
@@ -474,7 +491,7 @@ export default function Profil() {
                   <div className="flex justify-between items-center mb-3">
                     <span className="font-fredoka text-[#eeeaf8] text-base">{cat.nom}</span>
                     <div className="flex items-center gap-3">
-                      <span className="text-[#6b6880] text-xs">{cat.total} questions</span>
+                      <span className="text-[#827f97] text-xs">{cat.total} questions</span>
                       <span className="font-fredoka text-sm" style={{ color: cat.taux >= 70 ? '#6bcb77' : cat.taux >= 40 ? '#ffd93d' : '#ff6b6b' }}>
                         {cat.taux}%
                       </span>
@@ -498,11 +515,11 @@ export default function Profil() {
 
         {/* Panel messages */}
         {onglet === 'messages' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', animation: 'coolos-fade-in 0.2s ease both' }}>
             {notifications.length === 0 ? (
               <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-10 text-center">
                 <p className="font-fredoka text-[#9b96b8] text-xl mb-2">Aucun message</p>
-                <p className="text-[#6b6880] text-sm">Tu recevras ici les messages de l'équipe Coolos.</p>
+                <p className="text-[#827f97] text-sm">Tu recevras ici les messages de l'équipe Coolos.</p>
               </div>
             ) : (
               notifications.map(n => (
@@ -533,7 +550,7 @@ export default function Profil() {
                         </span>
                       )}
                     </div>
-                    <span className="text-[#4a4760] text-xs flex-shrink-0">
+                    <span className="text-[#8480a1] text-xs flex-shrink-0">
                       {new Date(n.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
@@ -568,7 +585,7 @@ export default function Profil() {
 
         {/* Panel stats avancées (premium) */}
         {onglet === 'premium' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', animation: 'coolos-fade-in 0.2s ease both' }}>
             {!hasPremiumAccess ? (
               <div className="bg-[#1a1828] border rounded-2xl p-10 text-center" style={{ borderColor: '#4a3a10' }}>
                 <p className="font-fredoka text-[#ffd93d] text-xl mb-2">★ Fonctionnalité Premium</p>
@@ -579,7 +596,12 @@ export default function Profil() {
                 </p>
               </div>
             ) : premiumLoading && !premiumLoaded ? (
-              <p className="font-fredoka text-[#9b96b8] text-center" style={{ padding: '40px 0' }}>Chargement des statistiques...</p>
+              <>
+                <Skeleton height={220} radius="16px" />
+                <Skeleton height={160} radius="16px" />
+                <Skeleton height={160} radius="16px" />
+                <Skeleton height={180} radius="16px" />
+              </>
             ) : premiumStats ? (
               <>
                 <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl" style={{ padding: '18px 20px' }}>
@@ -643,7 +665,7 @@ export default function Profil() {
                       />
                     </div>
                   ) : (
-                    <p className="text-[#6b6880] text-sm text-center">Pas encore assez de données pour te classer.</p>
+                    <p className="text-[#827f97] text-sm text-center">Pas encore assez de données pour te classer.</p>
                   )}
                 </div>
 
@@ -660,16 +682,16 @@ export default function Profil() {
                       <div className="flex flex-col gap-3 text-center">
                         <div>
                           <div className="font-fredoka text-2xl text-[#4ecdc4]">{premiumStats.multiplayer.gamesPlayed}</div>
-                          <div className="text-[#6b6880] text-sm">Parties jouées</div>
+                          <div className="text-[#827f97] text-sm">Parties jouées</div>
                         </div>
                         <div>
                           <div className="font-fredoka text-2xl text-[#6bcb77]">{premiumStats.multiplayer.gamesWon}</div>
-                          <div className="text-[#6b6880] text-sm">Victoires</div>
+                          <div className="text-[#827f97] text-sm">Victoires</div>
                         </div>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-[#6b6880] text-sm text-center">Pas encore de partie multijoueur jouée.</p>
+                    <p className="text-[#827f97] text-sm text-center">Pas encore de partie multijoueur jouée.</p>
                   )}
                 </div>
 
@@ -680,22 +702,22 @@ export default function Profil() {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="text-center">
                           <div className="font-fredoka text-2xl text-[#ffd93d]">{premiumStats.questionFrequency.distinctQuestions}</div>
-                          <div className="text-[#6b6880] text-sm">Questions distinctes</div>
+                          <div className="text-[#827f97] text-sm">Questions distinctes</div>
                         </div>
                         <div className="text-center">
                           <div className="font-fredoka text-2xl text-[#a78bfa]">{premiumStats.questionFrequency.totalAnswers}</div>
-                          <div className="text-[#6b6880] text-sm">Réponses au total</div>
+                          <div className="text-[#827f97] text-sm">Réponses au total</div>
                         </div>
                       </div>
                       {premiumStats.questionFrequency.mostFrequentText && premiumStats.questionFrequency.mostFrequentCount > 1 && (
                         <div className="bg-[#0f0e17] rounded-xl" style={{ padding: '12px 16px' }}>
-                          <p className="text-[#6b6880] text-xs mb-1">Question la plus rencontrée ({premiumStats.questionFrequency.mostFrequentCount} fois)</p>
+                          <p className="text-[#827f97] text-xs mb-1">Question la plus rencontrée ({premiumStats.questionFrequency.mostFrequentCount} fois)</p>
                           <p className="text-[#c9c4e0] text-sm">{premiumStats.questionFrequency.mostFrequentText}</p>
                         </div>
                       )}
                     </div>
                   ) : (
-                    <p className="text-[#6b6880] text-sm text-center">Pas encore de données.</p>
+                    <p className="text-[#827f97] text-sm text-center">Pas encore de données.</p>
                   )}
                 </div>
 

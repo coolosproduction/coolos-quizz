@@ -7,6 +7,7 @@ import { createClient } from '../../../lib/supabase'
 import Avatar from '@/components/Avatar'
 import BackButton from '@/components/BackButton'
 import RoleBadge from '@/components/RoleBadge'
+import Skeleton, { SkeletonRow } from '@/components/Skeleton'
 
 type Identite = {
   pseudo: string
@@ -221,8 +222,25 @@ export default function ProfilPublic() {
 
   if (checkingAuth || loading) {
     return (
-      <main className="min-h-screen bg-[#0f0e17] flex items-center justify-center">
-        <p className="font-fredoka text-[#9b96b8] text-xl">Chargement...</p>
+      <main className="min-h-screen bg-[#0f0e17]" style={{ padding: '32px 24px 60px' }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl" style={{ padding: '24px' }}>
+            <div className="flex items-center gap-5">
+              <Skeleton width={64} height={64} radius="9999px" />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <Skeleton width={160} height={20} />
+                <Skeleton width={120} height={12} />
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <Skeleton height={90} radius="16px" />
+            <Skeleton height={90} radius="16px" />
+            <Skeleton height={90} radius="16px" />
+          </div>
+          <SkeletonRow avatar={false} />
+          <SkeletonRow avatar={false} />
+        </div>
       </main>
     )
   }
@@ -257,13 +275,13 @@ export default function ProfilPublic() {
                   <RoleBadge role={identite.role} isPremium={identite.is_premium} size="sm" />
                 </div>
                 {stats && (
-                  <p className="text-[#6b6880] text-sm">Rang #{stats.rank} au classement général</p>
+                  <p className="text-[#827f97] text-sm">Rang #{stats.rank} au classement général</p>
                 )}
               </div>
             </div>
 
             {cestMoi ? (
-              <Link href="/profil" className="font-fredoka text-sm rounded-full px-4 py-2 flex-shrink-0" style={{ background: '#2a1f3d', color: '#a78bfa', border: '1px solid #3a2d5a' }}>
+              <Link href="/profil" className="font-fredoka text-sm rounded-full px-4 py-2 flex-shrink-0 transition hover:opacity-80" style={{ background: '#2a1f3d', color: '#a78bfa', border: '1px solid #3a2d5a' }}>
                 C'est toi · Voir ton profil
               </Link>
             ) : meId ? (
@@ -273,7 +291,7 @@ export default function ProfilPublic() {
                     <button
                       onClick={debloquer}
                       disabled={actionLoading}
-                      className="font-fredoka text-sm rounded-full px-4 py-2 disabled:opacity-50"
+                      className="font-fredoka text-sm rounded-full px-4 py-2 disabled:opacity-50 transition hover:opacity-80"
                       style={{ background: 'transparent', color: '#9b96b8', border: '1px solid #3a3650' }}
                     >
                       Débloquer
@@ -284,7 +302,7 @@ export default function ProfilPublic() {
                         <button
                           onClick={envoyerDemande}
                           disabled={actionLoading}
-                          className="font-fredoka text-sm rounded-full px-4 py-2 disabled:opacity-50"
+                          className="font-fredoka text-sm rounded-full px-4 py-2 disabled:opacity-50 transition hover:opacity-90"
                           style={{ background: '#a78bfa', color: '#0f0e17' }}
                         >
                           + Ajouter en ami
@@ -294,7 +312,7 @@ export default function ProfilPublic() {
                         <button
                           onClick={annulerDemande}
                           disabled={actionLoading}
-                          className="font-fredoka text-sm rounded-full px-4 py-2 disabled:opacity-50"
+                          className="font-fredoka text-sm rounded-full px-4 py-2 disabled:opacity-50 transition hover:opacity-80"
                           style={{ background: 'transparent', color: '#9b96b8', border: '1px solid #3a3650' }}
                         >
                           Demande envoyée · Annuler
@@ -305,7 +323,7 @@ export default function ProfilPublic() {
                           <button
                             onClick={() => repondreDemande('accepted')}
                             disabled={actionLoading}
-                            className="font-fredoka text-sm rounded-full px-4 py-2 disabled:opacity-50"
+                            className="font-fredoka text-sm rounded-full px-4 py-2 disabled:opacity-50 transition hover:opacity-90"
                             style={{ background: '#6bcb77', color: '#0f0e17' }}
                           >
                             Accepter
@@ -313,7 +331,7 @@ export default function ProfilPublic() {
                           <button
                             onClick={() => repondreDemande('declined')}
                             disabled={actionLoading}
-                            className="font-fredoka text-sm rounded-full px-4 py-2 disabled:opacity-50"
+                            className="font-fredoka text-sm rounded-full px-4 py-2 disabled:opacity-50 transition hover:opacity-80"
                             style={{ background: 'transparent', color: '#9b96b8', border: '1px solid #3a3650' }}
                           >
                             Refuser
@@ -324,10 +342,10 @@ export default function ProfilPublic() {
                         confirmAction === 'unfriend' ? (
                           <>
                             <span className="text-[#9b96b8] text-xs">Retirer cet ami ?</span>
-                            <button onClick={retirerAmi} disabled={actionLoading} className="font-fredoka text-sm rounded-full px-4 py-2 disabled:opacity-50" style={{ background: '#ff6b6b', color: '#0f0e17' }}>
+                            <button onClick={retirerAmi} disabled={actionLoading} className="font-fredoka text-sm rounded-full px-4 py-2 disabled:opacity-50 transition hover:opacity-90" style={{ background: '#ff6b6b', color: '#0f0e17' }}>
                               Confirmer
                             </button>
-                            <button onClick={() => setConfirmAction(null)} className="font-fredoka text-sm rounded-full px-4 py-2" style={{ background: 'transparent', color: '#9b96b8', border: '1px solid #3a3650' }}>
+                            <button onClick={() => setConfirmAction(null)} className="font-fredoka text-sm rounded-full px-4 py-2 transition hover:opacity-80" style={{ background: 'transparent', color: '#9b96b8', border: '1px solid #3a3650' }}>
                               Annuler
                             </button>
                           </>
@@ -336,7 +354,7 @@ export default function ProfilPublic() {
                             <span className="font-fredoka text-sm rounded-full px-4 py-2" style={{ background: '#1a2e1f', color: '#6bcb77', border: '1px solid #2a4a30' }}>
                               ✓ Amis
                             </span>
-                            <button onClick={() => setConfirmAction('unfriend')} className="font-fredoka text-xs text-[#6b6880] hover:text-[#ff6b6b] transition">
+                            <button onClick={() => setConfirmAction('unfriend')} className="font-fredoka text-xs text-[#827f97] hover:text-[#ff6b6b] transition">
                               Retirer
                             </button>
                           </span>
@@ -345,17 +363,17 @@ export default function ProfilPublic() {
                       {confirmAction === 'block' ? (
                         <span className="flex items-center gap-2">
                           <span className="text-[#9b96b8] text-xs">Bloquer ce joueur ?</span>
-                          <button onClick={bloquer} disabled={actionLoading} className="font-fredoka text-sm rounded-full px-4 py-2 disabled:opacity-50" style={{ background: '#ff6b6b', color: '#0f0e17' }}>
+                          <button onClick={bloquer} disabled={actionLoading} className="font-fredoka text-sm rounded-full px-4 py-2 disabled:opacity-50 transition hover:opacity-90" style={{ background: '#ff6b6b', color: '#0f0e17' }}>
                             Confirmer
                           </button>
-                          <button onClick={() => setConfirmAction(null)} className="font-fredoka text-sm rounded-full px-4 py-2" style={{ background: 'transparent', color: '#9b96b8', border: '1px solid #3a3650' }}>
+                          <button onClick={() => setConfirmAction(null)} className="font-fredoka text-sm rounded-full px-4 py-2 transition hover:opacity-80" style={{ background: 'transparent', color: '#9b96b8', border: '1px solid #3a3650' }}>
                             Annuler
                           </button>
                         </span>
                       ) : (
                         <button
                           onClick={() => setConfirmAction('block')}
-                          className="font-fredoka text-xs text-[#6b6880] hover:text-[#ff6b6b] transition"
+                          className="font-fredoka text-xs text-[#827f97] hover:text-[#ff6b6b] transition"
                           style={{ padding: '8px 4px' }}
                         >
                           Bloquer
@@ -367,7 +385,7 @@ export default function ProfilPublic() {
                 {actionError && <p className="text-[#ff6b6b] text-xs">{actionError}</p>}
               </div>
             ) : (
-              <Link href="/connexion" className="font-fredoka text-sm rounded-full px-4 py-2 flex-shrink-0" style={{ background: '#a78bfa', color: '#0f0e17' }}>
+              <Link href="/connexion" className="font-fredoka text-sm rounded-full px-4 py-2 flex-shrink-0 transition hover:opacity-90" style={{ background: '#a78bfa', color: '#0f0e17' }}>
                 Connexion pour ajouter en ami
               </Link>
             )}
@@ -379,15 +397,15 @@ export default function ProfilPublic() {
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-5 text-center">
               <div className="font-fredoka text-3xl text-[#ffd93d] mb-1">{stats.total_score % 1 === 0 ? stats.total_score : stats.total_score.toFixed(1)}</div>
-              <div className="text-[#6b6880] text-sm">Score total</div>
+              <div className="text-[#827f97] text-sm">Score total</div>
             </div>
             <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-5 text-center">
               <div className="font-fredoka text-3xl text-[#4ecdc4] mb-1">{stats.questions_played}</div>
-              <div className="text-[#6b6880] text-sm">Questions jouées</div>
+              <div className="text-[#827f97] text-sm">Questions jouées</div>
             </div>
             <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-5 text-center">
               <div className="font-fredoka text-3xl text-[#6bcb77] mb-1">{stats.success_rate}%</div>
-              <div className="text-[#6b6880] text-sm">Réussite</div>
+              <div className="text-[#827f97] text-sm">Réussite</div>
             </div>
           </div>
         ) : (
@@ -406,7 +424,7 @@ export default function ProfilPublic() {
                   <div className="flex justify-between items-center mb-3">
                     <span className="font-fredoka text-[#eeeaf8] text-base">{cat.category_name}</span>
                     <div className="flex items-center gap-3">
-                      <span className="text-[#6b6880] text-xs">{cat.questions_played} questions</span>
+                      <span className="text-[#827f97] text-xs">{cat.questions_played} questions</span>
                       <span className="font-fredoka text-sm" style={{ color: cat.success_rate >= 70 ? '#6bcb77' : cat.success_rate >= 40 ? '#ffd93d' : '#ff6b6b' }}>
                         {cat.success_rate}%
                       </span>
@@ -428,7 +446,7 @@ export default function ProfilPublic() {
           </div>
         )}
 
-        <p className="text-[#4a4760] text-xs text-center">
+        <p className="text-[#8480a1] text-xs text-center">
           Seules les statistiques agrégées sont visibles ici — l'historique détaillé des parties reste privé.
         </p>
 

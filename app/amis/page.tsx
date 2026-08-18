@@ -7,6 +7,7 @@ import { createClient } from '../../lib/supabase'
 import Avatar from '@/components/Avatar'
 import BackButton from '@/components/BackButton'
 import RoleBadge from '@/components/RoleBadge'
+import Skeleton, { SkeletonList } from '@/components/Skeleton'
 
 type Identite = { pseudo: string, avatar_url: string | null, role: string | null, is_premium: boolean | null }
 
@@ -137,8 +138,15 @@ export default function Amis() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#0f0e17] flex items-center justify-center">
-        <p className="font-fredoka text-[#9b96b8] text-xl">Chargement...</p>
+      <main className="min-h-screen bg-[#0f0e17]" style={{ padding: '32px 24px 60px' }}>
+        <div style={{ maxWidth: '700px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <Skeleton width={140} height={24} />
+            <Skeleton width={220} height={14} />
+          </div>
+          <Skeleton height={48} radius="12px" />
+          <SkeletonList count={4} />
+        </div>
       </main>
     )
   }
@@ -172,7 +180,7 @@ export default function Amis() {
             <button
               key={t.key}
               onClick={() => setOnglet(t.key)}
-              className="flex-1 text-center font-fredoka text-sm py-3 rounded-lg relative flex-shrink-0"
+              className="flex-1 text-center font-fredoka text-sm py-3 rounded-lg relative flex-shrink-0 transition hover:opacity-80"
               style={{ background: onglet === t.key ? '#0f0e17' : 'transparent', color: onglet === t.key ? '#eeeaf8' : '#9b96b8', minWidth: '110px' }}
             >
               {t.label}
@@ -190,11 +198,11 @@ export default function Amis() {
 
         {/* Amis */}
         {onglet === 'amis' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', animation: 'coolos-fade-in 0.2s ease both' }}>
             {amis.length === 0 ? (
               <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-10 text-center">
                 <p className="font-fredoka text-[#9b96b8] text-lg mb-2">Aucun ami pour l'instant</p>
-                <p className="text-[#6b6880] text-sm">Cherche un joueur depuis le classement pour lui envoyer une demande.</p>
+                <p className="text-[#827f97] text-sm">Cherche un joueur depuis le classement pour lui envoyer une demande.</p>
               </div>
             ) : amis.map(row => {
               const otherId = otherIdOf(row, meId!)
@@ -203,15 +211,15 @@ export default function Amis() {
                   {confirmId === row.id ? (
                     <>
                       <span className="text-[#9b96b8] text-xs">Retirer ?</span>
-                      <button onClick={() => supprimerDemande(row)} disabled={actionLoadingId === row.id} className="font-fredoka text-xs rounded-full px-3 py-1.5 disabled:opacity-50" style={{ background: '#ff6b6b', color: '#0f0e17' }}>
+                      <button onClick={() => supprimerDemande(row)} disabled={actionLoadingId === row.id} className="font-fredoka text-xs rounded-full px-3 py-1.5 disabled:opacity-50 transition hover:opacity-90" style={{ background: '#ff6b6b', color: '#0f0e17' }}>
                         Confirmer
                       </button>
-                      <button onClick={() => setConfirmId(null)} className="font-fredoka text-xs rounded-full px-3 py-1.5" style={{ background: 'transparent', color: '#9b96b8', border: '1px solid #3a3650' }}>
+                      <button onClick={() => setConfirmId(null)} className="font-fredoka text-xs rounded-full px-3 py-1.5 transition hover:opacity-80" style={{ background: 'transparent', color: '#9b96b8', border: '1px solid #3a3650' }}>
                         Annuler
                       </button>
                     </>
                   ) : (
-                    <button onClick={() => setConfirmId(row.id)} className="font-fredoka text-xs text-[#6b6880] hover:text-[#ff6b6b] transition">
+                    <button onClick={() => setConfirmId(row.id)} className="font-fredoka text-xs text-[#827f97] hover:text-[#ff6b6b] transition">
                       Retirer
                     </button>
                   )}
@@ -223,7 +231,7 @@ export default function Amis() {
 
         {/* Demandes reçues */}
         {onglet === 'recues' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', animation: 'coolos-fade-in 0.2s ease both' }}>
             {recues.length === 0 ? (
               <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-10 text-center">
                 <p className="font-fredoka text-[#9b96b8] text-lg">Aucune demande en attente</p>
@@ -233,7 +241,7 @@ export default function Amis() {
                 <button
                   onClick={() => repondre(row, 'accepted')}
                   disabled={actionLoadingId === row.id}
-                  className="font-fredoka text-xs rounded-full px-3 py-1.5 disabled:opacity-50"
+                  className="font-fredoka text-xs rounded-full px-3 py-1.5 disabled:opacity-50 transition hover:opacity-90"
                   style={{ background: '#6bcb77', color: '#0f0e17' }}
                 >
                   Accepter
@@ -241,7 +249,7 @@ export default function Amis() {
                 <button
                   onClick={() => repondre(row, 'declined')}
                   disabled={actionLoadingId === row.id}
-                  className="font-fredoka text-xs rounded-full px-3 py-1.5 disabled:opacity-50"
+                  className="font-fredoka text-xs rounded-full px-3 py-1.5 disabled:opacity-50 transition hover:opacity-80"
                   style={{ background: 'transparent', color: '#9b96b8', border: '1px solid #3a3650' }}
                 >
                   Refuser
@@ -253,7 +261,7 @@ export default function Amis() {
 
         {/* Demandes envoyées */}
         {onglet === 'envoyees' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', animation: 'coolos-fade-in 0.2s ease both' }}>
             {envoyees.length === 0 ? (
               <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-10 text-center">
                 <p className="font-fredoka text-[#9b96b8] text-lg">Aucune demande envoyée</p>
@@ -263,7 +271,7 @@ export default function Amis() {
                 <button
                   onClick={() => supprimerDemande(row)}
                   disabled={actionLoadingId === row.id}
-                  className="font-fredoka text-xs rounded-full px-3 py-1.5 disabled:opacity-50"
+                  className="font-fredoka text-xs rounded-full px-3 py-1.5 disabled:opacity-50 transition hover:opacity-80"
                   style={{ background: 'transparent', color: '#9b96b8', border: '1px solid #3a3650' }}
                 >
                   Annuler
@@ -275,7 +283,7 @@ export default function Amis() {
 
         {/* Bloqués */}
         {onglet === 'bloques' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', animation: 'coolos-fade-in 0.2s ease both' }}>
             {bloques.length === 0 ? (
               <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-10 text-center">
                 <p className="font-fredoka text-[#9b96b8] text-lg">Aucun joueur bloqué</p>
@@ -285,7 +293,7 @@ export default function Amis() {
                 <button
                   onClick={() => debloquer(b.blocked_id)}
                   disabled={actionLoadingId === b.blocked_id}
-                  className="font-fredoka text-xs rounded-full px-3 py-1.5 disabled:opacity-50"
+                  className="font-fredoka text-xs rounded-full px-3 py-1.5 disabled:opacity-50 transition hover:opacity-80"
                   style={{ background: 'transparent', color: '#9b96b8', border: '1px solid #3a3650' }}
                 >
                   Débloquer
@@ -311,7 +319,7 @@ function CarteJoueur({ userId, identites, sousTitre, children }: { userId: strin
             <p className="font-fredoka text-[#eeeaf8] text-sm truncate">{id?.pseudo || 'Joueur'}</p>
             <RoleBadge role={id?.role} isPremium={id?.is_premium} />
           </div>
-          {sousTitre && <p className="text-[#6b6880] text-xs">{sousTitre}</p>}
+          {sousTitre && <p className="text-[#827f97] text-xs">{sousTitre}</p>}
         </div>
       </Link>
       <div className="flex items-center gap-2 flex-shrink-0">{children}</div>

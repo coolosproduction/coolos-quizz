@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '../../../../../lib/supabase'
 import BackButton from '@/components/BackButton'
+import Spinner from '@/components/Spinner'
 
 export default function ModifierCategorie() {
   const router = useRouter()
@@ -55,14 +56,15 @@ export default function ModifierCategorie() {
 
   if (loadingData) {
     return (
-      <div className="min-h-screen bg-[#0f0e17] flex items-center justify-center">
-        <p className="font-fredoka text-[#9b96b8] text-xl">Chargement...</p>
-      </div>
+      <main className="min-h-screen bg-[#0f0e17] flex flex-col items-center justify-center gap-3">
+        <Spinner size={28} />
+        <p className="font-fredoka text-[#9b96b8] text-sm">Chargement...</p>
+      </main>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#0f0e17] flex">
+    <main className="min-h-screen bg-[#0f0e17] flex">
 
       {/* Sidebar */}
       <div style={{ width: '220px', background: '#0a0910', borderRight: '1px solid #1e1c2e', display: 'flex', flexDirection: 'column', padding: '24px 0', flexShrink: 0 }}>
@@ -73,23 +75,23 @@ export default function ModifierCategorie() {
           <span className="text-[#6bcb77]">l</span>
           <span className="text-[#4ecdc4]">o</span>
           <span className="text-[#a78bfa]">s</span>
-          <span className="text-[#6b6880] text-sm"> admin</span>
+          <span className="text-[#827f97] text-sm"> admin</span>
         </div>
 
-        <p className="text-[#4a4760] text-xs font-bold uppercase tracking-widest" style={{ padding: '0 20px', marginBottom: '8px' }}>Contenu</p>
+        <p className="text-[#8480a1] text-xs font-bold uppercase tracking-widest" style={{ padding: '0 20px', marginBottom: '8px' }}>Contenu</p>
 
-        <Link href="/admin" className="flex items-center gap-3 font-fredoka text-sm" style={{ padding: '10px 20px', color: '#6b6880', borderRight: '3px solid transparent' }}>
+        <Link href="/admin" className="flex items-center gap-3 font-fredoka text-sm transition hover:opacity-80" style={{ padding: '10px 20px', color: '#827f97', borderRight: '3px solid transparent' }}>
           <div className="w-2 h-2 rounded-full bg-[#ffd93d]"></div>
           Questions
         </Link>
-        <Link href="/admin" className="flex items-center gap-3 font-fredoka text-sm" style={{ padding: '10px 20px', color: '#eeeaf8', background: '#1a1828', borderRight: '3px solid #4ecdc4' }}>
+        <Link href="/admin" className="flex items-center gap-3 font-fredoka text-sm transition hover:opacity-80" style={{ padding: '10px 20px', color: '#eeeaf8', background: '#1a1828', borderRight: '3px solid #4ecdc4' }}>
           <div className="w-2 h-2 rounded-full bg-[#4ecdc4]"></div>
           Catégories
         </Link>
 
-        <p className="text-[#4a4760] text-xs font-bold uppercase tracking-widest" style={{ padding: '16px 20px 8px' }}>Communauté</p>
+        <p className="text-[#8480a1] text-xs font-bold uppercase tracking-widest" style={{ padding: '16px 20px 8px' }}>Communauté</p>
 
-        <Link href="/admin" className="flex items-center gap-3 font-fredoka text-sm" style={{ padding: '10px 20px', color: '#6b6880', borderRight: '3px solid transparent' }}>
+        <Link href="/admin" className="flex items-center gap-3 font-fredoka text-sm transition hover:opacity-80" style={{ padding: '10px 20px', color: '#827f97', borderRight: '3px solid transparent' }}>
           <div className="w-2 h-2 rounded-full bg-[#a78bfa]"></div>
           Utilisateurs
         </Link>
@@ -97,7 +99,7 @@ export default function ModifierCategorie() {
         <div style={{ flex: 1 }}></div>
         <div style={{ padding: '16px 20px', borderTop: '1px solid #1e1c2e' }}>
           <p className="font-fredoka text-sm text-[#9b96b8]">Admin</p>
-          <p className="text-xs text-[#6b6880]">connecté</p>
+          <p className="text-xs text-[#827f97]">connecté</p>
         </div>
       </div>
 
@@ -109,7 +111,7 @@ export default function ModifierCategorie() {
             <BackButton />
             <div>
               <h2 className="font-fredoka text-2xl text-[#eeeaf8]">Modifier la catégorie</h2>
-              <p className="text-[#6b6880] text-sm" style={{ marginTop: '4px' }}>Modifie le nom ou le statut</p>
+              <p className="text-[#827f97] text-sm" style={{ marginTop: '4px' }}>Modifie le nom ou le statut</p>
             </div>
           </div>
           <Link href="/admin" className="font-fredoka text-sm hover:opacity-80 transition" style={{ border: '1.5px solid #3a3650', color: '#9b96b8', borderRadius: '12px', padding: '10px 20px' }}>
@@ -133,7 +135,7 @@ export default function ModifierCategorie() {
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="Ex: Histoire, Sciences, Sport..."
-              className="w-full text-[#eeeaf8] text-sm outline-none"
+              className="w-full text-[#eeeaf8] text-sm outline-none transition focus:shadow-[0_0_0_3px_rgba(78,205,196,0.25)]"
               style={{ background: '#1a1828', border: `1.5px solid ${name ? '#4ecdc4' : '#3a3650'}`, borderRadius: '14px', padding: '14px 16px' }}
             />
           </div>
@@ -142,11 +144,11 @@ export default function ModifierCategorie() {
           <div className="flex items-center justify-between" style={{ background: '#1a1828', border: '1px solid #2a2830', borderRadius: '14px', padding: '16px 20px' }}>
             <div>
               <p className="font-fredoka text-[#c9c4e0] text-sm">Catégorie active</p>
-              <p className="text-[#6b6880] text-xs" style={{ marginTop: '2px' }}>Visible dans la configuration du quiz</p>
+              <p className="text-[#827f97] text-xs" style={{ marginTop: '2px' }}>Visible dans la configuration du quiz</p>
             </div>
             <div
               onClick={() => setActive(!active)}
-              className="rounded-full cursor-pointer relative"
+              className="rounded-full cursor-pointer relative hover:opacity-90 transition"
               style={{ width: '44px', height: '24px', background: active ? '#6bcb77' : '#2a2830' }}
             >
               <div
@@ -165,7 +167,7 @@ export default function ModifierCategorie() {
               onClick={handleSave}
               disabled={!name || loading}
               className="flex-1 font-fredoka text-lg hover:opacity-90 transition"
-              style={{ background: name ? '#4ecdc4' : '#2a2830', color: name ? '#0f0e17' : '#4a4760', borderRadius: '14px', padding: '14px', cursor: name ? 'pointer' : 'not-allowed' }}
+              style={{ background: name ? '#4ecdc4' : '#2a2830', color: name ? '#0f0e17' : '#8480a1', borderRadius: '14px', padding: '14px', cursor: name ? 'pointer' : 'not-allowed' }}
             >
               {loading ? 'Enregistrement...' : 'Enregistrer les modifications'}
             </button>
@@ -173,6 +175,6 @@ export default function ModifierCategorie() {
 
         </div>
       </div>
-    </div>
+    </main>
   )
 }

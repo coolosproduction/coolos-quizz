@@ -1,0 +1,13 @@
+# Normalise les fins de ligne pour que git compare et diffe le contenu réel
+# plutôt que CRLF vs LF — évite les diffs "fichier entier changé" alors que
+# seul le style de fin de ligne diffère entre éditeurs/OS.
+* text=auto eol=lf
+
+# Binaires : jamais de normalisation de fin de ligne.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary

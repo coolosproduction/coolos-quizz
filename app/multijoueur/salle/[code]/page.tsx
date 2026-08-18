@@ -10,6 +10,8 @@ import BackButton from '@/components/BackButton'
 import Avatar from '@/components/Avatar'
 import ChatPanel from '@/components/ChatPanel'
 import RoleBadge from '@/components/RoleBadge'
+import Skeleton, { SkeletonList } from '@/components/Skeleton'
+import Spinner from '@/components/Spinner'
 
 type Friend = {
   id: string
@@ -378,8 +380,16 @@ export default function SalleAttente() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#0f0e17] flex items-center justify-center">
-        <p className="font-fredoka text-[#9b96b8] text-xl">Chargement...</p>
+      <main className="min-h-screen bg-[#0f0e17]" style={{ padding: '32px 24px 80px' }}>
+        <div style={{ maxWidth: '700px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+          <div className="flex items-center gap-3">
+            <Spinner size={20} />
+            <p className="font-fredoka text-[#9b96b8] text-lg">Connexion à la salle...</p>
+          </div>
+          <Skeleton height={160} radius="16px" />
+          <Skeleton height={48} radius="9999px" width="60%" />
+          <SkeletonList count={3} />
+        </div>
       </main>
     )
   }
@@ -388,7 +398,7 @@ export default function SalleAttente() {
     return (
       <main className="min-h-screen bg-[#0f0e17] flex flex-col items-center justify-center gap-6 px-6 text-center">
         <p className="font-fredoka text-[#ff6b6b] text-xl">{closed}</p>
-        <Link href="/multijoueur" className="bg-[#ffd93d] text-[#0f0e17] rounded-2xl py-3 px-8 font-fredoka text-lg">
+        <Link href="/multijoueur" className="bg-[#ffd93d] text-[#0f0e17] rounded-2xl py-3 px-8 font-fredoka text-lg hover:opacity-90 transition">
           Retour au multijoueur
         </Link>
       </main>
@@ -411,7 +421,7 @@ export default function SalleAttente() {
 
   return (
     <main className="min-h-screen bg-[#0f0e17]" style={{ padding: '32px 24px 80px' }}>
-      <div style={{ maxWidth: '700px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+      <div className="coolos-card-transition" style={{ maxWidth: '700px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
 
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -421,7 +431,7 @@ export default function SalleAttente() {
               <span className="text-[#c9c4e0]"> Quiz</span>
             </Link>
           </div>
-          <button onClick={handleQuitter} className="text-[#6b6880] text-sm font-semibold hover:text-[#ff6b6b] transition">
+          <button onClick={handleQuitter} className="text-[#827f97] text-sm font-semibold hover:text-[#ff6b6b] transition">
             Quitter la salle
           </button>
         </div>
@@ -457,16 +467,16 @@ export default function SalleAttente() {
         {/* Joueurs */}
         <div>
           <p className="font-fredoka text-[#c9c4e0] text-xl mb-4">
-            Joueurs <span className="text-[#6b6880] text-base">({activePlayers.length}/{game.max_players})</span>
+            Joueurs <span className="text-[#827f97] text-base">({activePlayers.length}/{game.max_players})</span>
           </p>
           <div className="flex flex-col gap-3">
             {activePlayers.map(p => (
-              <div key={p.id} className="bg-[#1a1828] border border-[#2a2830] rounded-xl px-5 py-4 flex items-center justify-between">
+              <div key={p.id} className="coolos-card-transition bg-[#1a1828] border border-[#2a2830] rounded-xl px-5 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Avatar url={p.avatar_url} size={36} border="accent" />
                   <span className="font-fredoka text-[#eeeaf8] text-base">{p.pseudo}</span>
                   {p.user_id === myUserId && (
-                    <span className="text-[#6b6880] text-xs">(toi)</span>
+                    <span className="text-[#827f97] text-xs">(toi)</span>
                   )}
                   <RoleBadge role={p.role} isPremium={p.is_premium} />
                 </div>
@@ -490,7 +500,7 @@ export default function SalleAttente() {
             {!hasPremiumAccess ? (
               <p className="text-[#ffd93d] text-sm">★ Passe premium pour voir tes amis en ligne et les inviter directement dans cette salle.</p>
             ) : onlineFriendsToInvite.length === 0 ? (
-              <p className="text-[#6b6880] text-sm">Aucun ami en ligne pour le moment.</p>
+              <p className="text-[#827f97] text-sm">Aucun ami en ligne pour le moment.</p>
             ) : (
               <div className="flex flex-col gap-3">
                 {onlineFriendsToInvite.map(f => {
@@ -548,7 +558,8 @@ export default function SalleAttente() {
             {launching ? 'Lancement...' : 'Lancer la partie →'}
           </button>
         ) : (
-          <div className="bg-[#1e1c2e] border border-[#2a2830] rounded-2xl py-5 text-center">
+          <div className="bg-[#1e1c2e] border border-[#2a2830] rounded-2xl py-5 flex items-center justify-center gap-3">
+            <Spinner size={18} />
             <p className="font-fredoka text-[#9b96b8] text-base">En attente que l&apos;hôte lance la partie...</p>
           </div>
         )}
