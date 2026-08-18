@@ -107,6 +107,12 @@ export default function Home() {
           Classement
         </Link>
         <Link
+          href="/amis"
+          className="font-fredoka text-sm text-[#6b6880] hover:text-[#c9c4e0] transition hidden sm:block"
+        >
+          Amis
+        </Link>
+        <Link
           href="/contact"
           className="font-fredoka text-sm text-[#6b6880] hover:text-[#c9c4e0] transition"
         >

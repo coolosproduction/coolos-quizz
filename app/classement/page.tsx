@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { createClient } from '../../lib/supabase'
 
 type Category = { id: string, name: string, color: string, bg: string }
@@ -15,6 +15,12 @@ type LeaderboardRow = {
   questions_played: number
   correct_answers: number
   success_rate: number | string
+}
+
+type SearchResult = {
+  user_id: string
+  pseudo: string
+  avatar_url: string | null
 }
 
 const themeColors = [
@@ -60,6 +66,13 @@ export default function Classement() {
   const [maPosition, setMaPosition] = useState<LeaderboardRow | null>(null)
   const [loading, setLoading] = useState(true)
   const [posLoading, setPosLoading] = useState(false)
+
+  // Recherche de joueur par pseudo
+  const [recherche, setRecherche] = useState('')
+  const [resultats, setResultats] = useState<SearchResult[]>([])
+  const [rechercheOuverte, setRechercheOuverte] = useState(false)
+  const [rechercheLoading, setRechercheLoading] = useState(false)
+  const rechercheBoxRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const init = async () => {
@@ -121,6 +134,44 @@ export default function Classement() {
     loadClassement(categorieSelec, userId)
   }, [checkingAuth, categorieSelec, userId, loadClassement])
 
+  // Recherche debouncée par pseudo (correspondance partielle)
+  useEffect(() => {
+    const query = recherche.trim()
+    if (query.length === 0) {
+      setResultats([])
+      setRechercheLoading(false)
+      return
+    }
+    setRechercheLoading(true)
+    const timeout = setTimeout(async () => {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .rpc('search_users', { p_query: query, p_limit: 20 })
+      if (!error && data) {
+        setResultats((data as any[]).map(r => ({
+          user_id: r.user_id,
+          pseudo: r.pseudo,
+          avatar_url: r.avatar_url,
+        })))
+      } else {
+        setResultats([])
+      }
+      setRechercheLoading(false)
+    }, 300)
+    return () => clearTimeout(timeout)
+  }, [recherche])
+
+  // Ferme le menu de résultats si on clique en dehors
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (rechercheBoxRef.current && !rechercheBoxRef.current.contains(e.target as Node)) {
+        setRechercheOuverte(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
   const suisJeDansLeTop = maPosition ? top.some(r => r.user_id === maPosition.user_id) : false
 
   return (
@@ -139,6 +190,9 @@ export default function Classement() {
         {!checkingAuth && (
           connecte ? (
             <div className="flex items-center gap-3">
+              <Link href="/amis" className="font-fredoka text-sm text-[#6b6880] hover:text-[#c9c4e0] transition hidden sm:block">
+                Amis
+              </Link>
               <Link href="/configuration" className="bg-[#ffd93d] text-[#0f0e17] rounded-full px-4 py-2 font-fredoka text-sm hover:opacity-90 transition">
                 Jouer →
               </Link>
@@ -160,6 +214,66 @@ export default function Classement() {
           <div>
             <h1 className="font-fredoka text-3xl md:text-4xl text-[#eeeaf8] mb-2">Classement</h1>
             <p className="text-[#9b96b8] text-base">Les meilleurs joueurs de Coolos Quiz</p>
+          </div>
+
+          {/* Barre de recherche par pseudo */}
+          <div ref={rechercheBoxRef} style={{ position: 'relative' }}>
+            <div className="flex items-center gap-2 bg-[#1a1828] border border-[#2a2830] rounded-full focus-within:border-[#a78bfa] transition" style={{ padding: '10px 18px' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="flex-shrink-0">
+                <circle cx="11" cy="11" r="7" stroke="#6b6880" strokeWidth="2" />
+                <path d="M21 21l-4.35-4.35" stroke="#6b6880" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              <input
+                type="text"
+                value={recherche}
+                onChange={e => { setRecherche(e.target.value); setRechercheOuverte(true) }}
+                onFocus={() => setRechercheOuverte(true)}
+                placeholder="Chercher un joueur par pseudo..."
+                className="bg-transparent flex-1 text-[#eeeaf8] font-fredoka text-sm focus:outline-none"
+              />
+              {recherche && (
+                <button
+                  onClick={() => { setRecherche(''); setResultats([]) }}
+                  className="text-[#6b6880] hover:text-[#c9c4e0] text-lg leading-none flex-shrink-0"
+                  aria-label="Effacer la recherche"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+
+            {rechercheOuverte && recherche.trim().length > 0 && (
+              <div
+                className="absolute left-0 right-0 bg-[#1a1828] border border-[#2a2830] rounded-2xl overflow-hidden"
+                style={{ top: 'calc(100% + 8px)', zIndex: 20, maxHeight: '320px', overflowY: 'auto' }}
+              >
+                {rechercheLoading ? (
+                  <p className="text-[#6b6880] text-sm text-center" style={{ padding: '16px' }}>Recherche...</p>
+                ) : resultats.length === 0 ? (
+                  <p className="text-[#6b6880] text-sm text-center" style={{ padding: '16px' }}>Aucun joueur trouvé.</p>
+                ) : (
+                  resultats.map(r => (
+                    <Link
+                      key={r.user_id}
+                      href={`/joueur/${r.user_id}`}
+                      onClick={() => setRechercheOuverte(false)}
+                      className="flex items-center gap-3 hover:bg-[#231f38] transition"
+                      style={{ padding: '10px 16px' }}
+                    >
+                      <div className="rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center" style={{ width: '28px', height: '28px', border: '2px solid #2a2830', background: '#2a1f3d' }}>
+                        {r.avatar_url ? (
+                          <img src={r.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-3 h-3 rounded-full bg-[#a78bfa]"></div>
+                        )}
+                      </div>
+                      <span className="font-fredoka text-[#eeeaf8] text-sm truncate">{r.pseudo}</span>
+                      {r.user_id === userId && <span className="text-[#a78bfa] text-xs">(toi)</span>}
+                    </Link>
+                  ))
+                )}
+              </div>
+            )}
           </div>
 
           {/* Sélecteur de catégorie */}
@@ -259,13 +373,16 @@ export default function Classement() {
 
 function LigneClassement({ row, highlight }: { row: LeaderboardRow, highlight?: boolean }) {
   return (
-    <div
+    <Link
+      href={`/joueur/${row.user_id}`}
       style={{
         background: highlight ? '#231f38' : row.rank === 1 ? '#1f1e10' : '#1a1828',
         border: `1px solid ${highlight ? '#a78bfa' : row.rank === 1 ? '#ffd93d' : '#2a2830'}`,
         borderRadius: '12px',
         padding: '12px 16px',
+        display: 'block',
       }}
+      className="hover:opacity-90 transition"
     >
       <div className="flex items-center gap-3 md:gap-4">
         <div className="font-fredoka text-sm w-7 flex-shrink-0 text-center" style={{ color: rankColor(row.rank) }}>
@@ -297,6 +414,6 @@ function LigneClassement({ row, highlight }: { row: LeaderboardRow, highlight?: 
           {formatRate(row.success_rate)}
         </div>
       </div>
-    </div>
+    </Link>
   )
 }

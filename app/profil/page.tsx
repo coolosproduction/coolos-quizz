@@ -199,6 +199,9 @@ export default function Profil() {
               <Link href="/profil/modifier" className="border border-[#3a3650] text-[#9b96b8] rounded-full px-4 py-1 font-fredoka text-sm hover:bg-[#1e1c2e] transition">
                 Modifier le profil
               </Link>
+              <Link href="/amis" className="border border-[#3a3650] text-[#9b96b8] rounded-full px-4 py-1 font-fredoka text-sm hover:bg-[#1e1c2e] transition">
+                Amis
+              </Link>
             </div>
           </div>
         </div>
@@ -294,6 +297,10 @@ export default function Profil() {
 
             <Link href="/classement" className="block w-full border rounded-2xl py-4 font-fredoka text-lg text-center hover:bg-[#2a1f3d] transition" style={{ borderColor: '#a78bfa', color: '#a78bfa' }}>
               Voir le classement →
+            </Link>
+
+            <Link href="/amis" className="block w-full border rounded-2xl py-4 font-fredoka text-lg text-center hover:bg-[#1a2e1f] transition" style={{ borderColor: '#6bcb77', color: '#6bcb77' }}>
+              Voir mes amis →
             </Link>
           </div>
         )}
