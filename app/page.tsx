@@ -13,6 +13,7 @@ export default function Home() {
   const [nbQuestions, setNbQuestions] = useState<number | null>(null)
   const [showPopup, setShowPopup] = useState(false)
   const [pseudoInvite, setPseudoInvite] = useState('')
+  const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
     const checkUser = async () => {
@@ -100,79 +101,98 @@ export default function Home() {
     )}
   </div>
   {!loading && (
-    connecte ? (
-      <div className="flex items-center gap-3">
-        <Link
-          href="/multijoueur"
-          className="font-fredoka text-sm text-[#827f97] hover:text-[#c9c4e0] transition"
-        >
+    <div className="relative flex items-center gap-2 md:gap-3">
+      {/* Liens secondaires : en ligne dès sm (comportement desktop inchangé),
+          regroupés dans le menu ☰ en dessous de 640px où ils ne tenaient
+          plus tous sur une seule ligne avec le bouton Jouer et l'avatar. */}
+      <div className="hidden sm:flex items-center gap-3">
+        <Link href="/multijoueur" className="font-fredoka text-sm text-[#827f97] hover:text-[#c9c4e0] transition">
           Multijoueur
         </Link>
-        <Link
-          href="/classement"
-          className="font-fredoka text-sm text-[#827f97] hover:text-[#c9c4e0] transition"
-        >
+        <Link href="/classement" className="font-fredoka text-sm text-[#827f97] hover:text-[#c9c4e0] transition">
           Classement
         </Link>
-        <Link
-          href="/amis"
-          className="font-fredoka text-sm text-[#827f97] hover:text-[#c9c4e0] transition hidden sm:block"
-        >
-          Amis
-        </Link>
-        <Link
-          href="/revision"
-          className="font-fredoka text-sm text-[#827f97] hover:text-[#c9c4e0] transition hidden sm:block"
-        >
-          ★ Révision
-        </Link>
-        <Link
-          href="/contact"
-          className="font-fredoka text-sm text-[#827f97] hover:text-[#c9c4e0] transition"
-        >
+        {connecte && (
+          <>
+            <Link href="/amis" className="font-fredoka text-sm text-[#827f97] hover:text-[#c9c4e0] transition">
+              Amis
+            </Link>
+            <Link href="/revision" className="font-fredoka text-sm text-[#827f97] hover:text-[#c9c4e0] transition">
+              ★ Révision
+            </Link>
+          </>
+        )}
+        <Link href="/contact" className="font-fredoka text-sm text-[#827f97] hover:text-[#c9c4e0] transition">
           Contact
-        </Link>
-        <Link
-          href="/configuration"
-          className="bg-[#ffd93d] text-[#0f0e17] rounded-full px-4 py-2 font-fredoka text-sm hover:opacity-90 transition"
-        >
-          Jouer →
-        </Link>
-        <Link
-          href="/profil"
-          className="w-9 h-9 rounded-full bg-[#2a1f3d] border-2 border-[#a78bfa] flex items-center justify-center"
-        >
-          <div className="w-4 h-4 rounded-full bg-[#a78bfa]"></div>
         </Link>
       </div>
-    ) : (
-      <div className="flex items-center gap-3">
-        <Link
-          href="/multijoueur"
-          className="font-fredoka text-sm text-[#827f97] hover:text-[#c9c4e0] transition"
-        >
-          Multijoueur
-        </Link>
-        <Link
-          href="/classement"
-          className="font-fredoka text-sm text-[#827f97] hover:text-[#c9c4e0] transition"
-        >
-          Classement
-        </Link>
-        <Link
-          href="/contact"
-          className="font-fredoka text-sm text-[#827f97] hover:text-[#c9c4e0] transition"
-        >
-          Contact
-        </Link>
+
+      {/* Bouton menu, visible seulement en dessous de sm */}
+      <button
+        onClick={() => setMenuOpen((o) => !o)}
+        aria-label="Menu"
+        aria-expanded={menuOpen}
+        className="sm:hidden w-9 h-9 flex-shrink-0 rounded-full bg-[#1a1828] border border-[#2a2830] text-[#c9c4e0] flex items-center justify-center hover:bg-[#1e1c2e] transition"
+      >
+        <span aria-hidden="true" style={{ fontSize: '16px', lineHeight: 1 }}>☰</span>
+      </button>
+
+      {connecte ? (
+        <>
+          <Link
+            href="/configuration"
+            className="bg-[#ffd93d] text-[#0f0e17] rounded-full px-4 py-2 font-fredoka text-sm hover:opacity-90 transition flex-shrink-0"
+          >
+            Jouer →
+          </Link>
+          <Link
+            href="/profil"
+            className="w-9 h-9 rounded-full bg-[#2a1f3d] border-2 border-[#a78bfa] flex items-center justify-center flex-shrink-0"
+          >
+            <div className="w-4 h-4 rounded-full bg-[#a78bfa]"></div>
+          </Link>
+        </>
+      ) : (
         <Link
           href="/connexion"
-          className="border border-[#3a3650] text-[#c9c4e0] rounded-full px-4 py-2 text-sm hover:bg-[#1e1c2e] transition"
+          className="border border-[#3a3650] text-[#c9c4e0] rounded-full px-4 py-2 text-sm hover:bg-[#1e1c2e] transition flex-shrink-0"
         >
           Connexion
         </Link>
-      </div>
-    )
+      )}
+
+      {/* Menu déroulant mobile : mêmes liens que la version desktop ci-dessus */}
+      {menuOpen && (
+        <>
+          <div
+            className="sm:hidden fixed inset-0 z-30"
+            onClick={() => setMenuOpen(false)}
+            aria-hidden="true"
+          />
+          <div className="sm:hidden absolute top-full right-0 mt-2 w-52 bg-[#1a1828] border border-[#2a2830] rounded-2xl p-2 flex flex-col gap-1 z-40 shadow-lg">
+            <Link href="/multijoueur" onClick={() => setMenuOpen(false)} className="font-fredoka text-sm text-[#c9c4e0] hover:bg-[#1e1c2e] transition rounded-xl px-3 py-2">
+              Multijoueur
+            </Link>
+            <Link href="/classement" onClick={() => setMenuOpen(false)} className="font-fredoka text-sm text-[#c9c4e0] hover:bg-[#1e1c2e] transition rounded-xl px-3 py-2">
+              Classement
+            </Link>
+            {connecte && (
+              <>
+                <Link href="/amis" onClick={() => setMenuOpen(false)} className="font-fredoka text-sm text-[#c9c4e0] hover:bg-[#1e1c2e] transition rounded-xl px-3 py-2">
+                  Amis
+                </Link>
+                <Link href="/revision" onClick={() => setMenuOpen(false)} className="font-fredoka text-sm text-[#c9c4e0] hover:bg-[#1e1c2e] transition rounded-xl px-3 py-2">
+                  ★ Révision
+                </Link>
+              </>
+            )}
+            <Link href="/contact" onClick={() => setMenuOpen(false)} className="font-fredoka text-sm text-[#c9c4e0] hover:bg-[#1e1c2e] transition rounded-xl px-3 py-2">
+              Contact
+            </Link>
+          </div>
+        </>
+      )}
+    </div>
   )}
 </nav>
 

@@ -1,9 +1,21 @@
 @import "tailwindcss";
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/* Ce reset doit vivre dans @layer base : Tailwind range ses propres
+   utilitaires (px-*, py-*, p-*, m-*...) dans @layer utilities, et dans le
+   système de "cascade layers" du CSS, une règle hors de tout @layer gagne
+   TOUJOURS sur une règle qui est dans un layer — quelle que soit sa
+   spécificité. Un `* { padding: 0 }` non catégorisé annulait donc
+   silencieusement tous les px-4/py-3/p-6 etc. du site (texte collé aux
+   bords des champs, cartes, boutons...), sauf là où le padding était posé
+   en style inline. En le mettant dans @layer base (comme le fait Tailwind
+   lui-même pour son propre reset), les utilitaires reprennent la priorité
+   normale par-dessus. */
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
 }
 
 body {
