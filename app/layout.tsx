@@ -14,6 +14,11 @@ const nunito = Nunito({
 export const metadata: Metadata = {
   title: 'Coolos Quiz',
   description: 'Le quiz de culture générale fun et coloré !',
+  other: {
+    // Balise de vérification de propriété du site pour Google AdSense (méthode
+    // alternative au script complet — plus fiable pour la validation initiale).
+    'google-adsense-account': 'ca-pub-8305981695601473',
+  },
 }
 
 // Scripts Google AdSense — chargés sur TOUTES les pages (même celles qui n'affichent
