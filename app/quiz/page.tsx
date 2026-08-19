@@ -244,7 +244,7 @@ function QuizContent() {
     if (index + 1 >= questions.length) {
       sessionStorage.setItem('reponses_partie', JSON.stringify(reponsesRef.current))
       sessionStorage.setItem('timer_partie', timerDuration.toString())
-      router.push('/correction')
+      router.push('/pub')
       return
     }
     setIndex(prev => prev + 1)
