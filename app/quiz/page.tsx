@@ -23,30 +23,6 @@ type ReponsePartie = {
   images?: { url: string, position: number }[]
 }
 
-function tirerQuestions(questions: Question[], poids: Record<string, number>, nb: number): Question[] {
-  const pool = [...questions]
-  const selection: Question[] = []
-
-  while (selection.length < nb && pool.length > 0) {
-    const totalPoids = pool.reduce((acc, q) => acc + (poids[q.id] ?? 5), 0)
-    let rand = Math.random() * totalPoids
-    let choix = pool[pool.length - 1]
-
-    for (const q of pool) {
-      rand -= poids[q.id] ?? 5
-      if (rand <= 0) {
-        choix = q
-        break
-      }
-    }
-
-    selection.push(choix)
-    pool.splice(pool.indexOf(choix), 1)
-  }
-
-  return selection
-}
-
 function QuizContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -77,25 +53,28 @@ function QuizContent() {
       const categoryIds = categoriesParam.split(',').filter(Boolean)
       const difficulties = difficultiesParam.split(',').filter(Boolean)
       const subcategoryIds = subcategoriesParam.split(',').filter(Boolean)
+      const evalFiltre = evalFiltreParam.split(',').filter(Boolean)
 
-      let query = supabase
-        .from('questions')
-        .select('id, question_text, answer_text, category:categories(name)')
-        .eq('active', true)
+      // Le tirage pondéré (poids selon l'historique de réponses, filtrage par mode
+      // jamais_vues/révision) est désormais fait côté SQL via draw_quiz_questions —
+      // ça évite le plafond de 1000 lignes de PostgREST sur un simple .select() et
+      // ça ne fait transiter que les `nb` questions réellement tirées.
+      const { data, error } = await supabase.rpc('draw_quiz_questions', {
+        p_category_ids: categoryIds.length > 0 ? categoryIds : null,
+        p_difficulties: difficulties.length > 0 ? difficulties : null,
+        p_subcategory_ids: subcategoryIds.length > 0 ? subcategoryIds : null,
+        p_mode: mode,
+        p_eval_filtre: evalFiltre.length > 0 ? evalFiltre : null,
+        p_nb: nb,
+      })
 
-      if (categoryIds.length > 0) {
-        query = query.in('category_id', categoryIds)
-      }
-      if (difficulties.length > 0) {
-        query = query.in('difficulty', difficulties)
-      }
-      // Filtre par sous-catégories si sélectionnées
-      if (subcategoryIds.length > 0) {
-        query = query.in('subcategory_id', subcategoryIds)
+      if (error) {
+        console.error('Erreur tirage questions:', error)
       }
 
-      const { data } = await query
       if (!data || data.length === 0) {
+        setPoolVide(mode === 'jamais_vues' || mode === 'revision')
+        setQuestions([])
         setLoading(false)
         return
       }
@@ -119,85 +98,15 @@ function QuizContent() {
         })
       }
 
-      const dataAvecImages = data.map((q: any) => ({
-        ...q,
+      const selection: Question[] = data.map((q: any) => ({
+        id: q.id,
+        question_text: q.question_text,
+        answer_text: q.answer_text,
+        category: { name: q.category_name },
         images: imagesParQuestion[q.id] || [],
       }))
 
-      // Récupère l'utilisateur connecté
-      const { data: { user } } = await supabase.auth.getUser()
-
-      let poids: Record<string, number> = {}
-      let pool: any[] = dataAvecImages
-
-      if (user) {
-        const { data: answers } = await supabase
-          .from('game_answers')
-          .select('question_id, self_eval, game:games!inner(user_id, played_at)')
-          .in('question_id', questionIds)
-
-        const statsParQuestion: Record<string, { total: number, oui: number }> = {}
-        const dernierEvalParQuestion: Record<string, { eval: string, date: string }> = {}
-
-        if (answers) {
-          answers
-            .filter((a: any) => a.game?.user_id === user.id)
-            .forEach((a: any) => {
-              const id = a.question_id
-              if (!statsParQuestion[id]) statsParQuestion[id] = { total: 0, oui: 0 }
-              statsParQuestion[id].total++
-              if (a.self_eval === 'oui') statsParQuestion[id].oui++
-
-              // Garde la dernière évaluation (par date de partie) pour le mode révision
-              const playedAt = a.game?.played_at || ''
-              if (!dernierEvalParQuestion[id] || playedAt > dernierEvalParQuestion[id].date) {
-                dernierEvalParQuestion[id] = { eval: a.self_eval, date: playedAt }
-              }
-            })
-        }
-
-        // Modes premium : filtre le pool avant le tirage (côté /configuration on ne
-        // laisse passer ces params que si l'utilisateur a effectivement accès premium,
-        // mais on ne fait pas confiance à l'URL — un pool vide déclenche juste le
-        // message "aucune question trouvée" existant, aucune conséquence si trafiqué)
-        if (mode === 'jamais_vues') {
-          pool = dataAvecImages.filter((q: any) => !statsParQuestion[q.id] || statsParQuestion[q.id].total === 0)
-        } else if (mode === 'revision') {
-          const filtresEval = evalFiltreParam.split(',').filter(Boolean)
-          pool = dataAvecImages.filter((q: any) => {
-            const dernier = dernierEvalParQuestion[q.id]
-            return dernier && filtresEval.includes(dernier.eval)
-          })
-        }
-
-        dataAvecImages.forEach((q: any) => {
-          if (mode === 'revision') {
-            // Tirage uniforme parmi le pool ciblé plutôt que la pondération adaptative
-            // habituelle : on a déjà choisi le sous-ensemble à réviser, pas besoin de le
-            // rebiaiser une seconde fois.
-            poids[q.id] = 1
-            return
-          }
-          const stats = statsParQuestion[q.id]
-          if (!stats || stats.total === 0) {
-            poids[q.id] = 5
-          } else {
-            const taux = stats.oui / stats.total
-            if (taux > 0.7) {
-              poids[q.id] = 1
-            } else if (taux >= 0.4) {
-              poids[q.id] = 2
-            } else {
-              poids[q.id] = 4
-            }
-          }
-        })
-      } else {
-        dataAvecImages.forEach((q: any) => { poids[q.id] = 1 })
-      }
-
-      const selection = tirerQuestions(pool as any, poids, nb)
-      setPoolVide(pool.length === 0)
+      setPoolVide(false)
       setQuestions(selection)
       setLoading(false)
       timerRef.current = timerDuration
