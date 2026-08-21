@@ -9,6 +9,7 @@ import BackButton from '@/components/BackButton'
 export default function Home() {
   const router = useRouter()
   const [connecte, setConnecte] = useState(false)
+  const [estPremium, setEstPremium] = useState(false)
   const [loading, setLoading] = useState(true)
   const [nbQuestions, setNbQuestions] = useState<number | null>(null)
   const [showPopup, setShowPopup] = useState(false)
@@ -20,6 +21,14 @@ export default function Home() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       setConnecte(!!user)
+      if (user) {
+        const { data } = await supabase
+          .from('users')
+          .select('is_premium, role')
+          .eq('id', user.id)
+          .single()
+        setEstPremium(!!data?.is_premium || data?.role === 'admin' || data?.role === 'owner')
+      }
       setLoading(false)
     }
     const loadNbQuestions = async () => {
@@ -120,6 +129,11 @@ export default function Home() {
             <Link href="/revision" className="font-fredoka text-sm text-[#827f97] hover:text-[#c9c4e0] transition">
               ★ Révision
             </Link>
+            {!estPremium && (
+              <Link href="/premium" className="font-fredoka text-sm text-[#ffd93d] hover:opacity-80 transition">
+                ★ Premium
+              </Link>
+            )}
           </>
         )}
         <Link href="/contact" className="font-fredoka text-sm text-[#827f97] hover:text-[#c9c4e0] transition">
@@ -184,6 +198,11 @@ export default function Home() {
                 <Link href="/revision" onClick={() => setMenuOpen(false)} className="font-fredoka text-sm text-[#c9c4e0] hover:bg-[#1e1c2e] transition rounded-xl px-3 py-2">
                   ★ Révision
                 </Link>
+                {!estPremium && (
+                  <Link href="/premium" onClick={() => setMenuOpen(false)} className="font-fredoka text-sm text-[#ffd93d] hover:bg-[#1e1c2e] transition rounded-xl px-3 py-2">
+                    ★ Premium
+                  </Link>
+                )}
               </>
             )}
             <Link href="/contact" onClick={() => setMenuOpen(false)} className="font-fredoka text-sm text-[#c9c4e0] hover:bg-[#1e1c2e] transition rounded-xl px-3 py-2">

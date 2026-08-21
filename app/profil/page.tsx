@@ -17,6 +17,7 @@ type Stats = {
   avatarUrl: string | null
   role: string | null
   isPremium: boolean | null
+  stripeCustomerId: string | null
   depuis: string
   totalQuestions: number
   tauxReussite: number
@@ -79,6 +80,22 @@ export default function Profil() {
   const [premiumLoaded, setPremiumLoaded] = useState(false)
   const [categoriesList, setCategoriesList] = useState<Category[]>([])
   const [percentileCategory, setPercentileCategory] = useState<string>('')
+  const [portalLoading, setPortalLoading] = useState(false)
+
+  const ouvrirPortailAbonnement = async () => {
+    setPortalLoading(true)
+    try {
+      const res = await fetch('/api/stripe/create-portal-session', { method: 'POST' })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        setPortalLoading(false)
+      }
+    } catch {
+      setPortalLoading(false)
+    }
+  }
 
   useEffect(() => {
     const loadStats = async () => {
@@ -123,7 +140,7 @@ export default function Profil() {
 
       const { data: roleData } = await supabase
         .from('users')
-        .select('role, is_premium')
+        .select('role, is_premium, stripe_customer_id')
         .eq('id', user.id)
         .single()
 
@@ -132,6 +149,7 @@ export default function Profil() {
         avatarUrl,
         role: roleData?.role ?? null,
         isPremium: roleData?.is_premium ?? null,
+        stripeCustomerId: roleData?.stripe_customer_id ?? null,
         depuis,
         totalQuestions,
         tauxReussite,
@@ -363,6 +381,16 @@ export default function Profil() {
               <Link href="/amis" className="border border-[#3a3650] text-[#9b96b8] rounded-full px-4 py-1 font-fredoka text-sm hover:bg-[#1e1c2e] transition">
                 Amis
               </Link>
+              {stats.stripeCustomerId && (
+                <button
+                  onClick={ouvrirPortailAbonnement}
+                  disabled={portalLoading}
+                  className="border border-[#3a3650] text-[#9b96b8] rounded-full px-4 py-1 font-fredoka text-sm hover:bg-[#1e1c2e] transition"
+                  style={{ cursor: portalLoading ? 'not-allowed' : 'pointer', opacity: portalLoading ? 0.6 : 1 }}
+                >
+                  {portalLoading ? 'Ouverture...' : 'Gérer mon abonnement'}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -589,11 +617,18 @@ export default function Profil() {
             {!hasPremiumAccess ? (
               <div className="bg-[#1a1828] border rounded-2xl p-10 text-center" style={{ borderColor: '#4a3a10' }}>
                 <p className="font-fredoka text-[#ffd93d] text-xl mb-2">★ Fonctionnalité Premium</p>
-                <p className="text-[#9b96b8] text-sm leading-relaxed">
+                <p className="text-[#9b96b8] text-sm leading-relaxed mb-6">
                   Les statistiques avancées (courbe d'évolution, détail par difficulté et sous-catégorie,
                   comparaison aux autres joueurs, stats multijoueur, question la plus rencontrée...) sont
                   réservées aux comptes premium.
                 </p>
+                <Link
+                  href="/premium"
+                  className="inline-block rounded-2xl py-3 px-8 font-fredoka text-base transition hover:opacity-90"
+                  style={{ background: '#ffd93d', color: '#0f0e17' }}
+                >
+                  Devenir Premium →
+                </Link>
               </div>
             ) : premiumLoading && !premiumLoaded ? (
               <>
