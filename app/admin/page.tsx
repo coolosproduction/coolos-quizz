@@ -25,6 +25,7 @@ type Question = {
   question: string
   answer: string
   category: string
+  subcategory: string
   difficulty: string
   active: boolean
 }
@@ -41,7 +42,15 @@ type Subcategory = {
   category_id: string
   name: string
   active: boolean
+  count: number
 }
+
+const DIFFICULTY_OPTIONS = [
+  { id: 'facile', label: 'Facile' },
+  { id: 'moyen', label: 'Moyen' },
+  { id: 'difficile', label: 'Difficile' },
+  { id: 'hardcore', label: 'Hardcore' },
+]
 
 type UserStat = {
   id: string
@@ -109,6 +118,12 @@ export default function Admin() {
   const [questionsLoading, setQuestionsLoading] = useState(false)
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
+  // Filtres de la liste des questions : catégorie, sous-catégorie (dépend
+  // de la catégorie choisie), difficulté, et sens du tri par date.
+  const [filterCategoryId, setFilterCategoryId] = useState('')
+  const [filterSubcategoryId, setFilterSubcategoryId] = useState('')
+  const [filterDifficulty, setFilterDifficulty] = useState('')
+  const [sortOrder, setSortOrder] = useState<'recent' | 'ancien'>('recent')
   const [authorized, setAuthorized] = useState(false)
   const [isOwner, setIsOwner] = useState(false)
   const [myUserId, setMyUserId] = useState<string | null>(null)
@@ -168,14 +183,24 @@ export default function Admin() {
 
   useEffect(() => {
     setQuestionsPage(1)
-  }, [debouncedSearch])
+  }, [debouncedSearch, filterCategoryId, filterSubcategoryId, filterDifficulty, sortOrder])
 
-  // Recharge la page de questions courante à chaque changement de page ou
-  // de recherche (une fois l'admin authentifié).
+  // Un changement de catégorie invalide la sous-catégorie sélectionnée si
+  // elle n'en fait plus partie (y compris repasser à "Toutes catégories").
+  useEffect(() => {
+    if (filterSubcategoryId && !subcategories.some(s => s.id === filterSubcategoryId && s.category_id === filterCategoryId)) {
+      setFilterSubcategoryId('')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterCategoryId])
+
+  // Recharge la page de questions courante à chaque changement de page, de
+  // recherche ou de filtre (une fois l'admin authentifié).
   useEffect(() => {
     if (!authorized) return
     loadQuestionsPage(questionsPage, debouncedSearch)
-  }, [authorized, questionsPage, debouncedSearch])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authorized, questionsPage, debouncedSearch, filterCategoryId, filterSubcategoryId, filterDifficulty, sortOrder])
 
   // Compteurs "Questions totales / Actives / Inactives" : un vrai comptage
   // exact côté base (count: 'exact', head: true — aucune ligne renvoyée,
@@ -214,11 +239,12 @@ export default function Admin() {
     // un tri unique sur created_at n'est pas déterministe pour .range(),
     // ce qui ferait apparaître des doublons ou des trous entre les pages.
     // On ajoute l'id comme second critère pour un ordre stable.
+    const ascending = sortOrder === 'ancien'
     let query = supabase
       .from('questions')
-      .select('id, question_text, answer_text, difficulty, active, category_id, categories(name)', { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .order('id', { ascending: false })
+      .select('id, question_text, answer_text, difficulty, active, category_id, subcategory_id, categories(name), subcategories(name)', { count: 'exact' })
+      .order('created_at', { ascending })
+      .order('id', { ascending })
 
     if (term) {
       const orParts = [`question_text.ilike.%${term}%`, `answer_text.ilike.%${term}%`]
@@ -227,6 +253,9 @@ export default function Admin() {
       }
       query = query.or(orParts.join(','))
     }
+    if (filterCategoryId) query = query.eq('category_id', filterCategoryId)
+    if (filterSubcategoryId) query = query.eq('subcategory_id', filterSubcategoryId)
+    if (filterDifficulty) query = query.eq('difficulty', filterDifficulty)
 
     const from = (pageNum - 1) * QUESTIONS_PAGE_SIZE
     const to = from + QUESTIONS_PAGE_SIZE - 1
@@ -238,6 +267,7 @@ export default function Admin() {
         question: q.question_text,
         answer: q.answer_text,
         category: q.categories?.name || '',
+        subcategory: q.subcategories?.name || '',
         difficulty: q.difficulty,
         active: q.active,
       })))
@@ -273,7 +303,14 @@ export default function Admin() {
       .order('name')
 
     if (subsData) {
-      setSubcategories(subsData as Subcategory[])
+      const subsWithCount = await Promise.all(subsData.map(async (s: any) => {
+        const { count } = await supabase
+          .from('questions')
+          .select('*', { count: 'exact', head: true })
+          .eq('subcategory_id', s.id)
+        return { id: s.id, category_id: s.category_id, name: s.name, active: s.active, count: count || 0 }
+      }))
+      setSubcategories(subsWithCount)
     }
 
     const { data: usersData } = await supabase
@@ -673,7 +710,67 @@ export default function Admin() {
               </div>
             </div>
 
-            <input type="text" placeholder="Rechercher une question..." value={search} onChange={e => setSearch(e.target.value)} className="w-full text-[#eeeaf8] text-sm outline-none" style={{ background: '#1a1828', border: `1.5px solid ${search ? '#ffd93d' : '#2a2830'}`, borderRadius: '12px', padding: '12px 16px', marginBottom: '16px' }} />
+            <input type="text" placeholder="Rechercher une question..." value={search} onChange={e => setSearch(e.target.value)} className="w-full text-[#eeeaf8] text-sm outline-none" style={{ background: '#1a1828', border: `1.5px solid ${search ? '#ffd93d' : '#2a2830'}`, borderRadius: '12px', padding: '12px 16px', marginBottom: '12px' }} />
+
+            {/* Filtres */}
+            <div className="flex flex-wrap gap-2" style={{ marginBottom: '16px' }}>
+              <select
+                value={filterCategoryId}
+                onChange={e => setFilterCategoryId(e.target.value)}
+                className="text-sm outline-none"
+                style={{ background: '#1a1828', border: `1.5px solid ${filterCategoryId ? '#ffd93d' : '#2a2830'}`, borderRadius: '10px', padding: '8px 12px', color: filterCategoryId ? '#eeeaf8' : '#9b96b8' }}
+              >
+                <option value="">Toutes catégories</option>
+                {categories.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+
+              <select
+                value={filterSubcategoryId}
+                onChange={e => setFilterSubcategoryId(e.target.value)}
+                disabled={!filterCategoryId}
+                className="text-sm outline-none disabled:opacity-40"
+                style={{ background: '#1a1828', border: `1.5px solid ${filterSubcategoryId ? '#ffd93d' : '#2a2830'}`, borderRadius: '10px', padding: '8px 12px', color: filterSubcategoryId ? '#eeeaf8' : '#9b96b8' }}
+              >
+                <option value="">Toutes sous-catégories</option>
+                {subcategories.filter(s => s.category_id === filterCategoryId).map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+
+              <select
+                value={filterDifficulty}
+                onChange={e => setFilterDifficulty(e.target.value)}
+                className="text-sm outline-none"
+                style={{ background: '#1a1828', border: `1.5px solid ${filterDifficulty ? '#ffd93d' : '#2a2830'}`, borderRadius: '10px', padding: '8px 12px', color: filterDifficulty ? '#eeeaf8' : '#9b96b8' }}
+              >
+                <option value="">Toutes difficultés</option>
+                {DIFFICULTY_OPTIONS.map(d => (
+                  <option key={d.id} value={d.id}>{d.label}</option>
+                ))}
+              </select>
+
+              <select
+                value={sortOrder}
+                onChange={e => setSortOrder(e.target.value as 'recent' | 'ancien')}
+                className="text-sm outline-none"
+                style={{ background: '#1a1828', border: '1.5px solid #2a2830', borderRadius: '10px', padding: '8px 12px', color: '#9b96b8' }}
+              >
+                <option value="recent">Plus récentes d&apos;abord</option>
+                <option value="ancien">Plus anciennes d&apos;abord</option>
+              </select>
+
+              {(filterCategoryId || filterSubcategoryId || filterDifficulty) && (
+                <button
+                  onClick={() => { setFilterCategoryId(''); setFilterSubcategoryId(''); setFilterDifficulty('') }}
+                  className="font-fredoka text-xs hover:opacity-80 transition"
+                  style={{ color: '#ff6b6b', padding: '8px 4px' }}
+                >
+                  ✕ Réinitialiser
+                </button>
+              )}
+            </div>
 
             <div className="grid grid-cols-4 gap-4" style={{ padding: '0 12px', marginBottom: '8px' }}>
               <p className="text-[#8480a1] text-xs font-bold uppercase tracking-wider col-span-2">Question</p>
@@ -693,8 +790,11 @@ export default function Admin() {
                   <div className="col-span-2">
                     <p className="text-[#c9c4e0] text-sm font-semibold truncate">{q.question}</p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-fredoka text-xs rounded-full px-2 py-0.5" style={{ background: '#1e1c2e', color: '#9b96b8' }}>{q.category}</span>
+                    {q.subcategory && (
+                      <span className="font-fredoka text-xs rounded-full px-2 py-0.5" style={{ background: '#141320', color: '#8480a1' }}>{q.subcategory}</span>
+                    )}
                     <span className="font-fredoka text-xs" style={{ color: diffColors[q.difficulty] }}>{q.difficulty}</span>
                   </div>
                   <div className="flex items-center gap-2 justify-end">
@@ -806,6 +906,7 @@ export default function Admin() {
                           <div key={s.id} className="flex items-center gap-3 py-2" style={{ borderBottom: '1px solid #1e1c2e' }}>
                             <div className="w-1.5 h-1.5 rounded-full bg-[#4ecdc4] opacity-50 ml-4"></div>
                             <span className="font-fredoka text-[#c9c4e0] text-sm" style={{ flex: 1 }}>{s.name}</span>
+                            <span className="text-[#827f97] text-xs">{s.count} question{s.count > 1 ? 's' : ''}</span>
                             <div onClick={() => toggleSubcategory(s.id)} className="rounded-full cursor-pointer relative" style={{ width: '36px', height: '18px', background: s.active ? '#6bcb77' : '#2a2830' }}>
                               <div className="rounded-full bg-white absolute" style={{ width: '14px', height: '14px', top: '2px', left: s.active ? '20px' : '2px', transition: 'left 0.2s' }}></div>
                             </div>

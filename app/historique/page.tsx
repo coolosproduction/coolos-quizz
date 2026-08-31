@@ -11,6 +11,7 @@ type Question = {
   reponseOfficielle: string
   reponseUtilisateur: string
   eval: string
+  difficulte: string
 }
 
 type Partie = {
@@ -32,6 +33,7 @@ type FlatAnswer = {
   reponseOfficielle: string
   reponseUtilisateur: string
   eval: string
+  difficulte: string
   categorie: string
   date: string
 }
@@ -40,6 +42,13 @@ const evalConfig = {
   oui: { label: 'Oui', color: '#6bcb77', bg: '#1a2e1f' },
   en_partie: { label: 'En partie', color: '#ffd93d', bg: '#1f1e10' },
   non: { label: 'Non', color: '#ff6b6b', bg: '#2e1a1a' },
+}
+
+const difficulteConfig = {
+  facile: { label: 'Facile', color: '#6bcb77', bg: '#1a2e1f' },
+  moyen: { label: 'Moyen', color: '#ffd93d', bg: '#1f1e10' },
+  difficile: { label: 'Difficile', color: '#ff6b6b', bg: '#2e1a1a' },
+  hardcore: { label: 'Hardcore', color: '#a78bfa', bg: '#2a1f3d' },
 }
 
 const filtresEval: { key: 'tous' | 'oui' | 'en_partie' | 'non', label: string }[] = [
@@ -94,7 +103,7 @@ export default function Historique() {
       const partiesAvecReponses = await Promise.all(games.map(async (game) => {
         const { data: answers } = await supabase
           .from('game_answers')
-          .select('*, question:questions(question_text, answer_text, categories(name))')
+          .select('*, question:questions(question_text, answer_text, difficulty, categories(name))')
           .eq('game_id', game.id)
           .order('position', { ascending: true })
 
@@ -103,6 +112,7 @@ export default function Historique() {
           reponseOfficielle: a.question?.answer_text || '',
           reponseUtilisateur: a.user_answer || '',
           eval: a.self_eval || 'non',
+          difficulte: a.question?.difficulty || 'facile',
         }))
 
         const date = new Date(game.played_at)
@@ -122,6 +132,7 @@ export default function Historique() {
               reponseOfficielle: a.question?.answer_text || '',
               reponseUtilisateur: a.user_answer || '',
               eval: a.self_eval || 'non',
+              difficulte: a.question?.difficulty || 'facile',
               categorie: a.question?.categories?.name || 'Autre',
               date: dateStr,
             })
@@ -303,10 +314,16 @@ export default function Historique() {
                   <div style={{ marginTop: '16px', borderTop: '1px solid #2a2830', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     {p.questions.map((q, i) => {
                       const e = evalConfig[q.eval as keyof typeof evalConfig] || evalConfig.non
+                      const d = difficulteConfig[q.difficulte as keyof typeof difficulteConfig] || difficulteConfig.facile
                       return (
                         <div key={i} className="rounded-xl" style={{ background: '#0f0e17', padding: '14px 16px' }}>
                           <div className="flex justify-between items-start mb-3">
-                            <span className="font-fredoka text-[#9b96b8] text-xs">Question {i + 1}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-fredoka text-[#9b96b8] text-xs">Question {i + 1}</span>
+                              <span className="rounded-full px-2 py-0.5 font-fredoka text-xs" style={{ background: d.bg, color: d.color, border: `1px solid ${d.color}` }}>
+                                {d.label}
+                              </span>
+                            </div>
                             <span className="rounded-full px-3 py-1 font-fredoka text-xs" style={{ background: e.bg, color: e.color, border: `1px solid ${e.color}` }}>
                               {e.label}
                             </span>
@@ -377,11 +394,15 @@ export default function Historique() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {reponsesFiltrees.map((a) => {
                     const e = evalConfig[a.eval as keyof typeof evalConfig] || evalConfig.non
+                    const d = difficulteConfig[a.difficulte as keyof typeof difficulteConfig] || difficulteConfig.facile
                     return (
                       <div key={a.id} className="rounded-xl" style={{ background: '#1a1828', border: '1px solid #2a2830', padding: '14px 16px' }}>
                         <div className="flex justify-between items-start mb-3 flex-wrap gap-2">
                           <div className="flex items-center gap-2">
                             <span className="bg-[#0f0e17] rounded-full px-3 py-1 font-fredoka text-xs text-[#9b96b8]">{a.categorie}</span>
+                            <span className="rounded-full px-2 py-0.5 font-fredoka text-xs" style={{ background: d.bg, color: d.color, border: `1px solid ${d.color}` }}>
+                              {d.label}
+                            </span>
                             <span className="text-[#8480a1] text-xs">{a.date}</span>
                           </div>
                           <span className="rounded-full px-3 py-1 font-fredoka text-xs" style={{ background: e.bg, color: e.color, border: `1px solid ${e.color}` }}>

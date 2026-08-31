@@ -44,16 +44,24 @@ export async function POST(request: Request) {
         if (userId && session.customer && session.subscription) {
           const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
 
-          await supabaseAdmin
+          const { error, count } = await supabaseAdmin
             .from('users')
-            .update({
-              stripe_customer_id: session.customer as string,
-              stripe_subscription_id: subscription.id,
-              premium_plan: session.metadata?.plan || null,
-              premium_current_period_end: getPeriodEnd(subscription),
-              is_premium: subscription.status === 'active' || subscription.status === 'trialing',
-            })
+            .update(
+              {
+                stripe_customer_id: session.customer as string,
+                stripe_subscription_id: subscription.id,
+                premium_plan: session.metadata?.plan || null,
+                premium_current_period_end: getPeriodEnd(subscription),
+                is_premium: subscription.status === 'active' || subscription.status === 'trialing',
+              },
+              { count: 'exact' }
+            )
             .eq('id', userId)
+
+          if (error || count === 0) {
+            console.error('checkout.session.completed: échec mise à jour users', { userId, error, count })
+            return NextResponse.json({ error: 'Mise à jour Supabase échouée.' }, { status: 500 })
+          }
         }
         break
       }
@@ -63,15 +71,23 @@ export async function POST(request: Request) {
         const userId = subscription.metadata?.supabase_user_id
 
         if (userId) {
-          await supabaseAdmin
+          const { error, count } = await supabaseAdmin
             .from('users')
-            .update({
-              stripe_subscription_id: subscription.id,
-              premium_plan: subscription.metadata?.plan || null,
-              premium_current_period_end: getPeriodEnd(subscription),
-              is_premium: subscription.status === 'active' || subscription.status === 'trialing',
-            })
+            .update(
+              {
+                stripe_subscription_id: subscription.id,
+                premium_plan: subscription.metadata?.plan || null,
+                premium_current_period_end: getPeriodEnd(subscription),
+                is_premium: subscription.status === 'active' || subscription.status === 'trialing',
+              },
+              { count: 'exact' }
+            )
             .eq('id', userId)
+
+          if (error || count === 0) {
+            console.error('customer.subscription.updated: échec mise à jour users', { userId, error, count })
+            return NextResponse.json({ error: 'Mise à jour Supabase échouée.' }, { status: 500 })
+          }
         }
         break
       }
@@ -83,10 +99,15 @@ export async function POST(request: Request) {
         if (userId) {
           // On garde stripe_customer_id/stripe_subscription_id pour l'historique
           // (support client) — seul is_premium change, ce qui coupe l'accès.
-          await supabaseAdmin
+          const { error, count } = await supabaseAdmin
             .from('users')
-            .update({ is_premium: false })
+            .update({ is_premium: false }, { count: 'exact' })
             .eq('id', userId)
+
+          if (error || count === 0) {
+            console.error('customer.subscription.deleted: échec mise à jour users', { userId, error, count })
+            return NextResponse.json({ error: 'Mise à jour Supabase échouée.' }, { status: 500 })
+          }
         }
         break
       }
