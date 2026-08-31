@@ -311,9 +311,14 @@ function EtudierContent() {
         <p className="font-fredoka text-[#ff6b6b] text-xl">
           {mode === 'programmee' ? "Ce set est introuvable ou n'a aucune carte due aujourd'hui." : 'Ce set est introuvable ou ne contient aucune carte.'}
         </p>
-        <Link href="/revision" className="bg-[#ffd93d] text-[#0f0e17] rounded-2xl py-3 px-8 font-fredoka text-lg">
-          Retour à mes révisions
-        </Link>
+        <div className="flex flex-col gap-3" style={{ width: '100%', maxWidth: '320px' }}>
+          <Link href="/revision" className="bg-[#ffd93d] text-[#0f0e17] rounded-2xl py-3 px-8 font-fredoka text-lg text-center">
+            Retour à mes révisions
+          </Link>
+          <Link href="/profil" className="border border-[#3a3650] text-[#c9c4e0] rounded-2xl py-3 px-8 font-fredoka text-lg text-center hover:bg-[#1e1c2e] transition">
+            Retour à mon profil
+          </Link>
+        </div>
       </main>
     )
   }
