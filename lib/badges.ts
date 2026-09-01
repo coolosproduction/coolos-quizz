@@ -157,7 +157,7 @@ export function getFullBadgeFamilies(categories: CategoryLike[], subcategories: 
 export function rarityForLevel(levelIndex: number, totalLevels: number, secret: boolean): Rarity {
   if (secret) return 'legendaire'
   if (totalLevels <= 1) return 'epique'
-  if (totalLevels === 2) return levelIndex >= 2 ? 'legendaire' : 'rare'
+  if (totalLevels === 2) return levelIndex >= 2 ? 'legendaire' : 'epique'
   if (levelIndex >= totalLevels) return 'legendaire'
   if (levelIndex <= 1) return 'commun'
   const remaining = totalLevels - 2
