@@ -156,6 +156,7 @@ export default function Correction() {
               timed_out: q.timedOut,
             }))
             await supabase.from('game_answers').insert(answers)
+            supabase.rpc('check_and_award_badges', { p_user_id: user.id }).then(() => {})
           }
         }
       } catch (e) {
@@ -264,7 +265,7 @@ export default function Correction() {
             ) : (
               <button
                 onClick={() => setSignalModal(true)}
-                className="inline-flex items-center gap-1 text-[#9b96b8] hover:text-[#ff6b6b] transition font-fredoka text-xs"
+                className="inline-flex items-center gap-1 text-[#3a3650] hover:text-[#ff6b6b] transition font-fredoka text-xs"
               >
                 <span>⚑</span>
                 <span>Signaler cette question</span>

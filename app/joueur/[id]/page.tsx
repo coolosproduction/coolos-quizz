@@ -8,6 +8,7 @@ import Avatar from '@/components/Avatar'
 import BackButton from '@/components/BackButton'
 import RoleBadge from '@/components/RoleBadge'
 import Skeleton, { SkeletonRow } from '@/components/Skeleton'
+import { getFullBadgeCatalog, findBadgeDef, BadgeDef } from '@/lib/badges'
 
 type Identite = {
   pseudo: string
@@ -54,7 +55,10 @@ export default function ProfilPublic() {
   const [notFound, setNotFound] = useState(false)
   const [stats, setStats] = useState<StatsGenerales | null>(null)
   const [statsCategories, setStatsCategories] = useState<StatCategorie[]>([])
+  const [streak, setStreak] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
+  const [badgesObtenus, setBadgesObtenus] = useState<{ badge_key: string, earned_at: string }[]>([])
+  const [badgeCatalog, setBadgeCatalog] = useState<BadgeDef[]>([])
 
   const [friendRow, setFriendRow] = useState<FriendRow | null>(null)
   const [bloqueParMoi, setBloqueParMoi] = useState(false)
@@ -108,6 +112,17 @@ export default function ProfilPublic() {
         role: idData[0].role ?? null,
         is_premium: idData[0].is_premium ?? null,
       })
+
+      const { data: streakData } = await supabase.rpc('get_user_streak', { p_user_id: targetId })
+      setStreak(typeof streakData === 'number' ? streakData : null)
+
+      const [{ data: badgesData }, { data: catsData }, { data: subcatsData }] = await Promise.all([
+        supabase.rpc('get_user_badges', { p_user_id: targetId }),
+        supabase.from('categories').select('id, name').eq('active', true).order('name'),
+        supabase.from('subcategories').select('id, name').eq('active', true).order('name'),
+      ])
+      setBadgesObtenus((badgesData || []) as { badge_key: string, earned_at: string }[])
+      setBadgeCatalog(getFullBadgeCatalog(catsData || [], subcatsData || []))
 
       const { data: rankData } = await supabase
         .rpc('get_user_rank', { p_user_id: targetId, p_category_id: null })
@@ -273,6 +288,11 @@ export default function ProfilPublic() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="font-fredoka text-2xl text-[#eeeaf8]">{identite.pseudo}</h1>
                   <RoleBadge role={identite.role} isPremium={identite.is_premium} size="sm" />
+                  {!!streak && streak > 0 && (
+                    <span className="font-fredoka text-xs rounded-full px-3 py-1" style={{ background: '#1f1e10', color: '#ffd93d', border: '1px solid #ffd93d' }}>
+                      🔥 {streak} jour{streak > 1 ? 's' : ''} de suite
+                    </span>
+                  )}
                 </div>
                 {stats && (
                   <p className="text-[#827f97] text-sm">Rang #{stats.rank} au classement général</p>
@@ -442,6 +462,28 @@ export default function ProfilPublic() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Badges */}
+        {badgesObtenus.length > 0 && (
+          <div>
+            <h2 className="font-fredoka text-xl text-[#eeeaf8] mb-3">🏅 Badges ({badgesObtenus.length})</h2>
+            <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
+              {badgesObtenus.map(b => {
+                const def = findBadgeDef(badgeCatalog, b.badge_key)
+                if (!def) return null
+                return (
+                  <div key={b.badge_key} className="rounded-2xl p-4 flex items-start gap-3" style={{ background: '#1f1e10', border: '1px solid #ffd93d' }}>
+                    <div className="text-3xl flex-shrink-0">{def.icon}</div>
+                    <div className="min-w-0">
+                      <p className="font-fredoka text-sm" style={{ color: '#ffd93d' }}>{def.label}</p>
+                      <p className="text-[#827f97] text-xs mt-0.5">{def.description}</p>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}

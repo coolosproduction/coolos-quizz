@@ -179,6 +179,7 @@ function EtudierContent() {
       position: i + 1,
     }))
     await supabase.from('revision_session_cards').insert(rows)
+    supabase.rpc('check_and_award_badges', { p_user_id: user.id }).then(() => {})
 
     setPhase('termine')
   }

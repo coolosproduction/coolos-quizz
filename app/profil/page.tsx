@@ -11,6 +11,7 @@ import LineChartScore, { ScorePoint } from '@/components/charts/LineChartScore'
 import BarList from '@/components/charts/BarList'
 import StatRing from '@/components/charts/StatRing'
 import Skeleton, { SkeletonRow } from '@/components/Skeleton'
+import { getFullBadgeCatalog, BadgeDef } from '@/lib/badges'
 
 type Stats = {
   pseudo: string
@@ -68,7 +69,7 @@ type PremiumStats = {
 
 export default function Profil() {
   const router = useRouter()
-  const [onglet, setOnglet] = useState<'stats' | 'categories' | 'messages' | 'premium'>('stats')
+  const [onglet, setOnglet] = useState<'stats' | 'categories' | 'messages' | 'premium' | 'badges'>('stats')
   const [stats, setStats] = useState<Stats | null>(null)
   const [statsCategories, setStatsCategories] = useState<StatCategorie[]>([])
   const [notifications, setNotifications] = useState<Notification[]>([])
@@ -81,6 +82,9 @@ export default function Profil() {
   const [categoriesList, setCategoriesList] = useState<Category[]>([])
   const [percentileCategory, setPercentileCategory] = useState<string>('')
   const [portalLoading, setPortalLoading] = useState(false)
+  const [streak, setStreak] = useState<number | null>(null)
+  const [badgesObtenus, setBadgesObtenus] = useState<{ badge_key: string, earned_at: string }[]>([])
+  const [badgeCatalog, setBadgeCatalog] = useState<BadgeDef[]>([])
 
   const ouvrirPortailAbonnement = async () => {
     setPortalLoading(true)
@@ -137,6 +141,17 @@ export default function Profil() {
       const avatarUrl = user.user_metadata?.avatar_url || null
 
       setUserId(user.id)
+
+      const { data: streakData } = await supabase.rpc('get_user_streak', { p_user_id: user.id })
+      setStreak(typeof streakData === 'number' ? streakData : null)
+
+      const [{ data: badgesData }, { data: catsData }, { data: subcatsData }] = await Promise.all([
+        supabase.rpc('get_user_badges', { p_user_id: user.id }),
+        supabase.from('categories').select('id, name').eq('active', true).order('name'),
+        supabase.from('subcategories').select('id, name').eq('active', true).order('name'),
+      ])
+      setBadgesObtenus((badgesData || []) as { badge_key: string, earned_at: string }[])
+      setBadgeCatalog(getFullBadgeCatalog(catsData || [], subcatsData || []))
 
       const { data: roleData } = await supabase
         .from('users')
@@ -372,6 +387,11 @@ export default function Profil() {
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="font-fredoka text-3xl text-[#eeeaf8]">{stats.pseudo}</h2>
               <RoleBadge role={stats.role} isPremium={stats.isPremium} size="sm" />
+              {!!streak && streak > 0 && (
+                <span className="font-fredoka text-xs rounded-full px-3 py-1" style={{ background: '#1f1e10', color: '#ffd93d', border: '1px solid #ffd93d' }}>
+                  🔥 {streak} jour{streak > 1 ? 's' : ''} de suite
+                </span>
+              )}
             </div>
             <p className="text-[#827f97] text-sm">Membre depuis {stats.depuis}</p>
             <div className="flex gap-2 mt-2">
@@ -432,6 +452,13 @@ export default function Profil() {
             style={{ background: onglet === 'premium' ? '#0f0e17' : 'transparent', color: onglet === 'premium' ? '#ffd93d' : '#9b96b8' }}
           >
             ★ Stats avancées
+          </button>
+          <button
+            onClick={() => setOnglet('badges')}
+            className="flex-1 text-center font-fredoka text-sm py-3 rounded-lg transition hover:opacity-80"
+            style={{ background: onglet === 'badges' ? '#0f0e17' : 'transparent', color: onglet === 'badges' ? '#eeeaf8' : '#9b96b8' }}
+          >
+            🏅 Badges
           </button>
         </div>
 
@@ -761,6 +788,51 @@ export default function Profil() {
                 </Link>
               </>
             ) : null}
+          </div>
+        )}
+
+        {/* Panel badges */}
+        {onglet === 'badges' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', animation: 'coolos-fade-in 0.2s ease both' }}>
+            <p className="text-[#827f97] text-sm">
+              {badgesObtenus.length} / {badgeCatalog.length} badges débloqués
+            </p>
+            <div className="grid grid-cols-2 gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
+              {[...badgeCatalog]
+                .sort((a, b) => {
+                  const aObtenu = badgesObtenus.some(bo => bo.badge_key === a.key)
+                  const bObtenu = badgesObtenus.some(bo => bo.badge_key === b.key)
+                  if (aObtenu === bObtenu) return 0
+                  return aObtenu ? -1 : 1
+                })
+                .map(badge => {
+                  const obtenu = badgesObtenus.find(bo => bo.badge_key === badge.key)
+                  return (
+                    <div
+                      key={badge.key}
+                      className="rounded-2xl p-4 flex items-start gap-3"
+                      style={{
+                        background: obtenu ? '#1f1e10' : '#1a1828',
+                        border: obtenu ? '1px solid #ffd93d' : '1px solid #2a2830',
+                        opacity: obtenu ? 1 : 0.5,
+                      }}
+                    >
+                      <div className="text-3xl flex-shrink-0" style={{ filter: obtenu ? 'none' : 'grayscale(1)' }}>
+                        {badge.icon}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-fredoka text-sm" style={{ color: obtenu ? '#ffd93d' : '#c9c4e0' }}>{badge.label}</p>
+                        <p className="text-[#827f97] text-xs mt-0.5">{badge.description}</p>
+                        {obtenu && (
+                          <p className="text-[#6bcb77] text-xs mt-1">
+                            Obtenu le {new Date(obtenu.earned_at).toLocaleDateString('fr-FR')}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+            </div>
           </div>
         )}
 

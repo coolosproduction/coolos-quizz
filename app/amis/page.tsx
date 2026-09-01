@@ -113,6 +113,11 @@ export default function Amis() {
     setActionLoadingId(row.id)
     const supabase = createClient()
     await supabase.from('friend_requests').update({ status, responded_at: new Date().toISOString() }).eq('id', row.id)
+    if (status === 'accepted') {
+      // Le badge "10 amis" peut se débloquer pour les deux côtés de la demande
+      supabase.rpc('check_and_award_badges', { p_user_id: meId }).then(() => {})
+      supabase.rpc('check_and_award_badges', { p_user_id: otherIdOf(row, meId) }).then(() => {})
+    }
     await chargerTout(meId)
     setActionLoadingId(null)
   }
