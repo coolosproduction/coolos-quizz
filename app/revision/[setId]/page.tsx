@@ -78,6 +78,15 @@ export default function GererSet() {
   const [confirmDeleteSet, setConfirmDeleteSet] = useState(false)
   const [confirmDeleteCard, setConfirmDeleteCard] = useState<string | null>(null)
 
+  const [shareOpen, setShareOpen] = useState(false)
+  const [shareLoaded, setShareLoaded] = useState(false)
+  const [friends, setFriends] = useState<{ id: string, pseudo: string, avatar_url: string | null }[]>([])
+  const [shares, setShares] = useState<{ share_id: string, friend_id: string }[]>([])
+  const [shareActionId, setShareActionId] = useState<string | null>(null)
+  const [publicLink, setPublicLink] = useState<{ token: string, expires_at: string } | null>(null)
+  const [linkLoading, setLinkLoading] = useState(false)
+  const [linkCopied, setLinkCopied] = useState(false)
+
   const validateImage = (file: File): boolean => {
     setImageError('')
     if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
@@ -94,13 +103,21 @@ export default function GererSet() {
   const loadAll = async () => {
     const supabase = createClient()
 
+    const { data: { user } } = await supabase.auth.getUser()
+
     const { data: setData } = await supabase
       .from('revision_sets')
-      .select('id, name')
+      .select('id, name, user_id')
       .eq('id', setId)
       .maybeSingle()
 
     if (!setData) { setNotFound(true); setLoading(false); return }
+    if (user && setData.user_id !== user.id) {
+      // Cette page de gestion est réservée au propriétaire du set — un ami à qui le set a
+      // été partagé étudie depuis la liste "Partagés avec moi" de /revision, pas ici.
+      router.push('/revision')
+      return
+    }
     setSetName(setData.name)
     setNameInput(setData.name)
 
@@ -123,6 +140,94 @@ export default function GererSet() {
     setWorstCards((worstData || []) as WorstCard[])
 
     setLoading(false)
+  }
+
+  const loadSharePanel = async () => {
+    if (!userId) return
+    const supabase = createClient()
+
+    const { data: friendData } = await supabase
+      .from('friend_requests')
+      .select('id, requester_id, recipient_id, status')
+      .eq('status', 'accepted')
+      .or(`requester_id.eq.${userId},recipient_id.eq.${userId}`)
+    const friendIds = (friendData || []).map(r => r.requester_id === userId ? r.recipient_id : r.requester_id)
+
+    if (friendIds.length > 0) {
+      const results = await Promise.all(
+        friendIds.map(id => supabase.rpc('get_user_public_identity', { p_user_id: id }))
+      )
+      const list = results
+        .map((res, i) => {
+          const row = res.data && res.data.length > 0 ? res.data[0] : null
+          return row ? { id: friendIds[i], pseudo: row.pseudo as string, avatar_url: row.avatar_url as string | null } : null
+        })
+        .filter((f): f is { id: string, pseudo: string, avatar_url: string | null } => !!f)
+      setFriends(list)
+    } else {
+      setFriends([])
+    }
+
+    const { data: sharesData } = await supabase.rpc('get_my_shared_sets')
+    const mine = ((sharesData || []) as { share_id: string, set_id: string, friend_id: string }[])
+      .filter(s => s.set_id === setId)
+      .map(s => ({ share_id: s.share_id, friend_id: s.friend_id }))
+    setShares(mine)
+
+    const { data: linkData } = await supabase
+      .from('revision_set_public_links')
+      .select('id, expires_at')
+      .eq('set_id', setId)
+      .maybeSingle()
+    setPublicLink(linkData ? { token: linkData.id, expires_at: linkData.expires_at } : null)
+
+    setShareLoaded(true)
+  }
+
+  const ouvrirPartage = async () => {
+    setShareOpen(true)
+    if (!shareLoaded) await loadSharePanel()
+  }
+
+  const handleTogglePartage = async (friendId: string) => {
+    if (!userId) return
+    setShareActionId(friendId)
+    const supabase = createClient()
+    const existing = shares.find(s => s.friend_id === friendId)
+    if (existing) {
+      await supabase.from('revision_set_shares').delete().eq('id', existing.share_id)
+    } else {
+      await supabase.from('revision_set_shares').insert({ set_id: setId, owner_id: userId, friend_id: friendId })
+    }
+    await loadSharePanel()
+    setShareActionId(null)
+  }
+
+  const handleCreerLien = async () => {
+    setLinkLoading(true)
+    const supabase = createClient()
+    const { data, error } = await supabase.rpc('create_revision_public_link', { p_set_id: setId })
+    if (!error && data && data.length > 0) {
+      setPublicLink({ token: data[0].token, expires_at: data[0].expires_at })
+    }
+    setLinkLoading(false)
+  }
+
+  const handleRevoquerLien = async () => {
+    setLinkLoading(true)
+    const supabase = createClient()
+    await supabase.from('revision_set_public_links').delete().eq('set_id', setId)
+    setPublicLink(null)
+    setLinkLoading(false)
+  }
+
+  const copierLien = () => {
+    if (!publicLink) return
+    const url = `${window.location.origin}/revision/partage/${publicLink.token}`
+    navigator.clipboard.writeText(url).then(() => {
+      setLinkCopied(true)
+      setTimeout(() => setLinkCopied(false), 2000)
+    })
   }
 
   useEffect(() => {
@@ -322,7 +427,95 @@ export default function GererSet() {
               </div>
             )}
           </div>
+          <button
+            onClick={ouvrirPartage}
+            className="font-fredoka text-xs rounded-full px-4 py-2 flex-shrink-0 transition hover:opacity-80"
+            style={{ background: '#2a1f3d', color: '#a78bfa', border: '1px solid #3a2d5a' }}
+          >
+            🔗 Partager
+          </button>
         </div>
+
+        {/* Panneau de partage */}
+        {shareOpen && (
+          <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl" style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div className="flex justify-between items-center">
+              <p className="font-fredoka text-[#c9c4e0] text-base">Partager ce set</p>
+              <button onClick={() => setShareOpen(false)} className="text-[#827f97] hover:text-[#c9c4e0] text-sm transition">✕</button>
+            </div>
+
+            {!shareLoaded ? (
+              <Skeleton height={80} radius="16px" />
+            ) : (
+              <>
+                <div>
+                  <p className="text-[#9b96b8] text-sm mb-2">
+                    À un ami — accès en lecture, modes Classique et Flashcard uniquement (même s'il n'est pas premium).
+                  </p>
+                  {friends.length === 0 ? (
+                    <p className="text-[#827f97] text-xs">Tu n'as pas encore d'amis à qui partager ce set.</p>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {friends.map(f => {
+                        const partage = shares.find(s => s.friend_id === f.id)
+                        return (
+                          <div key={f.id} className="flex justify-between items-center bg-[#0f0e17] rounded-xl px-3 py-2">
+                            <span className="text-[#c9c4e0] text-sm">{f.pseudo}</span>
+                            <button
+                              onClick={() => handleTogglePartage(f.id)}
+                              disabled={shareActionId === f.id}
+                              className="font-fredoka text-xs rounded-full px-3 py-1.5 disabled:opacity-50 transition hover:opacity-80"
+                              style={partage
+                                ? { background: '#1a2e1f', color: '#6bcb77', border: '1px solid #2a4a30' }
+                                : { background: 'transparent', color: '#9b96b8', border: '1px solid #3a3650' }}
+                            >
+                              {partage ? '✓ Partagé · Retirer' : 'Partager'}
+                            </button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ borderTop: '1px solid #232035', paddingTop: '16px' }}>
+                  <p className="text-[#9b96b8] text-sm mb-2">
+                    Par lien public — consultable sans compte, en lecture seule, expire 7 jours après création.
+                  </p>
+                  {publicLink ? (
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <code className="bg-[#0f0e17] text-[#4ecdc4] text-xs rounded-lg px-3 py-2 truncate" style={{ maxWidth: '100%' }}>
+                          {`${typeof window !== 'undefined' ? window.location.origin : ''}/revision/partage/${publicLink.token}`}
+                        </code>
+                        <button onClick={copierLien} className="font-fredoka text-xs rounded-full px-3 py-1.5 hover:opacity-80 transition" style={{ background: '#1a2a2d', color: '#4ecdc4', border: '1px solid #4ecdc4' }}>
+                          {linkCopied ? '✓ Copié' : 'Copier'}
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-[#827f97] text-xs">
+                          Expire le {new Date(publicLink.expires_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </span>
+                        <button onClick={handleRevoquerLien} disabled={linkLoading} className="font-fredoka text-xs text-[#827f97] hover:text-[#ff6b6b] transition disabled:opacity-50">
+                          Révoquer
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handleCreerLien}
+                      disabled={linkLoading}
+                      className="font-fredoka text-xs rounded-full px-4 py-2 disabled:opacity-50 transition hover:opacity-80"
+                      style={{ background: '#1a2a2d', color: '#4ecdc4', border: '1px solid #4ecdc4' }}
+                    >
+                      {linkLoading ? 'Création...' : 'Créer un lien public'}
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Stats légères */}
         {overview && (

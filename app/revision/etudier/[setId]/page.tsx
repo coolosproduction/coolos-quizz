@@ -94,11 +94,18 @@ function EtudierContent() {
 
       const { data: setData } = await supabase
         .from('revision_sets')
-        .select('id, name')
+        .select('id, name, user_id')
         .eq('id', setId)
         .maybeSingle()
 
       if (!setData) { setNotFound(true); setLoading(false); return }
+
+      // Le mode "programmée" (planification SM-2) est personnel au propriétaire du set —
+      // un ami à qui le set a été partagé ne peut étudier qu'en classique/flashcard.
+      if (mode === 'programmee' && setData.user_id !== user.id) {
+        router.replace(`/revision/etudier/${setId}?mode=classique`)
+        return
+      }
 
       let cardsQuery = supabase
         .from('revision_cards')

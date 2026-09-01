@@ -17,6 +17,17 @@ type SetOverview = {
   due_cards_count: number
 }
 
+type SharedSet = {
+  set_id: string
+  name: string
+  owner_id: string
+  owner_pseudo: string
+  cards_count: number
+  my_sessions_count: number
+  my_last_session_at: string | null
+  my_success_rate: number
+}
+
 type GlobalStats = {
   total_sets: number
   total_cards: number
@@ -46,6 +57,8 @@ export default function Revision() {
   const [error, setError] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [sharedSets, setSharedSets] = useState<SharedSet[]>([])
+  const [expandedSharedId, setExpandedSharedId] = useState<string | null>(null)
 
   const loadSets = async () => {
     const supabase = createClient()
@@ -60,6 +73,12 @@ export default function Revision() {
     setGlobalStats((row || null) as GlobalStats | null)
   }
 
+  const loadSharedSets = async () => {
+    const supabase = createClient()
+    const { data } = await supabase.rpc('get_shared_revision_sets')
+    setSharedSets((data || []) as SharedSet[])
+  }
+
   useEffect(() => {
     const init = async () => {
       const supabase = createClient()
@@ -69,7 +88,11 @@ export default function Revision() {
       const { data: premiumAccess } = await supabase.rpc('has_premium_access')
       setHasPremiumAccess(!!premiumAccess)
 
-      if (premiumAccess) await Promise.all([loadSets(), loadGlobalStats()])
+      // Les sets partagés par un ami restent accessibles même sans premium — chargés
+      // indépendamment du statut premium du visiteur.
+      const tasks = [loadSharedSets()]
+      if (premiumAccess) tasks.push(loadSets(), loadGlobalStats())
+      await Promise.all(tasks)
       setLoading(false)
     }
     init()
@@ -132,12 +155,53 @@ export default function Revision() {
           </div>
         </div>
 
+        {/* Sets partagés avec moi — visible même sans premium */}
+        {sharedSets.length > 0 && (
+          <div>
+            <h2 className="font-fredoka text-xl text-[#eeeaf8] mb-3">🤝 Partagés avec moi</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {sharedSets.map(s => (
+                <div key={s.set_id} className="bg-[#1a1828] border border-[#2a2830] rounded-2xl" style={{ padding: '18px 20px' }}>
+                  <div className="mb-3">
+                    <p className="font-fredoka text-[#eeeaf8] text-lg">{s.name}</p>
+                    <div className="flex gap-3 flex-wrap mt-1">
+                      <span className="text-[#827f97] text-xs">Partagé par {s.owner_pseudo}</span>
+                      <span className="text-[#827f97] text-xs">{s.cards_count} carte{s.cards_count !== 1 ? 's' : ''}</span>
+                      {s.my_sessions_count > 0 && (
+                        <span className="text-xs font-fredoka" style={{ color: performanceColor(s.my_success_rate) }}>
+                          {s.my_success_rate}% de réussite
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {s.cards_count > 0 && (
+                    expandedSharedId === s.set_id ? (
+                      <div className="flex gap-2 flex-wrap">
+                        <Link href={`/revision/etudier/${s.set_id}?mode=classique`} className="font-fredoka text-xs rounded-full px-4 py-2 hover:opacity-80 transition" style={{ background: '#2a1f3d', color: '#a78bfa', border: '1px solid #a78bfa' }}>
+                          Classique →
+                        </Link>
+                        <Link href={`/revision/etudier/${s.set_id}?mode=flashcard`} className="font-fredoka text-xs rounded-full px-4 py-2 hover:opacity-80 transition" style={{ background: '#1a2a2d', color: '#4ecdc4', border: '1px solid #4ecdc4' }}>
+                          Flashcard →
+                        </Link>
+                      </div>
+                    ) : (
+                      <button onClick={() => setExpandedSharedId(s.set_id)} className="font-fredoka text-xs rounded-full px-4 py-2 hover:opacity-80 transition" style={{ background: '#1f1e10', color: '#ffd93d', border: '1px solid #ffd93d' }}>
+                        Étudier
+                      </button>
+                    )
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {!hasPremiumAccess ? (
           <div className="bg-[#1a1828] border rounded-2xl p-10 text-center" style={{ borderColor: '#4a3a10' }}>
             <p className="font-fredoka text-[#ffd93d] text-xl mb-2">★ Fonctionnalité Premium</p>
             <p className="text-[#9b96b8] text-sm leading-relaxed">
               La révision par fiches personnelles (recto/verso, mode classique ou flashcard) est réservée
-              aux comptes premium.
+              aux comptes premium — sauf les sets qu'un ami premium t'a partagés, ci-dessus.
             </p>
           </div>
         ) : (
