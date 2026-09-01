@@ -265,7 +265,7 @@ export default function Correction() {
             ) : (
               <button
                 onClick={() => setSignalModal(true)}
-                className="inline-flex items-center gap-1 text-[#3a3650] hover:text-[#ff6b6b] transition font-fredoka text-xs"
+                className="inline-flex items-center gap-1 text-[#ff6b6b] hover:opacity-80 transition font-fredoka text-xs"
               >
                 <span>⚑</span>
                 <span>Signaler cette question</span>

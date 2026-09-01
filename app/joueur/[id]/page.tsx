@@ -8,13 +8,17 @@ import Avatar from '@/components/Avatar'
 import BackButton from '@/components/BackButton'
 import RoleBadge from '@/components/RoleBadge'
 import Skeleton, { SkeletonRow } from '@/components/Skeleton'
-import { getFullBadgeCatalog, findBadgeDef, BadgeDef } from '@/lib/badges'
+import {
+  getFullBadgeFamilies, getAllFamilyDisplays, findFamilyByKey, getFamilyDisplay,
+  RARITY_STYLES, BadgeFamily, EarnedBadge,
+} from '@/lib/badges'
 
 type Identite = {
   pseudo: string
   avatar_url: string | null
   role: string | null
   is_premium: boolean | null
+  showcase_badge_key: string | null
 }
 
 type StatsGenerales = {
@@ -57,8 +61,8 @@ export default function ProfilPublic() {
   const [statsCategories, setStatsCategories] = useState<StatCategorie[]>([])
   const [streak, setStreak] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
-  const [badgesObtenus, setBadgesObtenus] = useState<{ badge_key: string, earned_at: string }[]>([])
-  const [badgeCatalog, setBadgeCatalog] = useState<BadgeDef[]>([])
+  const [badgesObtenus, setBadgesObtenus] = useState<EarnedBadge[]>([])
+  const [badgeFamilies, setBadgeFamilies] = useState<BadgeFamily[]>([])
 
   const [friendRow, setFriendRow] = useState<FriendRow | null>(null)
   const [bloqueParMoi, setBloqueParMoi] = useState(false)
@@ -111,6 +115,7 @@ export default function ProfilPublic() {
         avatar_url: idData[0].avatar_url,
         role: idData[0].role ?? null,
         is_premium: idData[0].is_premium ?? null,
+        showcase_badge_key: idData[0].showcase_badge_key ?? null,
       })
 
       const { data: streakData } = await supabase.rpc('get_user_streak', { p_user_id: targetId })
@@ -119,10 +124,10 @@ export default function ProfilPublic() {
       const [{ data: badgesData }, { data: catsData }, { data: subcatsData }] = await Promise.all([
         supabase.rpc('get_user_badges', { p_user_id: targetId }),
         supabase.from('categories').select('id, name').eq('active', true).order('name'),
-        supabase.from('subcategories').select('id, name').eq('active', true).order('name'),
+        supabase.from('subcategories').select('id, name, category_id').eq('active', true).order('name'),
       ])
-      setBadgesObtenus((badgesData || []) as { badge_key: string, earned_at: string }[])
-      setBadgeCatalog(getFullBadgeCatalog(catsData || [], subcatsData || []))
+      setBadgesObtenus((badgesData || []) as EarnedBadge[])
+      setBadgeFamilies(getFullBadgeFamilies(catsData || [], subcatsData || []))
 
       const { data: rankData } = await supabase
         .rpc('get_user_rank', { p_user_id: targetId, p_category_id: null })
@@ -283,7 +288,28 @@ export default function ProfilPublic() {
           <div className="flex items-center gap-5 flex-wrap justify-between">
             <div className="flex items-center gap-5">
               <BackButton />
-              <Avatar url={identite.avatar_url} size={64} border="accent" />
+              <div className="relative">
+                <Avatar url={identite.avatar_url} size={64} border="accent" />
+                {identite.showcase_badge_key && (() => {
+                  const fam = findFamilyByKey(badgeFamilies, identite.showcase_badge_key)
+                  if (!fam) return null
+                  const fd = getFamilyDisplay(fam, badgesObtenus)
+                  if (!fd.unlocked) return null
+                  const style = RARITY_STYLES[fd.rarity]
+                  return (
+                    <div
+                      title={fd.def.label}
+                      className="absolute flex items-center justify-center rounded-full"
+                      style={{
+                        bottom: '-4px', right: '-4px', width: '26px', height: '26px',
+                        background: style.bg, border: `2px solid ${style.color}`, fontSize: '13px',
+                      }}
+                    >
+                      {fd.def.icon}
+                    </div>
+                  )
+                })()}
+              </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="font-fredoka text-2xl text-[#eeeaf8]">{identite.pseudo}</h1>
@@ -470,26 +496,35 @@ export default function ProfilPublic() {
         )}
 
         {/* Badges */}
-        {badgesObtenus.length > 0 && (
-          <div>
-            <h2 className="font-fredoka text-xl text-[#eeeaf8] mb-3">🏅 Badges ({badgesObtenus.length})</h2>
-            <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
-              {badgesObtenus.map(b => {
-                const def = findBadgeDef(badgeCatalog, b.badge_key)
-                if (!def) return null
-                return (
-                  <div key={b.badge_key} className="rounded-2xl p-4 flex items-start gap-3" style={{ background: '#1f1e10', border: '1px solid #ffd93d' }}>
-                    <div className="text-3xl flex-shrink-0">{def.icon}</div>
-                    <div className="min-w-0">
-                      <p className="font-fredoka text-sm" style={{ color: '#ffd93d' }}>{def.label}</p>
-                      <p className="text-[#827f97] text-xs mt-0.5">{def.description}</p>
+        {badgesObtenus.length > 0 && (() => {
+          const obtenues = getAllFamilyDisplays(badgeFamilies, badgesObtenus).filter(d => d.unlocked)
+          return (
+            <div>
+              <h2 className="font-fredoka text-xl text-[#eeeaf8] mb-3">🏅 Badges ({obtenues.length})</h2>
+              <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
+                {obtenues.map(fd => {
+                  const style = RARITY_STYLES[fd.rarity]
+                  return (
+                    <div key={fd.family.familyKey} className="rounded-2xl p-4 flex items-start gap-3" style={{ background: style.bg, border: `1px solid ${style.color}` }}>
+                      <div className="text-3xl flex-shrink-0">{fd.def.icon}</div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-fredoka text-sm" style={{ color: style.color }}>{fd.def.label}</p>
+                          {fd.total > 1 && (
+                            <span className="font-fredoka text-[10px] rounded-full px-2 py-0.5" style={{ background: '#0f0e17', color: '#827f97', border: '1px solid #2a2830' }}>
+                              Niveau {fd.level}/{fd.total}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[#827f97] text-xs mt-0.5">{fd.def.description}</p>
+                      </div>
                     </div>
-                  </div>
-                )
-              })}
+                  )
+                })}
+              </div>
             </div>
-          </div>
-        )}
+          )
+        })()}
 
         <p className="text-[#8480a1] text-xs text-center">
           Seules les statistiques agrégées sont visibles ici — l'historique détaillé des parties reste privé.

@@ -11,7 +11,10 @@ import LineChartScore, { ScorePoint } from '@/components/charts/LineChartScore'
 import BarList from '@/components/charts/BarList'
 import StatRing from '@/components/charts/StatRing'
 import Skeleton, { SkeletonRow } from '@/components/Skeleton'
-import { getFullBadgeCatalog, BadgeDef } from '@/lib/badges'
+import {
+  getFullBadgeFamilies, getAllFamilyDisplays, findFamilyByKey, getFamilyDisplay, isHidden,
+  RARITY_STYLES, BadgeFamily, EarnedBadge,
+} from '@/lib/badges'
 
 type Stats = {
   pseudo: string
@@ -19,6 +22,7 @@ type Stats = {
   role: string | null
   isPremium: boolean | null
   stripeCustomerId: string | null
+  showcaseBadgeKey: string | null
   depuis: string
   totalQuestions: number
   tauxReussite: number
@@ -83,8 +87,10 @@ export default function Profil() {
   const [percentileCategory, setPercentileCategory] = useState<string>('')
   const [portalLoading, setPortalLoading] = useState(false)
   const [streak, setStreak] = useState<number | null>(null)
-  const [badgesObtenus, setBadgesObtenus] = useState<{ badge_key: string, earned_at: string }[]>([])
-  const [badgeCatalog, setBadgeCatalog] = useState<BadgeDef[]>([])
+  const [badgesObtenus, setBadgesObtenus] = useState<EarnedBadge[]>([])
+  const [badgeFamilies, setBadgeFamilies] = useState<BadgeFamily[]>([])
+  const [showcaseSaving, setShowcaseSaving] = useState(false)
+  const [showcasePicker, setShowcasePicker] = useState(false)
 
   const ouvrirPortailAbonnement = async () => {
     setPortalLoading(true)
@@ -148,14 +154,14 @@ export default function Profil() {
       const [{ data: badgesData }, { data: catsData }, { data: subcatsData }] = await Promise.all([
         supabase.rpc('get_user_badges', { p_user_id: user.id }),
         supabase.from('categories').select('id, name').eq('active', true).order('name'),
-        supabase.from('subcategories').select('id, name').eq('active', true).order('name'),
+        supabase.from('subcategories').select('id, name, category_id').eq('active', true).order('name'),
       ])
-      setBadgesObtenus((badgesData || []) as { badge_key: string, earned_at: string }[])
-      setBadgeCatalog(getFullBadgeCatalog(catsData || [], subcatsData || []))
+      setBadgesObtenus((badgesData || []) as EarnedBadge[])
+      setBadgeFamilies(getFullBadgeFamilies(catsData || [], subcatsData || []))
 
       const { data: roleData } = await supabase
         .from('users')
-        .select('role, is_premium, stripe_customer_id')
+        .select('role, is_premium, stripe_customer_id, showcase_badge_key')
         .eq('id', user.id)
         .single()
 
@@ -165,6 +171,7 @@ export default function Profil() {
         role: roleData?.role ?? null,
         isPremium: roleData?.is_premium ?? null,
         stripeCustomerId: roleData?.stripe_customer_id ?? null,
+        showcaseBadgeKey: roleData?.showcase_badge_key ?? null,
         depuis,
         totalQuestions,
         tauxReussite,
@@ -226,6 +233,17 @@ export default function Profil() {
     await supabase.from('notifications').update({ lu: true }).eq('id', id)
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, lu: true } : n))
     setNbNonLus(prev => Math.max(0, prev - 1))
+  }
+
+  const handleChoisirShowcase = async (familyKey: string | null) => {
+    setShowcaseSaving(true)
+    const supabase = createClient()
+    const { error } = await supabase.rpc('set_showcase_badge', { p_family_key: familyKey })
+    if (!error) {
+      setStats(prev => prev ? { ...prev, showcaseBadgeKey: familyKey } : prev)
+      setShowcasePicker(false)
+    }
+    setShowcaseSaving(false)
   }
 
   const hasPremiumAccess = stats?.role === 'admin' || stats?.role === 'owner' || !!stats?.isPremium
@@ -382,6 +400,25 @@ export default function Profil() {
         <div className="flex items-center gap-5">
           <div className="relative">
             <Avatar url={stats.avatarUrl} size={80} border="accent" />
+            {stats.showcaseBadgeKey && (() => {
+              const fam = findFamilyByKey(badgeFamilies, stats.showcaseBadgeKey)
+              if (!fam) return null
+              const fd = getFamilyDisplay(fam, badgesObtenus)
+              if (!fd.unlocked) return null
+              const style = RARITY_STYLES[fd.rarity]
+              return (
+                <div
+                  title={fd.def.label}
+                  className="absolute flex items-center justify-center rounded-full"
+                  style={{
+                    bottom: '-4px', right: '-4px', width: '32px', height: '32px',
+                    background: style.bg, border: `2px solid ${style.color}`, fontSize: '16px',
+                  }}
+                >
+                  {fd.def.icon}
+                </div>
+              )
+            })()}
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -796,49 +833,119 @@ export default function Profil() {
         )}
 
         {/* Panel badges */}
-        {onglet === 'badges' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', animation: 'coolos-fade-in 0.2s ease both' }}>
-            <p className="text-[#827f97] text-sm">
-              {badgesObtenus.length} / {badgeCatalog.length} badges débloqués
-            </p>
-            <div className="grid grid-cols-2 gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
-              {[...badgeCatalog]
-                .sort((a, b) => {
-                  const aObtenu = badgesObtenus.some(bo => bo.badge_key === a.key)
-                  const bObtenu = badgesObtenus.some(bo => bo.badge_key === b.key)
-                  if (aObtenu === bObtenu) return 0
-                  return aObtenu ? -1 : 1
-                })
-                .map(badge => {
-                  const obtenu = badgesObtenus.find(bo => bo.badge_key === badge.key)
+        {onglet === 'badges' && (() => {
+          const displays = getAllFamilyDisplays(badgeFamilies, badgesObtenus)
+          const obtenues = displays.filter(d => d.unlocked)
+          const sorted = [...displays].sort((a, b) => {
+            if (a.unlocked === b.unlocked) return 0
+            return a.unlocked ? -1 : 1
+          })
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', animation: 'coolos-fade-in 0.2s ease both' }}>
+              <p className="text-[#827f97] text-sm">
+                {obtenues.length} / {displays.length} badges débloqués
+              </p>
+
+              {/* Badge vitrine */}
+              <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-4">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <p className="font-fredoka text-[#c9c4e0] text-sm">🎖️ Badge vitrine — affiché à côté de ta photo</p>
+                  {stats.showcaseBadgeKey && (
+                    <button
+                      onClick={() => handleChoisirShowcase(null)}
+                      disabled={showcaseSaving}
+                      className="font-fredoka text-xs text-[#9b96b8] hover:text-[#ff6b6b] transition disabled:opacity-50"
+                    >
+                      Retirer
+                    </button>
+                  )}
+                </div>
+                {obtenues.length === 0 ? (
+                  <p className="text-[#827f97] text-xs mt-2">Débloque un premier badge pour pouvoir en afficher un sur ton profil.</p>
+                ) : !showcasePicker ? (
+                  <button
+                    onClick={() => setShowcasePicker(true)}
+                    className="mt-3 font-fredoka text-xs rounded-full px-4 py-2 transition hover:opacity-80"
+                    style={{ background: '#2a1f3d', color: '#a78bfa', border: '1px solid #3a2d5a' }}
+                  >
+                    {stats.showcaseBadgeKey ? 'Changer de badge vitrine' : 'Choisir un badge vitrine'}
+                  </button>
+                ) : (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {obtenues.map(fd => {
+                      const style = RARITY_STYLES[fd.rarity]
+                      const selected = stats.showcaseBadgeKey === fd.family.familyKey
+                      return (
+                        <button
+                          key={fd.family.familyKey}
+                          onClick={() => handleChoisirShowcase(fd.family.familyKey)}
+                          disabled={showcaseSaving}
+                          title={fd.def.label}
+                          className="flex items-center justify-center rounded-full transition hover:opacity-80 disabled:opacity-50"
+                          style={{
+                            width: '44px', height: '44px', fontSize: '20px',
+                            background: style.bg,
+                            border: selected ? `2px solid ${style.color}` : `1px solid ${style.border}`,
+                          }}
+                        >
+                          {fd.def.icon}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
+                {sorted.map(fd => {
+                  const style = RARITY_STYLES[fd.rarity]
+                  const hidden = isHidden(fd)
                   return (
                     <div
-                      key={badge.key}
+                      key={fd.family.familyKey}
                       className="rounded-2xl p-4 flex items-start gap-3"
                       style={{
-                        background: obtenu ? '#1f1e10' : '#1a1828',
-                        border: obtenu ? '1px solid #ffd93d' : '1px solid #2a2830',
-                        opacity: obtenu ? 1 : 0.5,
+                        background: fd.unlocked ? style.bg : '#1a1828',
+                        border: fd.unlocked ? `1px solid ${style.color}` : `1px solid ${style.border}`,
+                        opacity: fd.unlocked ? 1 : 0.5,
                       }}
                     >
-                      <div className="text-3xl flex-shrink-0" style={{ filter: obtenu ? 'none' : 'grayscale(1)' }}>
-                        {badge.icon}
+                      <div className="text-3xl flex-shrink-0" style={{ filter: fd.unlocked ? 'none' : 'grayscale(1)' }}>
+                        {hidden ? '❓' : fd.def.icon}
                       </div>
-                      <div className="min-w-0">
-                        <p className="font-fredoka text-sm" style={{ color: obtenu ? '#ffd93d' : '#c9c4e0' }}>{badge.label}</p>
-                        <p className="text-[#827f97] text-xs mt-0.5">{badge.description}</p>
-                        {obtenu && (
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-fredoka text-sm" style={{ color: fd.unlocked ? style.color : '#c9c4e0' }}>
+                            {hidden ? '???' : fd.def.label}
+                          </p>
+                          {fd.total > 1 && !hidden && (
+                            <span className="font-fredoka text-[10px] rounded-full px-2 py-0.5" style={{ background: '#0f0e17', color: '#827f97', border: '1px solid #2a2830' }}>
+                              Niveau {Math.max(fd.level, 1)}/{fd.total}
+                            </span>
+                          )}
+                          <span className="font-fredoka text-[10px]" style={{ color: style.color }}>{style.label}</span>
+                        </div>
+                        <p className="text-[#827f97] text-xs mt-0.5">
+                          {hidden ? 'Badge secret — débloque-le pour révéler son contenu.' : fd.def.description}
+                        </p>
+                        {fd.unlocked && fd.earnedAt && (
                           <p className="text-[#6bcb77] text-xs mt-1">
-                            Obtenu le {new Date(obtenu.earned_at).toLocaleDateString('fr-FR')}
+                            Obtenu le {new Date(fd.earnedAt).toLocaleDateString('fr-FR')}
+                          </p>
+                        )}
+                        {fd.unlocked && fd.nextDef && !hidden && (
+                          <p className="text-[#827f97] text-xs mt-1">
+                            Niveau suivant : {fd.nextDef.description}
                           </p>
                         )}
                       </div>
                     </div>
                   )
                 })}
+              </div>
             </div>
-          </div>
-        )}
+          )
+        })()}
 
         {/* Déconnexion */}
         <div style={{ borderTop: '1px solid #1e1c2e', paddingTop: '24px' }}>

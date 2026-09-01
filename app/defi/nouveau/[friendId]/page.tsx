@@ -29,7 +29,6 @@ export default function NouveauDefi() {
   const friendId = params.friendId as string
 
   const [loading, setLoading] = useState(true)
-  const [hasPremiumAccess, setHasPremiumAccess] = useState(false)
   const [friend, setFriend] = useState<Identite | null>(null)
   const [notFriend, setNotFriend] = useState(false)
 
@@ -48,9 +47,6 @@ export default function NouveauDefi() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/connexion'); return }
 
-      const { data: premiumAccess } = await supabase.rpc('has_premium_access')
-      setHasPremiumAccess(!!premiumAccess)
-
       const { data: friendRow } = await supabase
         .from('friend_requests')
         .select('id')
@@ -65,19 +61,17 @@ export default function NouveauDefi() {
         setFriend({ pseudo: idData[0].pseudo, avatar_url: idData[0].avatar_url })
       }
 
-      if (premiumAccess) {
-        const { data: catsData } = await supabase
-          .from('categories')
-          .select('id, name')
-          .eq('active', true)
-          .order('name')
-        if (catsData) {
-          setThemes(catsData.map((c, i) => ({
-            id: c.id, name: c.name,
-            color: themeColors[i % themeColors.length],
-            bg: themeBgs[i % themeBgs.length],
-          })))
-        }
+      const { data: catsData } = await supabase
+        .from('categories')
+        .select('id, name')
+        .eq('active', true)
+        .order('name')
+      if (catsData) {
+        setThemes(catsData.map((c, i) => ({
+          id: c.id, name: c.name,
+          color: themeColors[i % themeColors.length],
+          bg: themeBgs[i % themeBgs.length],
+        })))
       }
 
       setLoading(false)
@@ -168,15 +162,7 @@ export default function NouveauDefi() {
           </div>
         </div>
 
-        {!hasPremiumAccess ? (
-          <div className="bg-[#1a1828] border rounded-2xl p-10 text-center" style={{ borderColor: '#4a3a10' }}>
-            <p className="font-fredoka text-[#ffd93d] text-xl mb-2">★ Fonctionnalité Premium</p>
-            <p className="text-[#9b96b8] text-sm leading-relaxed">
-              Envoyer un défi est réservé aux comptes premium — mais n'importe qui peut en recevoir et y jouer.
-            </p>
-          </div>
-        ) : (
-          <>
+        <>
             {error && (
               <div className="bg-[#2e1a1a] border border-[#ff6b6b] rounded-xl px-4 py-3">
                 <p className="text-[#ff6b6b] text-sm">{error}</p>
@@ -282,7 +268,6 @@ export default function NouveauDefi() {
               Tu joueras en premier pour lancer le défi — {friend?.pseudo} recevra une notification pour jouer à son tour.
             </p>
           </>
-        )}
 
       </div>
     </main>
