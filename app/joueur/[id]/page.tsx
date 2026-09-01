@@ -374,6 +374,9 @@ export default function ProfilPublic() {
                             <span className="font-fredoka text-sm rounded-full px-4 py-2" style={{ background: '#1a2e1f', color: '#6bcb77', border: '1px solid #2a4a30' }}>
                               ✓ Amis
                             </span>
+                            <Link href={`/defi/nouveau/${targetId}`} className="font-fredoka text-sm rounded-full px-4 py-2 transition hover:opacity-90" style={{ background: '#1f1e10', color: '#ffd93d', border: '1px solid #ffd93d' }}>
+                              🎯 Défier
+                            </Link>
                             <button onClick={() => setConfirmAction('unfriend')} className="font-fredoka text-xs text-[#827f97] hover:text-[#ff6b6b] transition">
                               Retirer
                             </button>

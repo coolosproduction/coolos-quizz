@@ -43,7 +43,7 @@ type Notification = {
   contenu: string
   lu: boolean
   created_at: string
-  type: 'coolos' | 'room_invite'
+  type: 'coolos' | 'room_invite' | 'quiz_challenge'
   action_url: string | null
 }
 
@@ -594,6 +594,10 @@ export default function Profil() {
                         <span className="font-fredoka text-xs rounded-full px-3 py-1" style={{ background: '#1a2a2d', color: '#4ecdc4' }}>
                           🎮 Invitation
                         </span>
+                      ) : n.type === 'quiz_challenge' ? (
+                        <span className="font-fredoka text-xs rounded-full px-3 py-1" style={{ background: '#1f1e10', color: '#ffd93d' }}>
+                          🎯 Défi
+                        </span>
                       ) : (
                         <span className="font-fredoka text-xs rounded-full px-3 py-1" style={{ background: '#2a1f3d', color: '#a78bfa' }}>
                           ✉ Coolos
@@ -619,7 +623,7 @@ export default function Profil() {
                         className="font-fredoka text-xs rounded-lg px-3 py-1.5 hover:opacity-80 transition"
                         style={{ background: '#1a2a2d', color: '#4ecdc4', border: '1px solid #2a4a4d' }}
                       >
-                        Rejoindre la salle →
+                        {n.type === 'quiz_challenge' ? 'Voir le défi →' : 'Rejoindre la salle →'}
                       </Link>
                     )}
                     {!n.lu && (

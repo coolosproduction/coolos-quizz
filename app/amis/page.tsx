@@ -161,7 +161,7 @@ export default function Amis() {
     <main className="min-h-screen bg-[#0f0e17]" style={{ padding: '32px 24px 60px' }}>
       <div style={{ maxWidth: '700px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
             <BackButton />
             <div>
@@ -169,9 +169,14 @@ export default function Amis() {
               <p className="text-[#9b96b8] text-sm">Gère tes amis, tes demandes et les joueurs bloqués</p>
             </div>
           </div>
-          <Link href="/classement" className="font-fredoka text-sm text-[#a78bfa] hover:opacity-80 transition flex-shrink-0">
-            Chercher un joueur →
-          </Link>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <Link href="/defi" className="font-fredoka text-sm rounded-full px-4 py-2 transition hover:opacity-80" style={{ background: '#1f1e10', color: '#ffd93d', border: '1px solid #ffd93d' }}>
+              🎯 Mes défis
+            </Link>
+            <Link href="/classement" className="font-fredoka text-sm text-[#a78bfa] hover:opacity-80 transition">
+              Chercher un joueur →
+            </Link>
+          </div>
         </div>
 
         {/* Onglets */}
@@ -224,9 +229,14 @@ export default function Amis() {
                       </button>
                     </>
                   ) : (
-                    <button onClick={() => setConfirmId(row.id)} className="font-fredoka text-xs text-[#827f97] hover:text-[#ff6b6b] transition">
-                      Retirer
-                    </button>
+                    <>
+                      <Link href={`/defi/nouveau/${otherId}`} className="font-fredoka text-xs rounded-full px-3 py-1.5 transition hover:opacity-90" style={{ background: '#1f1e10', color: '#ffd93d', border: '1px solid #ffd93d' }}>
+                        🎯 Défier
+                      </Link>
+                      <button onClick={() => setConfirmId(row.id)} className="font-fredoka text-xs text-[#827f97] hover:text-[#ff6b6b] transition">
+                        Retirer
+                      </button>
+                    </>
                   )}
                 </CarteJoueur>
               )
