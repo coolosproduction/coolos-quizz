@@ -15,6 +15,7 @@ type SetOverview = {
   last_session_at: string | null
   success_rate: number
   due_cards_count: number
+  cloze_cards_count: number
 }
 
 type SharedSet = {
@@ -26,6 +27,7 @@ type SharedSet = {
   my_sessions_count: number
   my_last_session_at: string | null
   my_success_rate: number
+  cloze_cards_count: number
 }
 
 type GlobalStats = {
@@ -167,6 +169,9 @@ export default function Revision() {
                     <div className="flex gap-3 flex-wrap mt-1">
                       <span className="text-[#827f97] text-xs">Partagé par {s.owner_pseudo}</span>
                       <span className="text-[#827f97] text-xs">{s.cards_count} carte{s.cards_count !== 1 ? 's' : ''}</span>
+                      {s.cloze_cards_count > 0 && (
+                        <span className="text-[#827f97] text-xs">{s.cloze_cards_count} à trous</span>
+                      )}
                       {s.my_sessions_count > 0 && (
                         <span className="text-xs font-fredoka" style={{ color: performanceColor(s.my_success_rate) }}>
                           {s.my_success_rate}% de réussite
@@ -174,15 +179,24 @@ export default function Revision() {
                       )}
                     </div>
                   </div>
-                  {s.cards_count > 0 && (
+                  {(s.cards_count > 0 || s.cloze_cards_count > 0) && (
                     expandedSharedId === s.set_id ? (
                       <div className="flex gap-2 flex-wrap">
-                        <Link href={`/revision/etudier/${s.set_id}?mode=classique`} className="font-fredoka text-xs rounded-full px-4 py-2 hover:opacity-80 transition" style={{ background: '#2a1f3d', color: '#a78bfa', border: '1px solid #a78bfa' }}>
-                          Classique →
-                        </Link>
-                        <Link href={`/revision/etudier/${s.set_id}?mode=flashcard`} className="font-fredoka text-xs rounded-full px-4 py-2 hover:opacity-80 transition" style={{ background: '#1a2a2d', color: '#4ecdc4', border: '1px solid #4ecdc4' }}>
-                          Flashcard →
-                        </Link>
+                        {s.cards_count > 0 && (
+                          <>
+                            <Link href={`/revision/etudier/${s.set_id}?mode=classique`} className="font-fredoka text-xs rounded-full px-4 py-2 hover:opacity-80 transition" style={{ background: '#2a1f3d', color: '#a78bfa', border: '1px solid #a78bfa' }}>
+                              Classique →
+                            </Link>
+                            <Link href={`/revision/etudier/${s.set_id}?mode=flashcard`} className="font-fredoka text-xs rounded-full px-4 py-2 hover:opacity-80 transition" style={{ background: '#1a2a2d', color: '#4ecdc4', border: '1px solid #4ecdc4' }}>
+                              Flashcard →
+                            </Link>
+                          </>
+                        )}
+                        {s.cloze_cards_count > 0 && (
+                          <Link href={`/revision/etudier-trous/${s.set_id}`} className="font-fredoka text-xs rounded-full px-4 py-2 hover:opacity-80 transition" style={{ background: '#132417', color: '#6bcb77', border: '1px solid #6bcb77' }}>
+                            Trous →
+                          </Link>
+                        )}
                       </div>
                     ) : (
                       <button onClick={() => setExpandedSharedId(s.set_id)} className="font-fredoka text-xs rounded-full px-4 py-2 hover:opacity-80 transition" style={{ background: '#1f1e10', color: '#ffd93d', border: '1px solid #ffd93d' }}>
@@ -292,6 +306,9 @@ export default function Revision() {
                         </Link>
                         <div className="flex gap-3 flex-wrap mt-1">
                           <span className="text-[#827f97] text-xs">{s.cards_count} carte{s.cards_count !== 1 ? 's' : ''}</span>
+                          {s.cloze_cards_count > 0 && (
+                            <span className="text-[#827f97] text-xs">{s.cloze_cards_count} à trous</span>
+                          )}
                           <span className="text-[#827f97] text-xs">{s.sessions_count} session{s.sessions_count !== 1 ? 's' : ''}</span>
                           {s.sessions_count > 0 && (
                             <span className="text-xs font-fredoka" style={{ color: performanceColor(s.success_rate) }}>
@@ -326,23 +343,32 @@ export default function Revision() {
                       <Link href={`/revision/${s.set_id}`} className="font-fredoka text-xs rounded-full px-4 py-2 hover:bg-[#231f38] transition" style={{ background: '#1e1c2e', color: '#9b96b8', border: '1px solid #3a3650' }}>
                         Gérer les cartes
                       </Link>
-                      {s.cards_count > 0 && (
+                      {(s.cards_count > 0 || s.cloze_cards_count > 0) && (
                         expandedId === s.set_id ? (
                           <div className="flex gap-2 flex-wrap">
-                            <Link href={`/revision/etudier/${s.set_id}?mode=classique`} className="font-fredoka text-xs rounded-full px-4 py-2 hover:opacity-80 transition" style={{ background: '#2a1f3d', color: '#a78bfa', border: '1px solid #a78bfa' }}>
-                              Classique →
-                            </Link>
-                            <Link href={`/revision/etudier/${s.set_id}?mode=flashcard`} className="font-fredoka text-xs rounded-full px-4 py-2 hover:opacity-80 transition" style={{ background: '#1a2a2d', color: '#4ecdc4', border: '1px solid #4ecdc4' }}>
-                              Flashcard →
-                            </Link>
-                            {s.due_cards_count > 0 ? (
-                              <Link href={`/revision/etudier/${s.set_id}?mode=programmee`} className="font-fredoka text-xs rounded-full px-4 py-2 hover:opacity-80 transition" style={{ background: '#1f1e10', color: '#ffd93d', border: '1px solid #ffd93d' }}>
-                                Réviser ({s.due_cards_count} due{s.due_cards_count > 1 ? 's' : ''}) →
+                            {s.cards_count > 0 && (
+                              <>
+                                <Link href={`/revision/etudier/${s.set_id}?mode=classique`} className="font-fredoka text-xs rounded-full px-4 py-2 hover:opacity-80 transition" style={{ background: '#2a1f3d', color: '#a78bfa', border: '1px solid #a78bfa' }}>
+                                  Classique →
+                                </Link>
+                                <Link href={`/revision/etudier/${s.set_id}?mode=flashcard`} className="font-fredoka text-xs rounded-full px-4 py-2 hover:opacity-80 transition" style={{ background: '#1a2a2d', color: '#4ecdc4', border: '1px solid #4ecdc4' }}>
+                                  Flashcard →
+                                </Link>
+                                {s.due_cards_count > 0 ? (
+                                  <Link href={`/revision/etudier/${s.set_id}?mode=programmee`} className="font-fredoka text-xs rounded-full px-4 py-2 hover:opacity-80 transition" style={{ background: '#1f1e10', color: '#ffd93d', border: '1px solid #ffd93d' }}>
+                                    Réviser ({s.due_cards_count} due{s.due_cards_count > 1 ? 's' : ''}) →
+                                  </Link>
+                                ) : (
+                                  <span className="font-fredoka text-xs rounded-full px-4 py-2" style={{ background: '#1a1828', color: '#4a4758', border: '1px solid #2a2830' }}>
+                                    Rien à réviser aujourd'hui
+                                  </span>
+                                )}
+                              </>
+                            )}
+                            {s.cloze_cards_count > 0 && (
+                              <Link href={`/revision/etudier-trous/${s.set_id}`} className="font-fredoka text-xs rounded-full px-4 py-2 hover:opacity-80 transition" style={{ background: '#132417', color: '#6bcb77', border: '1px solid #6bcb77' }}>
+                                Trous ({s.cloze_cards_count}) →
                               </Link>
-                            ) : (
-                              <span className="font-fredoka text-xs rounded-full px-4 py-2" style={{ background: '#1a1828', color: '#4a4758', border: '1px solid #2a2830' }}>
-                                Rien à réviser aujourd'hui
-                              </span>
                             )}
                           </div>
                         ) : (

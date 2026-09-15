@@ -1,15 +1,30 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '../../../lib/supabase'
+import { parseCloze, countBlanks, wrapSelectionAsBlank } from '../../../lib/cloze'
 import BackButton from '@/components/BackButton'
 import Skeleton, { SkeletonList } from '@/components/Skeleton'
 
 type Card = { id: string, recto: string, verso: string, recto_image_path: string | null, verso_image_path: string | null }
+type ClozeCard = { id: string, content: string }
 type WorstCard = { card_id: string, recto: string, verso: string, non_count: number, attempts_count: number }
-type SetOverview = { set_id: string, name: string, cards_count: number, sessions_count: number, last_session_at: string | null, success_rate: number, due_cards_count: number }
+type SetOverview = { set_id: string, name: string, cards_count: number, sessions_count: number, last_session_at: string | null, success_rate: number, due_cards_count: number, cloze_cards_count: number }
+
+// Rendu partagé d'un texte à trous : segments texte inchangés, segments trou affichés comme un
+// espace souligné (aperçu de création/édition, et liste des cartes existantes).
+function ClozePreview({ content, color }: { content: string, color: string }) {
+  return (
+    <>
+      {parseCloze(content).map((seg, i) => seg.type === 'text'
+        ? <span key={i}>{seg.value}</span>
+        : <span key={i} className="font-fredoka" style={{ color, borderBottom: `2px solid ${color}` }}>▁▁▁▁▁</span>
+      )}
+    </>
+  )
+}
 
 const performanceColor = (rate: number) => (rate >= 70 ? '#6bcb77' : rate >= 40 ? '#ffd93d' : '#ff6b6b')
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
@@ -78,6 +93,16 @@ export default function GererSet() {
   const [confirmDeleteSet, setConfirmDeleteSet] = useState(false)
   const [confirmDeleteCard, setConfirmDeleteCard] = useState<string | null>(null)
 
+  const [clozeCards, setClozeCards] = useState<ClozeCard[]>([])
+  const [newClozeContent, setNewClozeContent] = useState('')
+  const [addingCloze, setAddingCloze] = useState(false)
+  const [clozeError, setClozeError] = useState('')
+  const [editingClozeId, setEditingClozeId] = useState<string | null>(null)
+  const [editClozeContent, setEditClozeContent] = useState('')
+  const [confirmDeleteClozeCard, setConfirmDeleteClozeCard] = useState<string | null>(null)
+  const newClozeTextareaRef = useRef<HTMLTextAreaElement>(null)
+  const editClozeTextareaRef = useRef<HTMLTextAreaElement>(null)
+
   const [shareOpen, setShareOpen] = useState(false)
   const [shareLoaded, setShareLoaded] = useState(false)
   const [friends, setFriends] = useState<{ id: string, pseudo: string, avatar_url: string | null }[]>([])
@@ -131,6 +156,13 @@ export default function GererSet() {
 
     const urls = await getSignedImageUrls(loadedCards.flatMap(c => [c.recto_image_path, c.verso_image_path]))
     setImageUrls(urls)
+
+    const { data: clozeData } = await supabase
+      .from('revision_cloze_cards')
+      .select('id, content')
+      .eq('set_id', setId)
+      .order('created_at', { ascending: true })
+    setClozeCards((clozeData || []) as ClozeCard[])
 
     const { data: overviewData } = await supabase.rpc('get_revision_sets_overview')
     const mine = ((overviewData || []) as SetOverview[]).find(o => o.set_id === setId) || null
@@ -363,6 +395,73 @@ export default function GererSet() {
     await loadAll()
   }
 
+  const handleMarquerTrouNew = () => {
+    const ta = newClozeTextareaRef.current
+    if (!ta) return
+    const result = wrapSelectionAsBlank(newClozeContent, ta.selectionStart, ta.selectionEnd)
+    if (!result) return
+    setNewClozeContent(result.content)
+    requestAnimationFrame(() => { ta.focus(); ta.setSelectionRange(result.cursor, result.cursor) })
+  }
+
+  const handleMarquerTrouEdit = () => {
+    const ta = editClozeTextareaRef.current
+    if (!ta) return
+    const result = wrapSelectionAsBlank(editClozeContent, ta.selectionStart, ta.selectionEnd)
+    if (!result) return
+    setEditClozeContent(result.content)
+    requestAnimationFrame(() => { ta.focus(); ta.setSelectionRange(result.cursor, result.cursor) })
+  }
+
+  const handleAjouterClozeCard = async () => {
+    const content = newClozeContent.trim()
+    if (!content) return
+    if (countBlanks(content) === 0) {
+      setClozeError('Ajoute au moins un trou avec le bouton "Marquer comme trou" ou la syntaxe {{mot}}.')
+      return
+    }
+    setAddingCloze(true)
+    setClozeError('')
+    const supabase = createClient()
+    const { error } = await supabase.from('revision_cloze_cards').insert({ set_id: setId, content })
+    if (error) {
+      setClozeError("Impossible d'ajouter cette carte.")
+      setAddingCloze(false)
+      return
+    }
+    setNewClozeContent('')
+    await loadAll()
+    setAddingCloze(false)
+  }
+
+  const commencerEditionCloze = (card: ClozeCard) => {
+    setEditingClozeId(card.id)
+    setEditClozeContent(card.content)
+    setClozeError('')
+  }
+
+  const handleSauvegarderEditionCloze = async (cardId: string) => {
+    const content = editClozeContent.trim()
+    if (!content) return
+    if (countBlanks(content) === 0) {
+      setClozeError('Ajoute au moins un trou avant de sauvegarder.')
+      return
+    }
+    const supabase = createClient()
+    const { error } = await supabase.from('revision_cloze_cards').update({ content }).eq('id', cardId)
+    if (error) { setClozeError('Impossible de sauvegarder cette carte.'); return }
+    setEditingClozeId(null)
+    setClozeError('')
+    await loadAll()
+  }
+
+  const handleSupprimerClozeCard = async (cardId: string) => {
+    const supabase = createClient()
+    await supabase.from('revision_cloze_cards').delete().eq('id', cardId)
+    setConfirmDeleteClozeCard(null)
+    await loadAll()
+  }
+
   if (loading) {
     return (
       <main className="min-h-screen bg-[#0f0e17]" style={{ padding: '32px 24px 60px' }}>
@@ -558,22 +657,31 @@ export default function GererSet() {
         )}
 
         {/* Lancer une session */}
-        {cards.length > 0 ? (
+        {(cards.length > 0 || clozeCards.length > 0) ? (
           <div className="flex gap-3 flex-wrap">
-            <Link href={`/revision/etudier/${setId}?mode=classique`} className="flex-1 rounded-2xl py-4 font-fredoka text-lg text-center hover:opacity-90 transition" style={{ background: '#2a1f3d', color: '#a78bfa', border: '1px solid #a78bfa', minWidth: '200px' }}>
-              Étudier — Classique →
-            </Link>
-            <Link href={`/revision/etudier/${setId}?mode=flashcard`} className="flex-1 rounded-2xl py-4 font-fredoka text-lg text-center hover:opacity-90 transition" style={{ background: '#1a2a2d', color: '#4ecdc4', border: '1px solid #4ecdc4', minWidth: '200px' }}>
-              Étudier — Flashcard →
-            </Link>
-            {overview && overview.due_cards_count > 0 ? (
-              <Link href={`/revision/etudier/${setId}?mode=programmee`} className="flex-1 rounded-2xl py-4 font-fredoka text-lg text-center hover:opacity-90 transition" style={{ background: '#1f1e10', color: '#ffd93d', border: '1px solid #ffd93d', minWidth: '200px' }}>
-                Réviser ({overview.due_cards_count} due{overview.due_cards_count > 1 ? 's' : ''}) →
+            {cards.length > 0 && (
+              <>
+                <Link href={`/revision/etudier/${setId}?mode=classique`} className="flex-1 rounded-2xl py-4 font-fredoka text-lg text-center hover:opacity-90 transition" style={{ background: '#2a1f3d', color: '#a78bfa', border: '1px solid #a78bfa', minWidth: '200px' }}>
+                  Étudier — Classique →
+                </Link>
+                <Link href={`/revision/etudier/${setId}?mode=flashcard`} className="flex-1 rounded-2xl py-4 font-fredoka text-lg text-center hover:opacity-90 transition" style={{ background: '#1a2a2d', color: '#4ecdc4', border: '1px solid #4ecdc4', minWidth: '200px' }}>
+                  Étudier — Flashcard →
+                </Link>
+                {overview && overview.due_cards_count > 0 ? (
+                  <Link href={`/revision/etudier/${setId}?mode=programmee`} className="flex-1 rounded-2xl py-4 font-fredoka text-lg text-center hover:opacity-90 transition" style={{ background: '#1f1e10', color: '#ffd93d', border: '1px solid #ffd93d', minWidth: '200px' }}>
+                    Réviser ({overview.due_cards_count} due{overview.due_cards_count > 1 ? 's' : ''}) →
+                  </Link>
+                ) : (
+                  <div className="flex-1 rounded-2xl py-4 font-fredoka text-lg text-center" style={{ background: '#1a1828', color: '#4a4758', border: '1px solid #2a2830', minWidth: '200px' }}>
+                    Rien à réviser aujourd'hui
+                  </div>
+                )}
+              </>
+            )}
+            {clozeCards.length > 0 && (
+              <Link href={`/revision/etudier-trous/${setId}`} className="flex-1 rounded-2xl py-4 font-fredoka text-lg text-center hover:opacity-90 transition" style={{ background: '#132417', color: '#6bcb77', border: '1px solid #6bcb77', minWidth: '200px' }}>
+                📝 Étudier — Trous →
               </Link>
-            ) : (
-              <div className="flex-1 rounded-2xl py-4 font-fredoka text-lg text-center" style={{ background: '#1a1828', color: '#4a4758', border: '1px solid #2a2830', minWidth: '200px' }}>
-                Rien à réviser aujourd'hui
-              </div>
             )}
           </div>
         ) : (
@@ -747,6 +855,121 @@ export default function GererSet() {
             </div>
           ))}
         </div>
+
+        {/* Ajouter une carte à trous */}
+        <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-5">
+          <p className="font-fredoka text-[#c9c4e0] text-base mb-1">📝 Ajouter une carte à trous</p>
+          <p className="text-[#827f97] text-xs mb-3">
+            Écris ton texte, sélectionne un mot ou un groupe de mots puis clique sur "Marquer comme trou"
+            (ou tape directement {'{{mot}}'} autour du passage à cacher).
+          </p>
+          <textarea
+            ref={newClozeTextareaRef}
+            value={newClozeContent}
+            onChange={e => setNewClozeContent(e.target.value)}
+            placeholder="Ex. La Mésopotamie se situe entre le {{Tigre}} et l'{{Euphrate}}."
+            rows={4}
+            maxLength={2000}
+            className="w-full bg-[#0f0e17] border border-[#3a3650] rounded-xl px-4 py-3 text-[#eeeaf8] text-sm outline-none focus:border-[#6bcb77] resize-none mb-3"
+          />
+          <div className="flex items-center gap-3 flex-wrap mb-3">
+            <button
+              onClick={handleMarquerTrouNew}
+              className="font-fredoka text-xs rounded-full px-4 py-2 hover:opacity-80 transition"
+              style={{ background: '#132417', color: '#6bcb77', border: '1px solid #6bcb77' }}
+            >
+              🕳️ Marquer comme trou
+            </button>
+            <span className="text-[#827f97] text-xs">
+              {countBlanks(newClozeContent)} trou{countBlanks(newClozeContent) !== 1 ? 's' : ''}
+            </span>
+          </div>
+          {newClozeContent && (
+            <div className="bg-[#0f0e17] border border-[#2a2830] rounded-xl px-4 py-3 mb-3">
+              <p className="text-[#827f97] text-xs mb-2">Aperçu</p>
+              <p className="text-[#c9c4e0] text-sm leading-relaxed">
+                <ClozePreview content={newClozeContent} color="#6bcb77" />
+              </p>
+            </div>
+          )}
+          {clozeError && <p className="text-[#ff6b6b] text-xs mb-3">{clozeError}</p>}
+          <button
+            onClick={handleAjouterClozeCard}
+            disabled={addingCloze || !newClozeContent.trim()}
+            className="bg-[#6bcb77] text-[#0f0e17] rounded-xl px-6 py-3 font-fredoka text-sm hover:opacity-90 transition disabled:opacity-50"
+          >
+            {addingCloze ? 'Ajout...' : '+ Ajouter la carte'}
+          </button>
+        </div>
+
+        {/* Liste des cartes à trous */}
+        {clozeCards.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <p className="font-fredoka text-[#c9c4e0] text-base">Cartes à trous ({clozeCards.length})</p>
+            {clozeCards.map(c => (
+              <div key={c.id} className="bg-[#1a1828] border border-[#2a2830] rounded-xl" style={{ padding: '14px 18px' }}>
+                {editingClozeId === c.id ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <textarea
+                      ref={editClozeTextareaRef}
+                      value={editClozeContent}
+                      onChange={e => setEditClozeContent(e.target.value)}
+                      rows={4}
+                      maxLength={2000}
+                      className="w-full bg-[#0f0e17] border border-[#6bcb77] rounded-xl px-4 py-3 text-[#eeeaf8] text-sm outline-none resize-none"
+                    />
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <button
+                        onClick={handleMarquerTrouEdit}
+                        className="font-fredoka text-xs rounded-full px-4 py-2 hover:opacity-80 transition"
+                        style={{ background: '#132417', color: '#6bcb77', border: '1px solid #6bcb77' }}
+                      >
+                        🕳️ Marquer comme trou
+                      </button>
+                      <span className="text-[#827f97] text-xs">
+                        {countBlanks(editClozeContent)} trou{countBlanks(editClozeContent) !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    {clozeError && <p className="text-[#ff6b6b] text-xs">{clozeError}</p>}
+                    <div className="flex gap-2">
+                      <button onClick={() => handleSauvegarderEditionCloze(c.id)} className="font-fredoka text-xs rounded-full px-4 py-2 hover:opacity-80 transition" style={{ background: '#6bcb77', color: '#0f0e17' }}>
+                        Sauvegarder
+                      </button>
+                      <button onClick={() => { setEditingClozeId(null); setClozeError('') }} className="font-fredoka text-xs text-[#827f97] hover:text-[#c9c4e0] transition">
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex justify-between items-start gap-3 flex-wrap">
+                    <p className="text-[#c9c4e0] text-sm flex-1 min-w-0 leading-relaxed">
+                      <ClozePreview content={c.content} color="#6bcb77" />
+                    </p>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button onClick={() => commencerEditionCloze(c)} className="font-fredoka text-xs text-[#827f97] hover:text-[#6bcb77] transition">
+                        Modifier
+                      </button>
+                      {confirmDeleteClozeCard === c.id ? (
+                        <>
+                          <button onClick={() => handleSupprimerClozeCard(c.id)} className="font-fredoka text-xs rounded-full px-3 py-1.5 hover:opacity-80 transition" style={{ background: '#ff6b6b', color: '#0f0e17' }}>
+                            Confirmer
+                          </button>
+                          <button onClick={() => setConfirmDeleteClozeCard(null)} className="font-fredoka text-xs text-[#827f97] hover:text-[#c9c4e0] transition">
+                            Annuler
+                          </button>
+                        </>
+                      ) : (
+                        <button onClick={() => setConfirmDeleteClozeCard(c.id)} className="font-fredoka text-xs text-[#827f97] hover:text-[#ff6b6b] transition">
+                          Supprimer
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Supprimer le set */}
         <div style={{ borderTop: '1px solid #1e1c2e', paddingTop: '20px' }}>
