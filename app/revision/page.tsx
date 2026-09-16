@@ -16,6 +16,7 @@ type SetOverview = {
   success_rate: number
   due_cards_count: number
   cloze_cards_count: number
+  image_cloze_cards_count: number
 }
 
 type SharedSet = {
@@ -28,6 +29,7 @@ type SharedSet = {
   my_last_session_at: string | null
   my_success_rate: number
   cloze_cards_count: number
+  image_cloze_cards_count: number
 }
 
 type GlobalStats = {
@@ -172,6 +174,9 @@ export default function Revision() {
                       {s.cloze_cards_count > 0 && (
                         <span className="text-[#827f97] text-xs">{s.cloze_cards_count} à trous</span>
                       )}
+                      {s.image_cloze_cards_count > 0 && (
+                        <span className="text-[#827f97] text-xs">{s.image_cloze_cards_count} carte-image</span>
+                      )}
                       {s.my_sessions_count > 0 && (
                         <span className="text-xs font-fredoka" style={{ color: performanceColor(s.my_success_rate) }}>
                           {s.my_success_rate}% de réussite
@@ -179,7 +184,7 @@ export default function Revision() {
                       )}
                     </div>
                   </div>
-                  {(s.cards_count > 0 || s.cloze_cards_count > 0) && (
+                  {(s.cards_count > 0 || s.cloze_cards_count > 0 || s.image_cloze_cards_count > 0) && (
                     expandedSharedId === s.set_id ? (
                       <div className="flex gap-2 flex-wrap">
                         {s.cards_count > 0 && (
@@ -195,6 +200,11 @@ export default function Revision() {
                         {s.cloze_cards_count > 0 && (
                           <Link href={`/revision/etudier-trous/${s.set_id}`} className="font-fredoka text-xs rounded-full px-4 py-2 hover:opacity-80 transition" style={{ background: '#132417', color: '#6bcb77', border: '1px solid #6bcb77' }}>
                             Trous →
+                          </Link>
+                        )}
+                        {s.image_cloze_cards_count > 0 && (
+                          <Link href={`/revision/etudier-image/${s.set_id}`} className="font-fredoka text-xs rounded-full px-4 py-2 hover:opacity-80 transition" style={{ background: '#2a1f10', color: '#ff9f43', border: '1px solid #ff9f43' }}>
+                            Carte image →
                           </Link>
                         )}
                       </div>
@@ -309,6 +319,9 @@ export default function Revision() {
                           {s.cloze_cards_count > 0 && (
                             <span className="text-[#827f97] text-xs">{s.cloze_cards_count} à trous</span>
                           )}
+                          {s.image_cloze_cards_count > 0 && (
+                            <span className="text-[#827f97] text-xs">{s.image_cloze_cards_count} carte-image</span>
+                          )}
                           <span className="text-[#827f97] text-xs">{s.sessions_count} session{s.sessions_count !== 1 ? 's' : ''}</span>
                           {s.sessions_count > 0 && (
                             <span className="text-xs font-fredoka" style={{ color: performanceColor(s.success_rate) }}>
@@ -343,7 +356,7 @@ export default function Revision() {
                       <Link href={`/revision/${s.set_id}`} className="font-fredoka text-xs rounded-full px-4 py-2 hover:bg-[#231f38] transition" style={{ background: '#1e1c2e', color: '#9b96b8', border: '1px solid #3a3650' }}>
                         Gérer les cartes
                       </Link>
-                      {(s.cards_count > 0 || s.cloze_cards_count > 0) && (
+                      {(s.cards_count > 0 || s.cloze_cards_count > 0 || s.image_cloze_cards_count > 0) && (
                         expandedId === s.set_id ? (
                           <div className="flex gap-2 flex-wrap">
                             {s.cards_count > 0 && (
@@ -368,6 +381,11 @@ export default function Revision() {
                             {s.cloze_cards_count > 0 && (
                               <Link href={`/revision/etudier-trous/${s.set_id}`} className="font-fredoka text-xs rounded-full px-4 py-2 hover:opacity-80 transition" style={{ background: '#132417', color: '#6bcb77', border: '1px solid #6bcb77' }}>
                                 Trous ({s.cloze_cards_count}) →
+                              </Link>
+                            )}
+                            {s.image_cloze_cards_count > 0 && (
+                              <Link href={`/revision/etudier-image/${s.set_id}`} className="font-fredoka text-xs rounded-full px-4 py-2 hover:opacity-80 transition" style={{ background: '#2a1f10', color: '#ff9f43', border: '1px solid #ff9f43' }}>
+                                Carte image ({s.image_cloze_cards_count}) →
                               </Link>
                             )}
                           </div>

@@ -6,15 +6,19 @@ import { useParams, useRouter } from 'next/navigation'
 import Papa from 'papaparse'
 import { createClient } from '../../../lib/supabase'
 import { parseCloze, countBlanks, wrapSelectionAsBlank } from '../../../lib/cloze'
+import type { ImageBlank } from '../../../lib/imageCloze'
 import BackButton from '@/components/BackButton'
 import Skeleton, { SkeletonList } from '@/components/Skeleton'
 import Spinner from '@/components/Spinner'
+import ImageBlankEditor from '@/components/ImageBlankEditor'
 
 type Card = { id: string, recto: string, verso: string, recto_image_path: string | null, verso_image_path: string | null }
 type ClozeCard = { id: string, content: string }
 type LigneImportCsv = { ligneNum: number, recto: string, verso: string, erreur: string | null }
+type ImageClozeCard = { id: string, image_path: string, blanks: ImageBlank[] }
+type ImageClozeCardRow = { id: string, image_path: string, revision_image_cloze_blanks: ImageBlank[] }
 type WorstCard = { card_id: string, recto: string, verso: string, non_count: number, attempts_count: number }
-type SetOverview = { set_id: string, name: string, cards_count: number, sessions_count: number, last_session_at: string | null, success_rate: number, due_cards_count: number, cloze_cards_count: number }
+type SetOverview = { set_id: string, name: string, cards_count: number, sessions_count: number, last_session_at: string | null, success_rate: number, due_cards_count: number, cloze_cards_count: number, image_cloze_cards_count: number }
 
 // Rendu partagé d'un texte à trous : segments texte inchangés, segments trou affichés comme un
 // espace souligné (aperçu de création/édition, et liste des cartes existantes).
@@ -116,6 +120,17 @@ export default function GererSet() {
   const [csvResultat, setCsvResultat] = useState({ reussies: 0, echouees: 0 })
   const [csvErreurGenerale, setCsvErreurGenerale] = useState('')
 
+  const [imageClozeCards, setImageClozeCards] = useState<ImageClozeCard[]>([])
+  const [imageClozeImageUrls, setImageClozeImageUrls] = useState<Record<string, string>>({})
+  const [newImageFile, setNewImageFile] = useState<File | null>(null)
+  const [newImagePreviewUrl, setNewImagePreviewUrl] = useState<string | null>(null)
+  const [newImageBlanks, setNewImageBlanks] = useState<ImageBlank[]>([])
+  const [addingImageCard, setAddingImageCard] = useState(false)
+  const [imageClozeError, setImageClozeError] = useState('')
+  const [editingImageCardId, setEditingImageCardId] = useState<string | null>(null)
+  const [editImageBlanks, setEditImageBlanks] = useState<ImageBlank[]>([])
+  const [confirmDeleteImageCard, setConfirmDeleteImageCard] = useState<string | null>(null)
+
   const [shareOpen, setShareOpen] = useState(false)
   const [shareLoaded, setShareLoaded] = useState(false)
   const [friends, setFriends] = useState<{ id: string, pseudo: string, avatar_url: string | null }[]>([])
@@ -176,6 +191,18 @@ export default function GererSet() {
       .eq('set_id', setId)
       .order('created_at', { ascending: true })
     setClozeCards((clozeData || []) as ClozeCard[])
+
+    const { data: imageClozeData } = await supabase
+      .from('revision_image_cloze_cards')
+      .select('id, image_path, revision_image_cloze_blanks(id, x, y, width, height, answer)')
+      .eq('set_id', setId)
+      .order('created_at', { ascending: true })
+    const loadedImageCards = ((imageClozeData || []) as ImageClozeCardRow[]).map(c => ({
+      id: c.id, image_path: c.image_path, blanks: c.revision_image_cloze_blanks || [],
+    }))
+    setImageClozeCards(loadedImageCards)
+    const imgClozeUrls = await getSignedImageUrls(loadedImageCards.map(c => c.image_path))
+    setImageClozeImageUrls(imgClozeUrls)
 
     const { data: overviewData } = await supabase.rpc('get_revision_sets_overview')
     const mine = ((overviewData || []) as SetOverview[]).find(o => o.set_id === setId) || null
@@ -417,6 +444,102 @@ export default function GererSet() {
     setCsvAnalyseFaite(false)
     setCsvImportTermine(false)
     setCsvErreurGenerale('')
+  }
+
+  const handleNewImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]
+    if (!f || !validateImage(f)) return
+    setNewImageFile(f)
+    setNewImageBlanks([])
+    setNewImagePreviewUrl(URL.createObjectURL(f))
+  }
+
+  const handleAjouterImageCard = async () => {
+    if (!newImageFile || newImageBlanks.length === 0 || !userId) return
+    setAddingImageCard(true)
+    setImageClozeError('')
+
+    const imagePath = await uploadCardImage(newImageFile, userId)
+    if (!imagePath) {
+      setImageClozeError("Échec de l'upload de l'image.")
+      setAddingImageCard(false)
+      return
+    }
+
+    const supabase = createClient()
+    const { data: card, error: cardError } = await supabase
+      .from('revision_image_cloze_cards')
+      .insert({ set_id: setId, image_path: imagePath })
+      .select()
+      .single()
+
+    if (cardError || !card) {
+      await deleteCardImages([imagePath])
+      setImageClozeError('Impossible de créer cette carte.')
+      setAddingImageCard(false)
+      return
+    }
+
+    const blankRows = newImageBlanks.map(b => ({ card_id: card.id, x: b.x, y: b.y, width: b.width, height: b.height, answer: b.answer }))
+    const { error: blanksError } = await supabase.from('revision_image_cloze_blanks').insert(blankRows)
+    if (blanksError) {
+      await supabase.from('revision_image_cloze_cards').delete().eq('id', card.id)
+      await deleteCardImages([imagePath])
+      setImageClozeError("Impossible d'ajouter les trous : " + blanksError.message)
+      setAddingImageCard(false)
+      return
+    }
+
+    setNewImageFile(null)
+    setNewImagePreviewUrl(null)
+    setNewImageBlanks([])
+    await loadAll()
+    setAddingImageCard(false)
+  }
+
+  const commencerEditionImageCard = (card: ImageClozeCard) => {
+    setEditingImageCardId(card.id)
+    setEditImageBlanks(card.blanks)
+    setImageClozeError('')
+  }
+
+  const handleSauvegarderImageBlanks = async (cardId: string) => {
+    const original = imageClozeCards.find(c => c.id === cardId)?.blanks || []
+    const originalIds = new Set(original.map(b => b.id))
+    const editedIds = new Set(editImageBlanks.map(b => b.id))
+    const toInsert = editImageBlanks.filter(b => !originalIds.has(b.id))
+    const toDelete = original.filter(b => !editedIds.has(b.id))
+    const toUpdate = editImageBlanks.filter(b => {
+      const orig = original.find(o => o.id === b.id)
+      return orig && orig.answer !== b.answer
+    })
+
+    const supabase = createClient()
+
+    if (toDelete.length > 0) {
+      await supabase.from('revision_image_cloze_blanks').delete().in('id', toDelete.map(b => b.id))
+    }
+    if (toInsert.length > 0) {
+      const rows = toInsert.map(b => ({ card_id: cardId, x: b.x, y: b.y, width: b.width, height: b.height, answer: b.answer }))
+      const { error } = await supabase.from('revision_image_cloze_blanks').insert(rows)
+      if (error) { setImageClozeError('Impossible de sauvegarder les trous.'); return }
+    }
+    for (const b of toUpdate) {
+      await supabase.from('revision_image_cloze_blanks').update({ answer: b.answer }).eq('id', b.id)
+    }
+
+    setEditingImageCardId(null)
+    setImageClozeError('')
+    await loadAll()
+  }
+
+  const handleSupprimerImageCard = async (cardId: string) => {
+    const card = imageClozeCards.find(c => c.id === cardId)
+    const supabase = createClient()
+    await supabase.from('revision_image_cloze_cards').delete().eq('id', cardId)
+    if (card) await deleteCardImages([card.image_path])
+    setConfirmDeleteImageCard(null)
+    await loadAll()
   }
 
   const commencerEdition = (card: Card) => {
@@ -745,7 +868,7 @@ export default function GererSet() {
         )}
 
         {/* Lancer une session */}
-        {(cards.length > 0 || clozeCards.length > 0) ? (
+        {(cards.length > 0 || clozeCards.length > 0 || imageClozeCards.length > 0) ? (
           <div className="flex gap-3 flex-wrap">
             {cards.length > 0 && (
               <>
@@ -769,6 +892,11 @@ export default function GererSet() {
             {clozeCards.length > 0 && (
               <Link href={`/revision/etudier-trous/${setId}`} className="flex-1 rounded-2xl py-4 font-fredoka text-lg text-center hover:opacity-90 transition" style={{ background: '#132417', color: '#6bcb77', border: '1px solid #6bcb77', minWidth: '200px' }}>
                 📝 Étudier — Trous →
+              </Link>
+            )}
+            {imageClozeCards.length > 0 && (
+              <Link href={`/revision/etudier-image/${setId}`} className="flex-1 rounded-2xl py-4 font-fredoka text-lg text-center hover:opacity-90 transition" style={{ background: '#2a1f10', color: '#ff9f43', border: '1px solid #ff9f43', minWidth: '200px' }}>
+                🗺️ Étudier — Carte image →
               </Link>
             )}
           </div>
@@ -1197,6 +1325,99 @@ export default function GererSet() {
                         </>
                       ) : (
                         <button onClick={() => setConfirmDeleteClozeCard(c.id)} className="font-fredoka text-xs text-[#827f97] hover:text-[#ff6b6b] transition">
+                          Supprimer
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Ajouter une carte-image à trous */}
+        <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-5">
+          <p className="font-fredoka text-[#c9c4e0] text-base mb-1">🗺️ Ajouter une carte-image à trous</p>
+          <p className="text-[#827f97] text-xs mb-3">
+            Envoie une image (ex. une carte géographique), dessine des zones à cacher dessus, puis indique la réponse attendue pour chacune.
+          </p>
+          {!newImagePreviewUrl ? (
+            <label className="inline-block font-fredoka text-xs rounded-full px-4 py-2 hover:opacity-80 transition cursor-pointer" style={{ background: '#2a1f10', color: '#ff9f43', border: '1px solid #ff9f43' }}>
+              🖼 Choisir une image
+              <input type="file" accept={ACCEPTED_IMAGE_TYPES} onChange={handleNewImageFileChange} className="hidden" />
+            </label>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <ImageBlankEditor imageUrl={newImagePreviewUrl} blanks={newImageBlanks} onChange={setNewImageBlanks} accentColor="#ff9f43" />
+              <div className="flex items-center gap-3 flex-wrap">
+                <label className="font-fredoka text-xs text-[#827f97] hover:text-[#c9c4e0] transition cursor-pointer">
+                  Changer d'image
+                  <input type="file" accept={ACCEPTED_IMAGE_TYPES} onChange={handleNewImageFileChange} className="hidden" />
+                </label>
+              </div>
+            </div>
+          )}
+          {imageError && <p className="text-[#ff6b6b] text-xs mt-3">{imageError}</p>}
+          {imageClozeError && <p className="text-[#ff6b6b] text-xs mt-3">{imageClozeError}</p>}
+          {newImagePreviewUrl && (
+            <button
+              onClick={handleAjouterImageCard}
+              disabled={addingImageCard || newImageBlanks.length === 0}
+              className="mt-3 rounded-xl px-6 py-3 font-fredoka text-sm hover:opacity-90 transition disabled:opacity-50"
+              style={{ background: '#ff9f43', color: '#0f0e17' }}
+            >
+              {addingImageCard ? 'Ajout...' : `+ Créer la carte (${newImageBlanks.length} trou${newImageBlanks.length > 1 ? 's' : ''})`}
+            </button>
+          )}
+        </div>
+
+        {/* Liste des cartes-image à trous */}
+        {imageClozeCards.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <p className="font-fredoka text-[#c9c4e0] text-base">Cartes-image à trous ({imageClozeCards.length})</p>
+            {imageClozeCards.map(c => (
+              <div key={c.id} className="bg-[#1a1828] border border-[#2a2830] rounded-xl" style={{ padding: '14px 18px' }}>
+                {editingImageCardId === c.id ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {imageClozeImageUrls[c.image_path] && (
+                      <ImageBlankEditor imageUrl={imageClozeImageUrls[c.image_path]} blanks={editImageBlanks} onChange={setEditImageBlanks} accentColor="#ff9f43" />
+                    )}
+                    {imageClozeError && <p className="text-[#ff6b6b] text-xs">{imageClozeError}</p>}
+                    <div className="flex gap-2">
+                      <button onClick={() => handleSauvegarderImageBlanks(c.id)} className="font-fredoka text-xs rounded-full px-4 py-2 hover:opacity-80 transition" style={{ background: '#ff9f43', color: '#0f0e17' }}>
+                        Sauvegarder
+                      </button>
+                      <button onClick={() => { setEditingImageCardId(null); setImageClozeError('') }} className="font-fredoka text-xs text-[#827f97] hover:text-[#c9c4e0] transition">
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex justify-between items-center gap-3 flex-wrap">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      {imageClozeImageUrls[c.image_path] && (
+                        <img src={imageClozeImageUrls[c.image_path]} alt="" className="rounded-lg flex-shrink-0" style={{ width: '48px', height: '48px', objectFit: 'cover' }} />
+                      )}
+                      <span className="text-[#c9c4e0] text-sm">
+                        {c.blanks.length} trou{c.blanks.length > 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button onClick={() => commencerEditionImageCard(c)} className="font-fredoka text-xs text-[#827f97] hover:text-[#ff9f43] transition">
+                        Modifier
+                      </button>
+                      {confirmDeleteImageCard === c.id ? (
+                        <>
+                          <button onClick={() => handleSupprimerImageCard(c.id)} className="font-fredoka text-xs rounded-full px-3 py-1.5 hover:opacity-80 transition" style={{ background: '#ff6b6b', color: '#0f0e17' }}>
+                            Confirmer
+                          </button>
+                          <button onClick={() => setConfirmDeleteImageCard(null)} className="font-fredoka text-xs text-[#827f97] hover:text-[#c9c4e0] transition">
+                            Annuler
+                          </button>
+                        </>
+                      ) : (
+                        <button onClick={() => setConfirmDeleteImageCard(c.id)} className="font-fredoka text-xs text-[#827f97] hover:text-[#ff6b6b] transition">
                           Supprimer
                         </button>
                       )}
