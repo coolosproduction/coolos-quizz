@@ -288,7 +288,7 @@ export default function EtudierImage() {
                   style={{
                     position: 'absolute',
                     left: `${b.x}%`, top: `${b.y}%`, width: `${b.width}%`, height: `${b.height}%`,
-                    background: r ? 'rgba(255,107,107,0.6)' : (isActive ? 'rgba(255,217,61,0.6)' : 'rgba(15,14,23,0.92)'),
+                    background: 'rgba(8,7,12,0.97)',
                     border: `2px solid ${r ? '#ff6b6b' : (isActive ? '#ffd93d' : '#6bcb77')}`,
                     borderRadius: '4px',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
