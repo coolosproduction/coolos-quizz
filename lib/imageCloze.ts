@@ -13,19 +13,7 @@ export type ImageBlank = {
   answer: string
 }
 
-// Normalise une réponse pour la comparaison : espaces superflus, casse et accents ignorés
-// ("Paris" == "paris" == "PARIS" == "pariS"), mais une faute de frappe reste refusée.
-export function normalizeAnswer(text: string): string {
-  return text
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/\s+/g, ' ')
-}
-
-export function isAnswerCorrect(given: string, correct: string): boolean {
-  const g = normalizeAnswer(given)
-  if (!g) return false
-  return g === normalizeAnswer(correct)
-}
+// normalizeAnswer/isAnswerCorrect vivent désormais dans lib/answerMatch.ts (réutilisées aussi par
+// le texte à trous sur le lien public en essai libre) — réexportées ici pour ne rien casser côté
+// appelants existants de ce fichier.
+export { normalizeAnswer, isAnswerCorrect } from './answerMatch'

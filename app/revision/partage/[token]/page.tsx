@@ -5,13 +5,14 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { createClient } from '../../../../lib/supabase'
 import { parseCloze } from '../../../../lib/cloze'
+import { isAnswerCorrect } from '../../../../lib/answerMatch'
 import type { ImageBlank } from '../../../../lib/imageCloze'
 import Skeleton from '@/components/Skeleton'
 
-// Un lien public peut désormais pointer vers un set composé de n'importe quel mélange des 3
-// types de cartes (classique, à trous texte, carte-image à trous) — auparavant seules les cartes
-// classiques étaient prises en charge, ce qui rendait "invalide" tout lien vers un set qui n'en
-// avait aucune, même valide et non expiré.
+// Un lien public peut pointer vers un set composé de n'importe quel mélange des 3 types de
+// cartes (classique, à trous texte, carte-image à trous). Les modes à trous permettent à un
+// visiteur sans compte d'essayer de remplir les trous puis de voir son résultat + les réponses —
+// en essai libre, sans aucune progression enregistrée (pas de revision_sessions ici).
 type ClassicCard = { kind: 'classic', id: string, recto: string, verso: string }
 type ClozeCardPublic = { kind: 'cloze', id: string, content: string }
 type ImageCardPublic = { kind: 'image', id: string, image_path: string, blanks: ImageBlank[] }
@@ -38,7 +39,13 @@ export default function RevisionPartagePublique() {
   const [cards, setCards] = useState<PublicCard[]>([])
   const [imageUrls, setImageUrls] = useState<Record<string, string>>({})
   const [index, setIndex] = useState(0)
+
+  // État de l'essai libre pour la carte courante — remis à zéro à chaque navigation, jamais
+  // persisté (pas de compte, pas de revision_sessions pour ce lecteur public).
   const [revealed, setRevealed] = useState(false)
+  const [checked, setChecked] = useState(false)
+  const [clozeInputs, setClozeInputs] = useState<Record<number, string>>({})
+  const [imageInputs, setImageInputs] = useState<Record<string, string>>({})
 
   useEffect(() => {
     const load = async () => {
@@ -72,12 +79,19 @@ export default function RevisionPartagePublique() {
 
   const carte = cards[index] || null
 
-  const suivante = () => {
+  const resetEssai = () => {
     setRevealed(false)
+    setChecked(false)
+    setClozeInputs({})
+    setImageInputs({})
+  }
+
+  const suivante = () => {
+    resetEssai()
     setIndex(prev => (prev + 1) % cards.length)
   }
   const precedente = () => {
-    setRevealed(false)
+    resetEssai()
     setIndex(prev => (prev - 1 + cards.length) % cards.length)
   }
 
@@ -101,8 +115,11 @@ export default function RevisionPartagePublique() {
     )
   }
 
-  const labelHidden = carte.kind === 'image' ? 'Carte à trous' : carte.kind === 'cloze' ? 'Texte à trous' : 'Question'
-  const labelReveal = carte.kind === 'image' ? 'Carte complète' : carte.kind === 'cloze' ? 'Texte complet' : 'Réponse'
+  const clozeBlanks = carte.kind === 'cloze' ? parseCloze(carte.content).filter(s => s.type === 'blank') : []
+  const clozeScore = { correct: clozeBlanks.filter(b => isAnswerCorrect(clozeInputs[b.index] || '', b.value)).length, total: clozeBlanks.length }
+  const imageScore = carte.kind === 'image'
+    ? { correct: carte.blanks.filter(b => isAnswerCorrect(imageInputs[b.id] || '', b.answer)).length, total: carte.blanks.length }
+    : { correct: 0, total: 0 }
 
   return (
     <main className="min-h-screen bg-[#0f0e17] flex flex-col items-center" style={{ padding: '40px 24px' }}>
@@ -114,13 +131,13 @@ export default function RevisionPartagePublique() {
         </div>
 
         <div
-          onClick={() => setRevealed(r => !r)}
-          className="bg-[#1a1828] border border-[#2a2830] rounded-2xl cursor-pointer"
+          onClick={carte.kind === 'classic' ? () => setRevealed(r => !r) : undefined}
+          className={`bg-[#1a1828] border border-[#2a2830] rounded-2xl ${carte.kind === 'classic' ? 'cursor-pointer' : ''}`}
           style={{ minHeight: '220px', padding: '32px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}
         >
           {carte.kind === 'classic' && (
             <div>
-              <p className="text-[#827f97] text-xs mb-3 font-fredoka">{revealed ? labelReveal : labelHidden}</p>
+              <p className="text-[#827f97] text-xs mb-3 font-fredoka">{revealed ? 'Réponse' : 'Question'}</p>
               <p className="text-[#eeeaf8] text-lg leading-relaxed">{revealed ? carte.verso : carte.recto}</p>
               {!revealed && <p className="text-[#4a4758] text-xs mt-4">Touche la carte pour voir la réponse</p>}
             </div>
@@ -128,58 +145,97 @@ export default function RevisionPartagePublique() {
 
           {carte.kind === 'cloze' && (
             <div style={{ width: '100%' }}>
-              <p className="text-[#827f97] text-xs mb-3 font-fredoka">{revealed ? labelReveal : labelHidden}</p>
-              <p className="text-[#eeeaf8] text-lg leading-relaxed">
-                {parseCloze(carte.content).map((seg, i) => seg.type === 'text'
-                  ? <span key={i}>{seg.value}</span>
-                  : revealed
-                    ? <span key={i} className="font-fredoka" style={{ color: '#6bcb77' }}>{seg.value}</span>
-                    : <span key={i} className="font-fredoka" style={{ color: '#6bcb77', borderBottom: '2px solid #6bcb77' }}>▁▁▁▁▁</span>
-                )}
+              <p className="text-[#827f97] text-xs mb-3 font-fredoka">Texte à trous — essaie de le compléter</p>
+              <p className="text-[#eeeaf8] text-lg" style={{ lineHeight: '2.4' }}>
+                {parseCloze(carte.content).map((seg, i) => {
+                  if (seg.type === 'text') return <span key={i}>{seg.value}</span>
+                  if (!checked) {
+                    return (
+                      <input
+                        key={i}
+                        type="text"
+                        value={clozeInputs[seg.index] || ''}
+                        onChange={e => setClozeInputs(prev => ({ ...prev, [seg.index]: e.target.value }))}
+                        onKeyDown={e => e.key === 'Enter' && setChecked(true)}
+                        placeholder="..."
+                        className="bg-[#0f0e17] text-[#6bcb77] text-center font-fredoka outline-none mx-1 px-2 py-1 rounded-lg"
+                        style={{ border: '1px solid #3a3650', minWidth: '90px', width: `${Math.max(70, seg.value.length * 12)}px` }}
+                      />
+                    )
+                  }
+                  return isAnswerCorrect(clozeInputs[seg.index] || '', seg.value) ? (
+                    <span key={i} className="font-fredoka" style={{ color: '#6bcb77', fontWeight: 700 }}>{seg.value}</span>
+                  ) : (
+                    <span key={i} className="font-fredoka" style={{ color: '#ff6b6b' }}>
+                      <span style={{ textDecoration: 'line-through' }}>{clozeInputs[seg.index] || '(vide)'}</span>
+                      {' '}<span style={{ color: '#6bcb77', fontWeight: 700 }}>({seg.value})</span>
+                    </span>
+                  )
+                })}
               </p>
-              {!revealed && <p className="text-[#4a4758] text-xs mt-4">Touche la carte pour voir le texte complet</p>}
+              {!checked ? (
+                <button onClick={() => setChecked(true)} className="font-fredoka text-sm rounded-full px-6 py-3 hover:opacity-90 transition mt-5" style={{ background: '#6bcb77', color: '#0f0e17' }}>
+                  Corriger
+                </button>
+              ) : (
+                <p className="font-fredoka text-base mt-5" style={{ color: '#ffd93d' }}>
+                  {clozeScore.correct} / {clozeScore.total} bonne{clozeScore.correct !== 1 ? 's' : ''} réponse{clozeScore.total !== 1 ? 's' : ''}
+                </p>
+              )}
             </div>
           )}
 
           {carte.kind === 'image' && (
             <div style={{ width: '100%' }}>
-              <p className="text-[#827f97] text-xs mb-3 font-fredoka">
-                {revealed ? labelReveal : labelHidden}
-              </p>
+              <p className="text-[#827f97] text-xs mb-3 font-fredoka">Carte à trous — essaie de la compléter</p>
               <div style={{ position: 'relative', display: 'inline-block', maxWidth: '100%' }}>
                 {imageUrls[carte.image_path] && (
                   <img src={imageUrls[carte.image_path]} alt="" draggable={false} style={{ display: 'block', maxWidth: '100%', borderRadius: '16px', userSelect: 'none' }} />
                 )}
-                {!revealed && carte.blanks.map((b, i) => (
-                  <div
-                    key={b.id}
-                    style={{
-                      position: 'absolute',
-                      left: `${b.x}%`, top: `${b.y}%`, width: `${b.width}%`, height: `${b.height}%`,
-                      background: 'rgba(8,7,12,0.97)',
-                      border: '2px solid #6bcb77',
-                      borderRadius: '4px',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}
-                  >
-                    <span className="font-fredoka text-xs" style={{ color: '#0f0e17', background: '#6bcb77', borderRadius: '9999px', padding: '1px 6px' }}>
-                      {i + 1}
-                    </span>
-                  </div>
-                ))}
+                {carte.blanks.map(b => {
+                  const correct = checked && isAnswerCorrect(imageInputs[b.id] || '', b.answer)
+                  if (correct) return null
+                  const wrong = checked
+                  return (
+                    <div
+                      key={b.id}
+                      style={{
+                        position: 'absolute',
+                        left: `${b.x}%`, top: `${b.y}%`, width: `${b.width}%`, height: `${b.height}%`,
+                        background: 'rgba(8,7,12,0.97)',
+                        border: `2px solid ${wrong ? '#ff6b6b' : '#6bcb77'}`,
+                        borderRadius: '4px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        overflow: 'hidden',
+                        padding: '1px',
+                      }}
+                    >
+                      {wrong ? (
+                        <span className="font-fredoka text-center" style={{ color: '#eeeaf8', fontSize: '10px', lineHeight: '1.2' }}>{b.answer}</span>
+                      ) : (
+                        <input
+                          type="text"
+                          value={imageInputs[b.id] || ''}
+                          onChange={e => setImageInputs(prev => ({ ...prev, [b.id]: e.target.value }))}
+                          onKeyDown={e => e.key === 'Enter' && setChecked(true)}
+                          className="text-center font-fredoka"
+                          style={{ width: '100%', height: '100%', background: 'transparent', border: 'none', outline: 'none', color: '#eeeaf8', fontSize: '11px' }}
+                        />
+                      )}
+                    </div>
+                  )
+                })}
               </div>
-              {!revealed ? (
-                <p className="text-[#4a4758] text-xs mt-4">Touche la carte pour voir la carte complète</p>
+              {!checked ? (
+                <div>
+                  <button onClick={() => setChecked(true)} className="font-fredoka text-sm rounded-full px-6 py-3 hover:opacity-90 transition mt-5" style={{ background: '#6bcb77', color: '#0f0e17' }}>
+                    Corriger
+                  </button>
+                </div>
               ) : (
-                carte.blanks.length > 0 && (
-                  <div className="text-left mt-4" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    {carte.blanks.map((b, i) => (
-                      <p key={b.id} className="text-[#9b96b8] text-xs">
-                        <span className="font-fredoka" style={{ color: '#6bcb77' }}>{i + 1}.</span> {b.answer}
-                      </p>
-                    ))}
-                  </div>
-                )
+                <p className="font-fredoka text-base mt-5" style={{ color: '#ffd93d' }}>
+                  {imageScore.correct} / {imageScore.total} bonne{imageScore.correct !== 1 ? 's' : ''} réponse{imageScore.total !== 1 ? 's' : ''}
+                </p>
               )}
             </div>
           )}
