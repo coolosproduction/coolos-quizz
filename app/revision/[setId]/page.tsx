@@ -3,13 +3,16 @@
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import Papa from 'papaparse'
 import { createClient } from '../../../lib/supabase'
 import { parseCloze, countBlanks, wrapSelectionAsBlank } from '../../../lib/cloze'
 import BackButton from '@/components/BackButton'
 import Skeleton, { SkeletonList } from '@/components/Skeleton'
+import Spinner from '@/components/Spinner'
 
 type Card = { id: string, recto: string, verso: string, recto_image_path: string | null, verso_image_path: string | null }
 type ClozeCard = { id: string, content: string }
+type LigneImportCsv = { ligneNum: number, recto: string, verso: string, erreur: string | null }
 type WorstCard = { card_id: string, recto: string, verso: string, non_count: number, attempts_count: number }
 type SetOverview = { set_id: string, name: string, cards_count: number, sessions_count: number, last_session_at: string | null, success_rate: number, due_cards_count: number, cloze_cards_count: number }
 
@@ -102,6 +105,16 @@ export default function GererSet() {
   const [confirmDeleteClozeCard, setConfirmDeleteClozeCard] = useState<string | null>(null)
   const newClozeTextareaRef = useRef<HTMLTextAreaElement>(null)
   const editClozeTextareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const [csvOpen, setCsvOpen] = useState(false)
+  const [csvTexte, setCsvTexte] = useState('')
+  const [csvNomFichier, setCsvNomFichier] = useState('')
+  const [csvLignes, setCsvLignes] = useState<LigneImportCsv[]>([])
+  const [csvAnalyseFaite, setCsvAnalyseFaite] = useState(false)
+  const [csvImportEnCours, setCsvImportEnCours] = useState(false)
+  const [csvImportTermine, setCsvImportTermine] = useState(false)
+  const [csvResultat, setCsvResultat] = useState({ reussies: 0, echouees: 0 })
+  const [csvErreurGenerale, setCsvErreurGenerale] = useState('')
 
   const [shareOpen, setShareOpen] = useState(false)
   const [shareLoaded, setShareLoaded] = useState(false)
@@ -329,6 +342,81 @@ export default function GererSet() {
     setNewVersoImage(null)
     await loadAll()
     setAdding(false)
+  }
+
+  const analyserLignesCsv = (lignesCSV: Record<string, string>[]): LigneImportCsv[] => {
+    return lignesCSV.map((row, index) => {
+      const recto = (row['recto'] || row['question'] || row['front'] || '').trim()
+      const verso = (row['verso'] || row['réponse'] || row['reponse'] || row['answer'] || row['back'] || '').trim()
+      const ligne: LigneImportCsv = { ligneNum: index + 2, recto, verso, erreur: null }
+      if (!recto) { ligne.erreur = 'Recto manquant'; return ligne }
+      if (!verso) { ligne.erreur = 'Verso manquant'; return ligne }
+      if (recto.length > 500) { ligne.erreur = 'Recto trop long (500 caractères max)'; return ligne }
+      if (verso.length > 500) { ligne.erreur = 'Verso trop long (500 caractères max)'; return ligne }
+      return ligne
+    })
+  }
+
+  const lancerAnalyseCsv = () => {
+    setCsvErreurGenerale('')
+    if (!csvTexte.trim()) {
+      setCsvErreurGenerale("Colle un CSV ou choisis un fichier avant de lancer l'analyse.")
+      return
+    }
+    Papa.parse(csvTexte.trim(), {
+      header: true,
+      skipEmptyLines: true,
+      complete: (resultats) => {
+        const lignesAnalysees = analyserLignesCsv(resultats.data as Record<string, string>[])
+        setCsvLignes(lignesAnalysees)
+        setCsvAnalyseFaite(true)
+        setCsvImportTermine(false)
+      },
+      error: (err: Error) => {
+        setCsvErreurGenerale('Erreur de lecture du CSV : ' + err.message)
+      },
+    })
+  }
+
+  const handleCsvFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setCsvNomFichier(file.name)
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const texte = event.target?.result as string
+      setCsvTexte(texte)
+    }
+    reader.readAsText(file)
+  }
+
+  const csvLignesValides = csvLignes.filter(l => !l.erreur)
+  const csvLignesEnErreur = csvLignes.filter(l => l.erreur)
+
+  const lancerImportCsv = async () => {
+    if (csvLignesValides.length === 0) return
+    setCsvImportEnCours(true)
+    setCsvErreurGenerale('')
+    const supabase = createClient()
+    const objetsAInserer = csvLignesValides.map(l => ({ set_id: setId, recto: l.recto, verso: l.verso }))
+    const { error, data } = await supabase.from('revision_cards').insert(objetsAInserer).select()
+    setCsvImportEnCours(false)
+    if (error) {
+      setCsvErreurGenerale("Erreur lors de l'import : " + error.message)
+      return
+    }
+    setCsvResultat({ reussies: data?.length || 0, echouees: csvLignesEnErreur.length })
+    setCsvImportTermine(true)
+    await loadAll()
+  }
+
+  const reinitialiserCsv = () => {
+    setCsvTexte('')
+    setCsvNomFichier('')
+    setCsvLignes([])
+    setCsvAnalyseFaite(false)
+    setCsvImportTermine(false)
+    setCsvErreurGenerale('')
   }
 
   const commencerEdition = (card: Card) => {
@@ -739,6 +827,155 @@ export default function GererSet() {
           >
             {adding ? 'Ajout...' : '+ Ajouter la carte'}
           </button>
+        </div>
+
+        {/* Importer un CSV (cartes classiques) */}
+        <div className="bg-[#1a1828] border border-[#2a2830] rounded-2xl p-5">
+          <div className="flex justify-between items-center" style={{ marginBottom: csvOpen ? '16px' : 0 }}>
+            <div>
+              <p className="font-fredoka text-[#c9c4e0] text-base">📄 Importer des cartes depuis un CSV</p>
+              {!csvOpen && <p className="text-[#827f97] text-xs mt-1">Colonnes attendues : recto, verso</p>}
+            </div>
+            <button
+              onClick={() => { setCsvOpen(o => !o); if (csvOpen) reinitialiserCsv() }}
+              className="font-fredoka text-xs rounded-full px-4 py-2 flex-shrink-0 transition hover:opacity-80"
+              style={{ background: csvOpen ? 'transparent' : '#1e1c2e', color: '#9b96b8', border: '1px solid #3a3650' }}
+            >
+              {csvOpen ? 'Fermer' : 'Ouvrir'}
+            </button>
+          </div>
+
+          {csvOpen && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {csvErreurGenerale && (
+                <div style={{ background: '#2e1a1a', border: '1px solid #ff6b6b', borderRadius: '14px', padding: '12px 14px' }}>
+                  <p className="text-[#ff6b6b] text-sm">{csvErreurGenerale}</p>
+                </div>
+              )}
+
+              {!csvAnalyseFaite && (
+                <>
+                  <div>
+                    <label className="block font-fredoka text-[#9b96b8] text-sm mb-2">Option 1 — Choisir un fichier CSV</label>
+                    <label
+                      htmlFor="csv-cards-upload"
+                      className="w-full flex flex-col items-center justify-center cursor-pointer transition hover:opacity-80"
+                      style={{ background: '#0f0e17', border: '2px dashed #2a2830', borderRadius: '14px', padding: '24px' }}
+                    >
+                      <p className="font-fredoka text-[#827f97] text-sm">
+                        {csvNomFichier ? `Fichier sélectionné : ${csvNomFichier}` : 'Cliquer pour choisir un fichier .csv'}
+                      </p>
+                    </label>
+                    <input id="csv-cards-upload" type="file" accept=".csv" className="hidden" onChange={handleCsvFileChange} />
+                  </div>
+
+                  <div>
+                    <label className="block font-fredoka text-[#9b96b8] text-sm mb-2">Option 2 — Coller le contenu CSV directement</label>
+                    <textarea
+                      value={csvTexte}
+                      onChange={e => { setCsvTexte(e.target.value); setCsvNomFichier('') }}
+                      placeholder={'recto,verso\nQuelle est la capitale de la France ?,Paris'}
+                      rows={8}
+                      className="w-full text-[#eeeaf8] text-sm outline-none resize-none font-mono transition"
+                      style={{ background: '#0f0e17', border: `1.5px solid ${csvTexte ? '#6bcb77' : '#3a3650'}`, borderRadius: '14px', padding: '12px 14px', lineHeight: '1.5' }}
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={lancerAnalyseCsv}
+                    className="font-fredoka text-sm hover:opacity-90 transition"
+                    style={{ background: '#6bcb77', color: '#0f0e17', borderRadius: '14px', padding: '12px' }}
+                  >
+                    Analyser le CSV
+                  </button>
+                </>
+              )}
+
+              {csvAnalyseFaite && !csvImportTermine && (
+                <>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-[#0f0e17] border border-[#2a2830] rounded-xl p-3 text-center">
+                      <div className="font-fredoka text-xl text-[#eeeaf8]">{csvLignes.length}</div>
+                      <div className="text-[#827f97] text-xs mt-1">Lignes</div>
+                    </div>
+                    <div className="bg-[#0f0e17] border border-[#2a2830] rounded-xl p-3 text-center">
+                      <div className="font-fredoka text-xl text-[#6bcb77]">{csvLignesValides.length}</div>
+                      <div className="text-[#827f97] text-xs mt-1">Valides</div>
+                    </div>
+                    <div className="bg-[#0f0e17] border border-[#2a2830] rounded-xl p-3 text-center">
+                      <div className="font-fredoka text-xl text-[#ff6b6b]">{csvLignesEnErreur.length}</div>
+                      <div className="text-[#827f97] text-xs mt-1">En erreur</div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '320px', overflowY: 'auto' }}>
+                    {csvLignes.map(l => (
+                      <div key={l.ligneNum} style={{ background: l.erreur ? '#2e1a1a' : '#0f0e17', border: `1px solid ${l.erreur ? '#ff6b6b' : '#2a2830'}`, borderRadius: '10px', padding: '10px 14px' }}>
+                        <div className="flex items-start gap-3">
+                          <span className="font-fredoka text-xs text-[#8480a1]" style={{ minWidth: '24px' }}>L{l.ligneNum}</span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p className="text-[#c9c4e0] text-sm truncate">{l.recto || '(recto manquant)'}</p>
+                            {l.erreur ? (
+                              <p className="text-[#ff6b6b] text-xs mt-1">⚠ {l.erreur}</p>
+                            ) : (
+                              <p className="text-[#827f97] text-xs mt-1 truncate">{l.verso}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={reinitialiserCsv}
+                      className="font-fredoka text-xs hover:opacity-80 transition"
+                      style={{ border: '1px solid #3a3650', color: '#9b96b8', borderRadius: '12px', padding: '10px 20px' }}
+                    >
+                      Recommencer
+                    </button>
+                    <button
+                      type="button"
+                      onClick={lancerImportCsv}
+                      disabled={csvImportEnCours || csvLignesValides.length === 0}
+                      className="flex-1 flex items-center justify-center gap-2 font-fredoka text-sm hover:opacity-90 transition disabled:opacity-50"
+                      style={{ background: '#6bcb77', color: '#0f0e17', borderRadius: '12px', padding: '10px' }}
+                    >
+                      {csvImportEnCours && <Spinner size={16} color="#0f0e17" />}
+                      {csvImportEnCours
+                        ? 'Import en cours...'
+                        : `Importer ${csvLignesValides.length} carte${csvLignesValides.length > 1 ? 's' : ''} valide${csvLignesValides.length > 1 ? 's' : ''}`}
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {csvImportTermine && (
+                <>
+                  <div style={{ background: '#1a2e1f', border: '1px solid #6bcb77', borderRadius: '14px', padding: '16px' }}>
+                    <p className="font-fredoka text-[#6bcb77] text-base">
+                      ✓ {csvResultat.reussies} carte{csvResultat.reussies > 1 ? 's' : ''} importée{csvResultat.reussies > 1 ? 's' : ''} avec succès
+                    </p>
+                    {csvResultat.echouees > 0 && (
+                      <p className="text-[#9b96b8] text-xs mt-2">
+                        {csvResultat.echouees} ligne{csvResultat.echouees > 1 ? 's' : ''} ignorée{csvResultat.echouees > 1 ? 's' : ''} pour cause d'erreur (voir détail ci-dessus avant de relancer)
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={reinitialiserCsv}
+                    className="font-fredoka text-sm hover:opacity-80 transition"
+                    style={{ border: '1px solid #3a3650', color: '#9b96b8', borderRadius: '14px', padding: '12px' }}
+                  >
+                    Importer un autre CSV
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Liste des cartes */}
